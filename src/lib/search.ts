@@ -101,3 +101,47 @@ export function searchConnections(params: SearchParams): ConnectionResult[] {
     legs: [toJourney(c.legs[0], params.quota), toJourney(c.legs[1], params.quota)],
   }));
 }
+
+export type AlternativeRoute = {
+  from: { code: string; name: string; km: number };
+  to: { code: string; name: string; km: number };
+  count: number;
+  fastest: number;
+  earliest: string;
+  trains: { number: string; name: string }[];
+};
+
+/**
+ * "Nearby airports" for trains: station pairs within 30 km of the requested ones that have
+ * direct trains on the date. Closest alternatives first, so a station across the road
+ * (e.g. Dadar West -> Dadar Central) beats one across the city.
+ */
+export function alternativeRoutes(params: SearchParams, limit = 6): AlternativeRoute[] {
+  const nf = nearbyStations(params.from, 30);
+  const nt = nearbyStations(params.to, 30);
+  if (nf.length <= 1 && nt.length <= 1) return [];
+  const kmFrom = new Map(nf.map((s) => [s.code, s]));
+  const kmTo = new Map(nt.map((s) => [s.code, s]));
+  const groups = new Map<string, AlternativeRoute>();
+  for (const seg of findTrains(nf.map((s) => s.code), nt.map((s) => s.code), params.date)) {
+    if (seg.from.code === params.from && seg.to.code === params.to) continue;
+    const key = `${seg.from.code}-${seg.to.code}`;
+    const dep = seg.from.dep ?? "";
+    const g = groups.get(key) ?? {
+      from: { code: seg.from.code, name: seg.from.name, km: kmFrom.get(seg.from.code)?.km ?? 0 },
+      to: { code: seg.to.code, name: seg.to.name, km: kmTo.get(seg.to.code)?.km ?? 0 },
+      count: 0,
+      fastest: Infinity,
+      earliest: dep,
+      trains: [],
+    };
+    g.count++;
+    g.fastest = Math.min(g.fastest, seg.duration);
+    if (dep < g.earliest) g.earliest = dep;
+    g.trains.push({ number: seg.train.number, name: seg.train.name });
+    groups.set(key, g);
+  }
+  return [...groups.values()]
+    .sort((a, b) => a.from.km + a.to.km - (b.from.km + b.to.km) || b.count - a.count)
+    .slice(0, limit);
+}

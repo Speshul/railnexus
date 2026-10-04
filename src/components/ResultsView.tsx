@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Clock, Loader2, SlidersHorizontal } from "lucide-react";
-import type { ConnectionResult, JourneyResult, SearchResponse } from "@/lib/search";
+import { ArrowRight, Clock, Footprints, Loader2, SlidersHorizontal } from "lucide-react";
+import type { AlternativeRoute, ConnectionResult, JourneyResult, SearchResponse } from "@/lib/search";
 import { CLASS_ORDER, TRAIN_TYPE_FILTERS, type ClassCode } from "@/lib/constants";
 import { formatDuration } from "@/lib/dates";
 import { TrainCard } from "./TrainCard";
@@ -45,7 +45,7 @@ function SlotPicker({ value, set }: { value: Set<string>; set: (s: Set<string>) 
   );
 }
 
-export function ResultsView({ data, nearbyCount = 0, nearbyHref }: { data: SearchResponse; nearbyCount?: number; nearbyHref?: string }) {
+export function ResultsView({ data, alternatives = [], nearbyHref }: { data: SearchResponse; alternatives?: AlternativeRoute[]; nearbyHref: string }) {
   const { results, params } = data;
   const [tab, setTab] = useState<"direct" | "connect">(results.length ? "direct" : "connect");
   const [types, setTypes] = useState<Set<string>>(new Set());
@@ -151,14 +151,8 @@ export function ResultsView({ data, nearbyCount = 0, nearbyHref }: { data: Searc
       </aside>
 
       <section>
-        {nearbyHref && (
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand/30 bg-brand-light p-3 text-sm">
-            <p>
-              <b>{nearbyCount} direct {nearbyCount === 1 ? "train runs" : "trains run"}</b> between other stations within 30 km of{" "}
-              {data.fromStation?.name} and {data.toStation?.name}.
-            </p>
-            <Link href={nearbyHref} className="btn-brand py-1.5">Show trains from nearby stations</Link>
-          </div>
+        {alternatives.length > 0 && (
+          <NearbyAlternatives data={data} alternatives={alternatives} nearbyHref={nearbyHref} />
         )}
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm">
@@ -273,6 +267,65 @@ function Connections({ data }: { data: SearchResponse }) {
           <TrainCard j={c.legs[1]} quota={params.quota} anchor={false} />
         </section>
       ))}
+    </div>
+  );
+}
+
+const kmLabel = (km: number) => (km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`);
+
+function NearbyAlternatives({ data, alternatives, nearbyHref }: { data: SearchResponse; alternatives: AlternativeRoute[]; nearbyHref: string }) {
+  const { params, fromStation, toStation } = data;
+  const none = data.results.length === 0;
+  const total = new Set(alternatives.flatMap((a) => a.trains.map((t) => t.number))).size;
+  const href = (a: AlternativeRoute) => {
+    const q = new URLSearchParams({ from: a.from.code, to: a.to.code, date: params.date, quota: params.quota });
+    if (params.cls) q.set("cls", params.cls);
+    return `/search?${q}`;
+  };
+  return (
+    <div className="card mb-4 overflow-hidden border-brand/30">
+      <div className="bg-brand-light px-4 py-3">
+        <h2 className="font-semibold">
+          {none ? `No direct trains from ${fromStation?.name} to ${toStation?.name}, but nearby stations have them` : "More direct trains from nearby stations"}
+        </h2>
+        <p className="text-sm text-slate-600">Stations within 30 km, closest first. Pick one to see its trains.</p>
+      </div>
+      <ul className="divide-y divide-slate-100">
+        {alternatives.map((a) => {
+          const changedFrom = a.from.code !== params.from;
+          const changedTo = a.to.code !== params.to;
+          return (
+            <li key={a.from.code + a.to.code}>
+              <Link href={href(a)} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-slate-50">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium">
+                    <span className={changedFrom ? "text-brand" : ""}>{a.from.name} ({a.from.code})</span>
+                    <ArrowRight className="mx-1 inline size-3.5 text-slate-400" />
+                    <span className={changedTo ? "text-brand" : ""}>{a.to.name} ({a.to.code})</span>
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 text-xs text-slate-500">
+                    {changedFrom && (
+                      <span><Footprints className="mr-0.5 inline size-3" />Board {kmLabel(a.from.km)} from {fromStation?.name}</span>
+                    )}
+                    {changedTo && <span><Footprints className="mr-0.5 inline size-3" />Arrive {kmLabel(a.to.km)} from {toStation?.name}</span>}
+                    <span className="truncate">e.g. {a.trains.slice(0, 2).map((t) => t.name).join(", ")}</span>
+                  </div>
+                </div>
+                <div className="text-right text-sm">
+                  <div className="font-semibold text-ok">{a.count} direct {a.count === 1 ? "train" : "trains"}</div>
+                  <div className="text-xs text-slate-500">fastest {formatDuration(a.fastest)} · first at {a.earliest}</div>
+                </div>
+                <span className="btn-brand py-1.5 text-xs">View trains</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="border-t border-slate-100 px-4 py-2 text-sm">
+        <Link href={nearbyHref} className="font-medium text-brand hover:underline">
+          Show all {total}+ trains from every nearby station together →
+        </Link>
+      </div>
     </div>
   );
 }

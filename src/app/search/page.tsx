@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { SearchForm } from "@/components/SearchForm";
 import { ResultsView } from "@/components/ResultsView";
-import { parseSearchParams, searchJourneys } from "@/lib/search";
+import { alternativeRoutes, parseSearchParams, searchJourneys } from "@/lib/search";
 import { addDays, diffDays, formatDate, todayIST } from "@/lib/dates";
 import { BOOKING_WINDOW_DAYS, QUOTAS } from "@/lib/constants";
 
@@ -24,8 +24,8 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
   }
   const data = searchJourneys(params);
   const { fromStation, toStation } = data;
-  // No direct trains between the exact stations: check whether other stations in the same cities have some.
-  const nearbyCount = !params.nearby && data.results.length === 0 ? searchJourneys({ ...params, nearby: true }).results.length : 0;
+  // Few or no direct trains between the exact stations: suggest nearby station pairs that have some.
+  const alternatives = !params.nearby && data.results.length < 5 ? alternativeRoutes(params) : [];
 
   const qs = (date: string) => {
     const q = new URLSearchParams({ from: params.from, to: params.to, date, quota: params.quota });
@@ -87,7 +87,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
               </Link>
             </nav>
           </div>
-          <ResultsView data={data} nearbyCount={nearbyCount} nearbyHref={nearbyCount ? `${qs(params.date)}&nearby=1` : undefined} />
+          <ResultsView data={data} alternatives={alternatives} nearbyHref={`${qs(params.date)}&nearby=1`} />
         </>
       )}
     </div>
