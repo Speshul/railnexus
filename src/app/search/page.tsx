@@ -24,6 +24,8 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
   }
   const data = searchJourneys(params);
   const { fromStation, toStation } = data;
+  // No direct trains between the exact stations: check whether other stations in the same cities have some.
+  const nearbyCount = !params.nearby && data.results.length === 0 ? searchJourneys({ ...params, nearby: true }).results.length : 0;
 
   const qs = (date: string) => {
     const q = new URLSearchParams({ from: params.from, to: params.to, date, quota: params.quota });
@@ -85,7 +87,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
               </Link>
             </nav>
           </div>
-          <ResultsView data={data} />
+          <ResultsView data={data} nearbyCount={nearbyCount} nearbyHref={nearbyCount ? `${qs(params.date)}&nearby=1` : undefined} />
         </>
       )}
     </div>

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { ArrowRight, Clock, Loader2, SlidersHorizontal } from "lucide-react";
 import type { ConnectionResult, JourneyResult, SearchResponse } from "@/lib/search";
 import { CLASS_ORDER, TRAIN_TYPE_FILTERS, type ClassCode } from "@/lib/constants";
@@ -44,7 +45,7 @@ function SlotPicker({ value, set }: { value: Set<string>; set: (s: Set<string>) 
   );
 }
 
-export function ResultsView({ data }: { data: SearchResponse }) {
+export function ResultsView({ data, nearbyCount = 0, nearbyHref }: { data: SearchResponse; nearbyCount?: number; nearbyHref?: string }) {
   const { results, params } = data;
   const [tab, setTab] = useState<"direct" | "connect">(results.length ? "direct" : "connect");
   const [types, setTypes] = useState<Set<string>>(new Set());
@@ -150,6 +151,15 @@ export function ResultsView({ data }: { data: SearchResponse }) {
       </aside>
 
       <section>
+        {nearbyHref && (
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand/30 bg-brand-light p-3 text-sm">
+            <p>
+              <b>{nearbyCount} direct {nearbyCount === 1 ? "train runs" : "trains run"}</b> between other stations within 30 km of{" "}
+              {data.fromStation?.name} and {data.toStation?.name}.
+            </p>
+            <Link href={nearbyHref} className="btn-brand py-1.5">Show trains from nearby stations</Link>
+          </div>
+        )}
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm">
             <button onClick={() => setTab("direct")} className={`rounded-md px-3 py-1.5 ${tab === "direct" ? "bg-brand text-white" : ""}`}>
