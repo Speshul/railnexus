@@ -4,8 +4,8 @@ import type { Metadata } from "next";
 import { ArrowLeftRight } from "lucide-react";
 import { getStops, getTrain } from "@/lib/rail";
 import { adultFare } from "@/lib/fare";
-import { CLASSES, CLASS_ORDER } from "@/lib/constants";
-import { formatDuration, todayIST, addDays } from "@/lib/dates";
+import { CLASSES, CLASS_ORDER, QUOTAS, type Quota } from "@/lib/constants";
+import { formatDuration, todayIST, addDays, isValidDate } from "@/lib/dates";
 import { inr, runDaysLabel } from "@/lib/format";
 import { RunDays } from "@/components/RunDays";
 import { RouteMapLazy } from "@/components/RouteMapLazy";
@@ -80,12 +80,14 @@ export default async function TrainPage({ params, searchParams }: PageProps<"/tr
               <h2 className="mb-3 font-semibold">Book this train</h2>
               <TrainJourneyPicker
                 train={train.number}
-                halts={halts.map((h) => ({ code: h.code, name: h.name, seq: h.seq }))}
+                halts={halts.map((h) => ({ code: h.code, name: h.name, seq: h.seq, day: h.day }))}
                 classes={train.classes.filter((c) => c !== "UR")}
                 defaultFrom={from?.code}
                 defaultTo={to?.code}
                 today={todayIST()}
-                defaultDate={addDays(todayIST(), 1)}
+                defaultDate={typeof sp.date === "string" && isValidDate(sp.date) ? sp.date : addDays(todayIST(), 1)}
+                defaultQuota={typeof sp.quota === "string" && sp.quota in QUOTAS ? (sp.quota as Quota) : "GN"}
+                runsOn={train.run_days}
               />
             </div>
           ) : (

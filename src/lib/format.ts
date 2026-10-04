@@ -18,6 +18,17 @@ export function availTone(status: string) {
   }
 }
 
+/** Plain-language availability, e.g. "92 seats available" instead of "AVL 92". */
+export function availText(a: { status: string; count: number; label: string }) {
+  switch (a.status) {
+    case "AVAILABLE": return `${a.count} ${a.count === 1 ? "seat" : "seats"} available`;
+    case "RAC": return `RAC ${a.count}`;
+    case "WL": return `Waitlist #${a.count}`;
+    case "REGRET": return "Sold out";
+    default: return a.label;
+  }
+}
+
 export function runDaysLabel(mask: number) {
   if (mask === 127) return "Daily";
   return DAY_NAMES.filter((_, i) => mask & (1 << i)).join(", ");

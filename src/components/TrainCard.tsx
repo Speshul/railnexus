@@ -6,20 +6,27 @@ import type { JourneyResult } from "@/lib/search";
 import type { Availability } from "@/lib/availability";
 import { CLASSES, type ClassCode, type Quota } from "@/lib/constants";
 import { formatDate, formatDuration } from "@/lib/dates";
-import { availTone, inr, pct } from "@/lib/format";
+import { availText, availTone, inr, pct } from "@/lib/format";
 import { RunDays } from "./RunDays";
 
-export function TrainCard({ j, quota, initialClass }: { j: JourneyResult; quota: Quota; initialClass?: ClassCode | null }) {
-  const [selected, setSelected] = useState<ClassCode | null>(initialClass ?? null);
+export function TrainCard({ j, quota, initialClass, anchor = true }: { j: JourneyResult; quota: Quota; initialClass?: ClassCode | null; anchor?: boolean }) {
+  const [calendarFor, setCalendarFor] = useState<ClassCode | null>(initialClass ?? null);
+  const bookHref = (cls: ClassCode, date = j.date) =>
+    `/book?${new URLSearchParams({ train: j.number, from: j.from.code, to: j.to.code, date, cls, quota })}`;
+  const routeHref = `/train/${j.number}?${new URLSearchParams({ from: j.from.code, to: j.to.code, date: j.date, quota })}`;
+
   return (
-    <article id={j.number} className="card scroll-mt-4 overflow-hidden">
+    <article id={anchor ? j.number : undefined} className="card scroll-mt-4 overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50 px-4 py-2">
-        <Link href={`/train/${j.number}`} className="font-semibold hover:text-brand hover:underline">
+        <h3 className="font-semibold">
           <span className="font-mono">{j.number}</span> {j.name}
-        </Link>
+        </h3>
         <div className="flex items-center gap-3 text-xs text-slate-500">
           <span className="rounded bg-brand-light px-1.5 py-0.5 font-medium text-brand">{j.typeName}</span>
           <RunDays mask={j.runDays} />
+          <Link href={routeHref} className="inline-flex items-center gap-1 font-medium text-brand hover:underline">
+            <MapPin className="size-3" /> Route &amp; stops
+          </Link>
         </div>
       </div>
 
@@ -42,36 +49,53 @@ export function TrainCard({ j, quota, initialClass }: { j: JourneyResult; quota:
       </div>
 
       {j.reservable ? (
-        <div className="flex gap-2 overflow-x-auto px-4 pb-3">
-          {j.classes.map((c) => (
-            <button
-              key={c.cls}
-              onClick={() => setSelected(selected === c.cls ? null : c.cls)}
-              aria-expanded={selected === c.cls}
-              className={`min-w-32 shrink-0 rounded-lg border px-3 py-2 text-left transition ${
-                selected === c.cls ? "border-brand bg-brand-light ring-1 ring-brand" : "border-slate-200 hover:border-slate-400"
-              }`}
-            >
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="font-semibold">{c.cls}</span>
-                <span className="text-sm font-semibold">{inr(c.fare)}</span>
+        <div className="px-4 pb-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Choose a class to book</p>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {j.classes.map((c) => (
+              <div
+                key={c.cls}
+                className={`flex flex-col rounded-lg border p-3 ${calendarFor === c.cls ? "border-brand ring-1 ring-brand" : "border-slate-200"}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="text-sm font-semibold leading-tight">{CLASSES[c.cls].name}</div>
+                    <div className="font-mono text-xs text-slate-500">{c.cls}</div>
+                  </div>
+                  <div className="text-right font-semibold">{inr(c.fare)}</div>
+                </div>
+                <div className={`mt-1 text-sm font-semibold ${availTone(c.avail.status)}`}>{availText(c.avail)}</div>
+                {c.avail.status === "WL" && <div className="text-xs text-slate-500">{pct(c.avail.chance)} chance of confirmation</div>}
+                {c.avail.status === "RAC" && <div className="text-xs text-slate-500">Shared berth, usually confirms</div>}
+                <div className="mt-auto flex items-center gap-2 pt-2">
+                  {c.avail.bookable ? (
+                    <Link href={bookHref(c.cls)} className="btn-primary flex-1 py-1.5">
+                      {c.avail.status === "AVAILABLE" ? "Book" : "Book (waitlist)"}
+                    </Link>
+                  ) : (
+                    <span className="flex-1 text-xs text-slate-500">{c.avail.note ?? "Not bookable"}</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setCalendarFor(calendarFor === c.cls ? null : c.cls)}
+                    aria-expanded={calendarFor === c.cls}
+                    className="shrink-0 text-xs font-medium text-brand hover:underline"
+                  >
+                    {calendarFor === c.cls ? "Hide dates" : "Other dates"}
+                  </button>
+                </div>
               </div>
-              <div className={`text-sm font-semibold ${availTone(c.avail.status)}`}>{c.avail.label}</div>
-              {c.avail.status === "WL" && <div className="text-[11px] text-slate-500">{pct(c.avail.chance)} chance</div>}
-            </button>
-          ))}
+            ))}
+          </div>
         </div>
       ) : (
         <p className="px-4 pb-3 text-sm text-slate-500">Unreserved service: no booking required, buy a ticket at the station.</p>
       )}
 
-      {selected && <AvailabilityPanel j={j} cls={selected} quota={quota} />}
+      {calendarFor && <AvailabilityPanel j={j} cls={calendarFor} quota={quota} bookHref={bookHref} />}
 
-      <div className="flex flex-wrap gap-x-4 border-t border-slate-100 px-4 py-2 text-xs text-slate-500">
-        <span><MapPin className="mr-0.5 inline size-3" />{j.origin} → {j.destination}</span>
-        <Link href={`/train/${j.number}?from=${j.from.code}&to=${j.to.code}`} className="text-brand hover:underline">
-          Route &amp; all stops
-        </Link>
+      <div className="border-t border-slate-100 px-4 py-2 text-xs text-slate-500">
+        Runs {j.origin} → {j.destination}
       </div>
     </article>
   );
@@ -79,7 +103,7 @@ export function TrainCard({ j, quota, initialClass }: { j: JourneyResult; quota:
 
 type Cal = { date: string; runs: boolean; avail: Availability | null }[];
 
-function AvailabilityPanel({ j, cls, quota }: { j: JourneyResult; cls: ClassCode; quota: Quota }) {
+function AvailabilityPanel({ j, cls, quota, bookHref }: { j: JourneyResult; cls: ClassCode; quota: Quota; bookHref: (cls: ClassCode, date: string) => string }) {
   const key = `${j.number}|${cls}|${quota}|${j.date}`;
   const [state, setState] = useState<{ key: string; cal?: Cal; fare?: number; error?: string } | null>(null);
 
@@ -108,18 +132,17 @@ function AvailabilityPanel({ j, cls, quota }: { j: JourneyResult; cls: ClassCode
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           {loaded.cal!.map((d) => {
             const a = d.avail;
-            const bookHref = `/book?${new URLSearchParams({ train: j.number, from: j.from.code, to: j.to.code, date: d.date, cls, quota })}`;
             return (
-              <div key={d.date} className="rounded-lg border border-slate-200 bg-white p-2 text-sm">
-                <div className="text-xs text-slate-500">{formatDate(d.date)}</div>
+              <div key={d.date} className={`rounded-lg border bg-white p-2 text-sm ${d.date === j.date ? "border-brand" : "border-slate-200"}`}>
+                <div className="text-xs text-slate-500">{formatDate(d.date)}{d.date === j.date && " · your date"}</div>
                 {!d.runs || !a ? (
                   <div className="py-1 text-slate-400">Doesn&apos;t run</div>
                 ) : (
                   <>
-                    <div className={`font-semibold ${availTone(a.status)}`}>{a.label}</div>
+                    <div className={`font-semibold ${availTone(a.status)}`}>{availText(a)}</div>
                     {a.status === "WL" && <div className="text-[11px] text-slate-500">{pct(a.chance)} chance</div>}
                     {a.bookable ? (
-                      <Link href={bookHref} className="btn-primary mt-1.5 w-full py-1 text-xs">Book now</Link>
+                      <Link href={bookHref(cls, d.date)} className="btn-primary mt-1.5 w-full py-1 text-xs">Book</Link>
                     ) : (
                       a.note && <div className="mt-1 text-[11px] leading-tight text-slate-500">{a.note}</div>
                     )}

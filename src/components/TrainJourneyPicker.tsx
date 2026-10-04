@@ -4,30 +4,36 @@ import { useRouter } from "next/navigation";
 import { BOOKING_WINDOW_DAYS, CLASSES, QUOTAS, type ClassCode, type Quota } from "@/lib/constants";
 import { addDays } from "@/lib/dates";
 
-type Halt = { code: string; name: string; seq: number };
+type Halt = { code: string; name: string; seq: number; day: number };
 
-/** Pick boarding/destination halts of one train and jump to search results for that journey. */
+/** Pick boarding/destination halts of one train and book it directly (or compare with other trains). */
 export function TrainJourneyPicker({
-  train, halts, classes, defaultFrom, defaultTo, today, defaultDate,
+  train, halts, classes, defaultFrom, defaultTo, today, defaultDate, defaultQuota = "GN", runsOn,
 }: {
   train: string; halts: Halt[]; classes: ClassCode[]; defaultFrom?: string; defaultTo?: string; today: string; defaultDate: string;
+  defaultQuota?: Quota; runsOn: number;
 }) {
   const router = useRouter();
   const [from, setFrom] = useState(defaultFrom ?? halts[0].code);
   const [to, setTo] = useState(defaultTo ?? halts[halts.length - 1].code);
   const [date, setDate] = useState(defaultDate);
   const [cls, setCls] = useState<ClassCode>(classes[0]);
-  const [quota, setQuota] = useState<Quota>("GN");
+  const [quota, setQuota] = useState<Quota>(defaultQuota);
   const fromSeq = halts.find((h) => h.code === from)?.seq ?? 0;
   const toOptions = halts.filter((h) => h.seq > fromSeq);
   const validTo = toOptions.some((h) => h.code === to) ? to : toOptions[toOptions.length - 1]?.code;
+  const params = () => new URLSearchParams({ train, from, to: validTo, date, cls, quota });
+  // Running days are stored for the origin; this is a quick hint for the boarding date (the booking page re-validates).
+  const fromDay = halts.find((h) => h.code === from)?.day ?? 1;
+  const originDow = (new Date(`${date}T00:00:00Z`).getUTCDay() - (fromDay - 1) + 70) % 7;
+  const runs = (runsOn & (1 << originDow)) !== 0;
 
   return (
     <form
       className="space-y-3"
       onSubmit={(e) => {
         e.preventDefault();
-        router.push(`/search?${new URLSearchParams({ from, to: validTo, date, quota, cls })}#${train}`);
+        router.push(`/book?${params()}`);
       }}
     >
       <div>
@@ -60,7 +66,15 @@ export function TrainJourneyPicker({
           {Object.entries(QUOTAS).map(([k, q]) => <option key={k} value={k}>{q.name}</option>)}
         </select>
       </div>
-      <button className="btn-primary w-full">Check availability</button>
+      {!runs && <p className="text-xs text-bad">This train doesn&apos;t run from {from} on the selected date.</p>}
+      <button className="btn-primary w-full" disabled={!runs}>Book now</button>
+      <button
+        type="button"
+        className="btn-secondary w-full"
+        onClick={() => router.push(`/search?${new URLSearchParams({ from, to: validTo, date, quota, cls })}#${train}`)}
+      >
+        Compare with other trains
+      </button>
     </form>
   );
 }

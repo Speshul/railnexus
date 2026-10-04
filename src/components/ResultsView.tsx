@@ -1,10 +1,9 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { ArrowRight, Clock, Loader2, SlidersHorizontal } from "lucide-react";
 import type { ConnectionResult, JourneyResult, SearchResponse } from "@/lib/search";
 import { CLASS_ORDER, TRAIN_TYPE_FILTERS, type ClassCode } from "@/lib/constants";
-import { formatDate, formatDuration } from "@/lib/dates";
+import { formatDuration } from "@/lib/dates";
 import { TrainCard } from "./TrainCard";
 
 const SLOTS = [
@@ -179,7 +178,18 @@ export function ResultsView({ data }: { data: SearchResponse }) {
         {tab === "direct" ? (
           filtered.length ? (
             <div className="space-y-3">
-              <p className="text-sm text-slate-500">Showing {filtered.length} of {results.length} trains</p>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <p className="text-sm text-slate-500">Showing {filtered.length} of {results.length} trains. Pick a class on any train to book it.</p>
+                <details className="text-sm">
+                  <summary className="cursor-pointer text-brand hover:underline">What do these terms mean?</summary>
+                  <dl className="card mt-2 max-w-md space-y-1.5 p-3 text-xs text-slate-600">
+                    <div><dt className="inline font-semibold text-ok">Seats available</dt><dd className="inline">: you get a confirmed seat/berth straight away.</dd></div>
+                    <div><dt className="inline font-semibold text-warn">RAC</dt><dd className="inline"> (Reservation Against Cancellation): you can board, sharing a side berth; usually upgraded to a full berth.</dd></div>
+                    <div><dt className="inline font-semibold text-bad">Waitlist #n</dt><dd className="inline">: you&apos;re in a queue for cancellations. The % shows how likely it is to confirm.</dd></div>
+                    <div><dt className="inline font-semibold">Classes</dt><dd className="inline">: 1A/2A/3A are AC sleepers (fewer berths per bay = more comfort), SL is non-AC sleeper, CC/EC are AC chair cars, 2S is non-AC seating.</dd></div>
+                  </dl>
+                </details>
+              </div>
               {filtered.map((j) => (
                 <TrainCard key={j.number} j={j} quota={params.quota} initialClass={classes.size === 1 ? [...classes][0] : null} />
               ))}
@@ -226,45 +236,32 @@ function Connections({ data }: { data: SearchResponse }) {
   if (loaded.error) return <div className="card p-6 text-sm text-bad">Couldn&apos;t load connecting journeys.</div>;
   if (!loaded.list!.length) return <div className="card p-8 text-center text-slate-600">No one-change journeys found for this date.</div>;
 
+  const noDirect = data.results.length === 0;
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-slate-500">
-        Two separate tickets with one change of train. Layovers between 45 minutes and 10 hours, fastest first.
-      </p>
-      {loaded.list!.map((c) => (
-        <div key={c.legs[0].number + c.legs[1].number} className="card overflow-hidden">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-slate-100 bg-slate-50 px-4 py-2 text-sm">
-            <span className="font-semibold">{formatDuration(c.duration)} total</span>
+    <div className="space-y-6">
+      <div className={`rounded-lg border p-3 text-sm ${noDirect ? "border-amber-200 bg-amber-50 text-amber-900" : "border-slate-200 bg-white text-slate-600"}`}>
+        {noDirect && <p className="font-semibold">No train runs directly from {data.fromStation?.name} to {data.toStation?.name} on this date.</p>}
+        <p>
+          These journeys use <b>two trains</b> with one change. You book each train separately: pick a class on Leg 1,
+          then come back and book Leg 2. Layovers are between 45 minutes and 10 hours, fastest journeys first.
+        </p>
+      </div>
+      {loaded.list!.map((c, n) => (
+        <section key={c.legs[0].number + c.legs[1].number} className="rounded-xl border border-slate-300 bg-slate-100/60 p-3">
+          <header className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-sm">
+            <span className="font-semibold">Option {n + 1}: {formatDuration(c.duration)} total</span>
             <span className="flex items-center gap-1 text-slate-600">
-              {c.legs[0].from.code} <ArrowRight className="size-3" /> <b>{c.via.name}</b> ({c.via.code}) <ArrowRight className="size-3" /> {c.legs[1].to.code}
+              {c.legs[0].from.code} <ArrowRight className="size-3" /> change at <b>{c.via.name}</b> ({c.via.code}) <ArrowRight className="size-3" /> {c.legs[1].to.code}
             </span>
-            <span className="ml-auto flex items-center gap-1 text-warn"><Clock className="size-3.5" /> {formatDuration(c.layover)} layover</span>
-          </div>
-          <div className="divide-y divide-slate-100">
-            {c.legs.map((leg, i) => (
-              <div key={i} className="grid gap-2 px-4 py-3 sm:grid-cols-[1fr_auto] sm:items-center">
-                <div>
-                  <div className="text-xs font-semibold uppercase text-slate-500">Leg {i + 1}</div>
-                  <Link href={`/train/${leg.number}?from=${leg.from.code}&to=${leg.to.code}`} className="font-semibold hover:underline">
-                    <span className="font-mono">{leg.number}</span> {leg.name}
-                  </Link>
-                  <div className="text-sm text-slate-600">
-                    {leg.from.time} {leg.from.name} ({formatDate(leg.date)}) → {leg.to.time} {leg.to.name} ({formatDate(leg.arrivalDate)}) · {formatDuration(leg.duration)}
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {leg.classes.filter((x) => x.avail.bookable).slice(0, 4).map((x) => (
-                    <Link key={x.cls}
-                      href={`/book?${new URLSearchParams({ train: leg.number, from: leg.from.code, to: leg.to.code, date: leg.date, cls: x.cls, quota: params.quota })}`}
-                      className="rounded-md border border-slate-200 px-2 py-1 text-xs hover:border-brand">
-                      <b>{x.cls}</b> <span className={x.avail.status === "AVAILABLE" ? "text-ok" : x.avail.status === "RAC" ? "text-warn" : "text-bad"}>{x.avail.label}</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+          </header>
+          <p className="mb-1 px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Leg 1</p>
+          <TrainCard j={c.legs[0]} quota={params.quota} anchor={false} />
+          <p className="my-2 flex items-center gap-1.5 px-1 text-sm text-warn">
+            <Clock className="size-4" /> {formatDuration(c.layover)} wait at {c.via.name}
+          </p>
+          <p className="mb-1 px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Leg 2</p>
+          <TrainCard j={c.legs[1]} quota={params.quota} anchor={false} />
+        </section>
       ))}
     </div>
   );

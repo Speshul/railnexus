@@ -68,6 +68,10 @@ export function createUser(u: { username: string; email: string; full_name: stri
   return Number(info.lastInsertRowid);
 }
 
-export function userExists(username: string, email: string) {
-  return !!appDb().prepare("SELECT 1 FROM users WHERE username = ? OR email = ?").get(username, email);
+export function takenFields(username: string, email: string) {
+  const db = appDb();
+  return {
+    username: !!db.prepare("SELECT 1 FROM users WHERE username = ?").get(username),
+    email: !!email && !!db.prepare("SELECT 1 FROM users WHERE email = ?").get(email),
+  };
 }
