@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+/* Functional base theme. Visual design pass comes in a later phase. */
+@theme inline {
+  --color-brand: #0b3a75;
+  --color-brand-dark: #072a56;
+  --color-brand-light: #e8f0fb;
+  --color-accent: #f26b1d;
+  --color-accent-dark: #d4580f;
+  --color-ok: #15803d;
+  --color-warn: #b45309;
+  --color-bad: #b91c1c;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: #f4f6fa;
+  color: #172033;
+}
+
+@utility card {
+  @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-accent text-white hover:bg-accent-dark;
+}
+@utility btn-secondary {
+  @apply btn border border-slate-300 bg-white text-slate-800 hover:bg-slate-50;
+}
+@utility btn-brand {
+  @apply btn bg-brand text-white hover:bg-brand-dark;
+}
+@utility input {
+  @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20;
+}
+@utility label {
+  @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500;
+}
+.leaflet-container {
+  font-family: inherit;
+}
