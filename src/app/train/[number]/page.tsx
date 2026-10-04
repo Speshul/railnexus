@@ -79,6 +79,7 @@ export default async function TrainPage({ params, searchParams }: PageProps<"/tr
             <div className="card p-4">
               <h2 className="mb-3 font-semibold">Book this train</h2>
               <TrainJourneyPicker
+                key={`${train.number}-${from?.code ?? ""}-${to?.code ?? ""}`}
                 train={train.number}
                 halts={halts.map((h) => ({ code: h.code, name: h.name, seq: h.seq, day: h.day }))}
                 classes={train.classes.filter((c) => c !== "UR")}

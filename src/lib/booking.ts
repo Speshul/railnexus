@@ -110,6 +110,11 @@ export function createDraftBooking(user: User, input: BookingInput, v: Extract<V
   };
   db.exec("BEGIN");
   try {
+    // "Edit passengers" creates a fresh hold; release the old one so seats aren't held twice.
+    db.prepare(
+      `UPDATE bookings SET status = 'CANCELLED'
+       WHERE user_id = ? AND status = 'PENDING_PAYMENT' AND train_number = ? AND train_start_date = ? AND class_code = ? AND quota = ?`
+    ).run(user.id, input.train, segment.startDate, input.cls, input.quota);
     db.prepare(
       `INSERT INTO bookings (id, user_id, status, train_number, from_code, to_code, boarding_code, journey_date, train_start_date,
          class_code, quota, seats, contact_email, contact_phone, options, fare, total_paise, created_at, expires_at)

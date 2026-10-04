@@ -12,7 +12,9 @@ export function parseSearchParams(sp: Record<string, string | string[] | undefin
   const from = get("from").toUpperCase();
   const to = get("to").toUpperCase();
   if (!from || !to) return null;
-  const date = isValidDate(get("date")) ? get("date") : todayIST();
+  // Missing, malformed or past dates fall back to today.
+  const today = todayIST();
+  const date = isValidDate(get("date")) && get("date") >= today ? get("date") : today;
   const quota = (get("quota") in QUOTAS ? get("quota") : "GN") as Quota;
   const cls = CLASS_ORDER.includes(get("cls") as ClassCode) ? (get("cls") as ClassCode) : undefined;
   return { from, to, date, quota, cls, nearby: get("nearby") === "1" };

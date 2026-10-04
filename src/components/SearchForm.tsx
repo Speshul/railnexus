@@ -73,12 +73,10 @@ export function SearchForm({ defaults = {}, today, compact = false }: { defaults
         </div>
       </div>
       <div className={compact ? "contents" : "flex flex-wrap items-center justify-between gap-3"}>
-        {!compact && (
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" checked={nearby} onChange={(e) => setNearby(e.target.checked)} className="size-4 accent-brand" />
-            Include nearby stations (within 30 km)
-          </label>
-        )}
+        <label className={`flex items-center gap-2 text-sm text-slate-700 ${compact ? "md:order-last md:col-span-full" : ""}`}>
+          <input type="checkbox" checked={nearby} onChange={(e) => setNearby(e.target.checked)} className="size-4 accent-brand" />
+          Include nearby stations (within 30 km)
+        </label>
         <button className={`btn-primary ${compact ? "h-[38px]" : "px-8 py-3 text-base"}`}>
           <Search className="size-4" /> {compact ? "Modify" : "Search trains"}
         </button>

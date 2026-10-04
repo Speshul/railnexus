@@ -10,7 +10,7 @@ import { availText, availTone, inr, pct } from "@/lib/format";
 import { RunDays } from "./RunDays";
 
 export function TrainCard({ j, quota, initialClass, anchor = true }: { j: JourneyResult; quota: Quota; initialClass?: ClassCode | null; anchor?: boolean }) {
-  const [calendarFor, setCalendarFor] = useState<ClassCode | null>(initialClass ?? null);
+  const [calendarFor, setCalendarFor] = useState<ClassCode | null>(null);
   const bookHref = (cls: ClassCode, date = j.date) =>
     `/book?${new URLSearchParams({ train: j.number, from: j.from.code, to: j.to.code, date, cls, quota })}`;
   const routeHref = `/train/${j.number}?${new URLSearchParams({ from: j.from.code, to: j.to.code, date: j.date, quota })}`;
@@ -55,7 +55,7 @@ export function TrainCard({ j, quota, initialClass, anchor = true }: { j: Journe
             {j.classes.map((c) => (
               <div
                 key={c.cls}
-                className={`flex flex-col rounded-lg border p-3 ${calendarFor === c.cls ? "border-brand ring-1 ring-brand" : "border-slate-200"}`}
+                className={`flex flex-col rounded-lg border p-3 ${calendarFor === c.cls || initialClass === c.cls ? "border-brand ring-1 ring-brand" : "border-slate-200"}`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>

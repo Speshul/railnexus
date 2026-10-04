@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Clock, Footprints, Loader2, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, ChevronDown, Clock, Footprints, Loader2, SlidersHorizontal } from "lucide-react";
 import type { AlternativeRoute, ConnectionResult, JourneyResult, SearchResponse } from "@/lib/search";
-import { CLASS_ORDER, TRAIN_TYPE_FILTERS, type ClassCode, type Quota } from "@/lib/constants";
+import { CLASSES, CLASS_ORDER, TRAIN_TYPE_FILTERS, type ClassCode, type Quota } from "@/lib/constants";
 import { formatDate, formatDuration } from "@/lib/dates";
 import { inr } from "@/lib/format";
 import { TrainCard } from "./TrainCard";
@@ -50,7 +50,9 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
   const { results, params } = data;
   const [tab, setTab] = useState<"direct" | "connect">(results.length ? "direct" : "connect");
   const [types, setTypes] = useState<Set<string>>(new Set());
-  const [classes, setClasses] = useState<Set<ClassCode>>(new Set(params.cls ? [params.cls] : []));
+  // The class chosen in the search form pre-filters results, unless no train here offers it.
+  const clsOffered = !!params.cls && results.some((r) => r.classes.some((c) => c.cls === params.cls));
+  const [classes, setClasses] = useState<Set<ClassCode>>(new Set(params.cls && clsOffered ? [params.cls] : []));
   const [depSlots, setDepSlots] = useState<Set<string>>(new Set());
   const [arrSlots, setArrSlots] = useState<Set<string>>(new Set());
   const [onlyAvail, setOnlyAvail] = useState(false);
@@ -109,7 +111,7 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
             <Check checked={hideUnreserved} onChange={() => setHideUnreserved(!hideUnreserved)}>Hide unreserved trains</Check>
           )}
         </div>
-        {presentClasses.length > 1 && (
+        {(presentClasses.length > 1 || classes.size > 0) && (
           <div>
             <h3 className="label">Class</h3>
             {presentClasses.map((c) => (
@@ -180,6 +182,11 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
         {tab === "direct" ? (
           filtered.length ? (
             <div className="space-y-3">
+              {params.cls && !clsOffered && (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                  None of these trains has {CLASSES[params.cls].name} ({params.cls}), so all classes are shown.
+                </p>
+              )}
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <p className="text-sm text-slate-500">Showing {filtered.length} of {results.length} trains. Pick a class on any train to book it.</p>
                 <details className="text-sm">
@@ -239,7 +246,13 @@ function Connections({ data, alternatives, nearbyHref }: { data: SearchResponse;
   const noDirect = data.results.length === 0;
   const nearby = alternatives.length > 0 && <NearbyAlternatives data={data} alternatives={alternatives} nearbyHref={nearbyHref} />;
 
-  if (!loaded) return <div className="card flex items-center gap-2 p-6 text-sm text-slate-600"><Loader2 className="size-4 animate-spin" /> Finding journeys with one change…</div>;
+  if (!loaded)
+    return (
+      <div className="space-y-3">
+        {nearby}
+        <div className="card flex items-center gap-2 p-6 text-sm text-slate-600"><Loader2 className="size-4 animate-spin" /> Finding journeys with one change…</div>
+      </div>
+    );
   if (loaded.error) return <div className="card p-6 text-sm text-bad">Couldn&apos;t load journeys with a change.</div>;
   if (!loaded.list!.length)
     return (
@@ -334,17 +347,20 @@ function NearbyAlternatives({ data, alternatives, nearbyHref }: { data: SearchRe
   const toChanged = best.to.code !== params.to;
   return (
     <details className="group overflow-hidden rounded-xl border border-brand/30 bg-brand-light">
-      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-2 gap-y-1 px-4 py-3 text-sm">
-        <Footprints className="size-4 shrink-0 text-brand" />
-        <span>
+      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">
+        <Footprints className="size-5 shrink-0 text-brand" />
+        <span className="min-w-0 flex-1 basis-56">
           <b>Direct trains are available from nearby stations.</b>{" "}
           {fromChanged ? `${best.from.name} (${kmLabel(best.from.km)} away)` : best.from.name} →{" "}
           {toChanged ? `${best.to.name} (${kmLabel(best.to.km)} from ${toStation?.name})` : best.to.name} has {best.count} direct{" "}
           {best.count === 1 ? "train" : "trains"}
           {alternatives.length > 1 && <>, plus {alternatives.length - 1} more nearby {alternatives.length === 2 ? "option" : "options"}</>}.
         </span>
-        <span className="ml-auto font-semibold text-brand group-open:hidden">Show options</span>
-        <span className="ml-auto hidden font-semibold text-brand group-open:inline">Hide</span>
+        <span className="btn-brand w-full shrink-0 py-1.5 sm:w-auto">
+          <span className="group-open:hidden">See {alternatives.length} direct {alternatives.length === 1 ? "option" : "options"}</span>
+          <span className="hidden group-open:inline">Hide options</span>
+          <ChevronDown className="size-4 transition group-open:rotate-180" />
+        </span>
       </summary>
       <div className="bg-white">
       <p className="border-t border-slate-100 px-4 pt-2 text-xs text-slate-500">

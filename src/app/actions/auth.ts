@@ -1,15 +1,11 @@
 "use server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { safeNext } from "@/lib/redirect";
 import { createSession, createUser, destroySession, findUserForLogin, takenFields, verifyPassword } from "@/lib/auth";
 
 export type FormState = { error?: string; fieldErrors?: Record<string, string>; values?: Record<string, string> } | undefined;
 
-// Only allow redirects back into this site.
-const safeNext = (v: FormDataEntryValue | null) => {
-  const s = typeof v === "string" ? v : "";
-  return s.startsWith("/") && !s.startsWith("//") ? s : "/";
-};
 
 export async function login(_: FormState, form: FormData): Promise<FormState> {
   const identifier = String(form.get("identifier") ?? "").trim();

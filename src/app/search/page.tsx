@@ -22,6 +22,8 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
       </div>
     );
   }
+  // Client components (form state, tabs, filters) must reset when the search changes via in-app links.
+  const searchKey = JSON.stringify(params);
   const data = searchJourneys(params);
   const { fromStation, toStation } = data;
   // Few or no direct trains between the exact stations: suggest nearby station pairs that have some.
@@ -41,6 +43,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
     <div className="mx-auto max-w-6xl px-4 py-6">
       <div className="card mb-4 p-4">
         <SearchForm
+          key={searchKey}
           compact
           today={today}
           defaults={{
@@ -56,6 +59,8 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
 
       {!fromStation || !toStation ? (
         <div className="card p-8 text-center text-slate-600">Unknown station code. Please pick stations from the suggestions.</div>
+      ) : fromStation.code === toStation.code ? (
+        <div className="card p-8 text-center text-slate-600">From and To are the same station. Please choose a different destination.</div>
       ) : (
         <>
           <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
@@ -87,7 +92,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
               </Link>
             </nav>
           </div>
-          <ResultsView data={data} alternatives={alternatives} nearbyHref={`${qs(params.date)}&nearby=1`} />
+          <ResultsView key={searchKey} data={data} alternatives={alternatives} nearbyHref={`${qs(params.date)}&nearby=1`} />
         </>
       )}
     </div>

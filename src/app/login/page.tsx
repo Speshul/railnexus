@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/AuthForms";
 import { getUser } from "@/lib/auth";
+import { safeNext } from "@/lib/redirect";
 
 export const metadata: Metadata = { title: "Sign in" };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const sp = await searchParams;
-  const next = typeof sp.next === "string" && sp.next.startsWith("/") ? sp.next : "/";
+  const next = safeNext(sp.next);
   if (await getUser()) redirect(next);
   return (
     <div className="mx-auto max-w-md px-4 py-10">
