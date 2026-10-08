@@ -14,7 +14,8 @@ export function isHinglish(text: string) {
 function resolveStation(name: string | null | undefined): { station: Station; city: boolean } | null {
   if (!name) return null;
   const q = name.trim();
-  if (/^[A-Za-z]{2,5}$/.test(q)) {
+  // Treat it as a station code only when it looks like one (e.g. "NDLS"), not a spoken word like "Goa".
+  if (/^[A-Z]{2,5}$/.test(q)) {
     const byCode = getStation(q);
     if (byCode && byCode.train_count > 0) return { station: byCode, city: false };
   }
@@ -66,7 +67,7 @@ export function resolveIntent(intent: VoiceIntent, ctx: VoiceContext, heard: str
   const hi = isHinglish(heard);
   const say = (en: string, hin: string) => (hi ? hin : en);
   const reply = (fallback: string) => intent.reply?.trim() || fallback;
-  const needSearch = () => ({ reply: say("Search for trains first, then I can do that.", "Pehle trains search karo, phir main ye kar dunga."), actions: [] });
+  const needSearch = () => ({ reply: say("Search for trains first, then I can do that.", "Pehle trains search kijiye, phir ye ho jayega."), actions: [] });
   const needBooking = () => ({
     reply: say("That works on the passenger details page. Pick a train and class first.", "Ye passenger details page pe hota hai. Pehle train aur class chuno."),
     actions: [],
@@ -92,7 +93,7 @@ export function resolveIntent(intent: VoiceIntent, ctx: VoiceContext, heard: str
         from: from.station.code, to: to.station.code, date, quota: intent.quota, cls: intent.cls, nearby: from.city || to.city,
       });
       const what = `${from.station.name} → ${to.station.name}, ${formatDate(date)}${intent.cls ? `, ${CLASSES[intent.cls].name}` : ""}`;
-      return { reply: reply(say(`Searching ${what}.`, `${what} ke trains dhoond raha hoon.`)), actions: [{ type: "navigate", href }] };
+      return { reply: reply(say(`Searching ${what}.`, `${what} ke trains dhoondh rahe hain.`)), actions: [{ type: "navigate", href }] };
     }
 
     case "change_date": {
@@ -100,7 +101,7 @@ export function resolveIntent(intent: VoiceIntent, ctx: VoiceContext, heard: str
       const date = validDate(intent.date);
       if (!date) return { reply: say("That date can't be booked.", "Us date ki booking nahi ho sakti."), actions: [] };
       return {
-        reply: reply(say(`Showing trains for ${formatDate(date)}.`, `${formatDate(date)} ke trains dikha raha hoon.`)),
+        reply: reply(say(`Showing trains for ${formatDate(date)}.`, `${formatDate(date)} ke trains dikha rahe hain.`)),
         actions: [{ type: "navigate", href: searchHref({ ...ctx.search, date }) }],
       };
     }
@@ -115,7 +116,7 @@ export function resolveIntent(intent: VoiceIntent, ctx: VoiceContext, heard: str
       if (!offered.includes(cls)) return { reply: say(`${t.name} doesn't have ${cls}. It has ${offered.join(", ")}.`, `${t.name} mein ${cls} nahi hai. Isme ${offered.join(", ")} hai.`), actions: [] };
       const q = new URLSearchParams({ train: t.n, from: t.from, to: t.to, date: t.date, cls, quota: intent.quota || ctx.search.quota || "GN" });
       return {
-        reply: reply(say(`Booking ${t.n} ${t.name} in ${cls}. Add passengers next.`, `${t.n} ${t.name}, ${cls} book kar raha hoon. Ab passengers batao.`)),
+        reply: reply(say(`Booking ${t.n} ${t.name} in ${cls}. Add passengers next.`, `${t.n} ${t.name}, ${cls} book kar rahe hain. Ab passengers batayein.`)),
         actions: [{ type: "navigate", href: `/book?${q}` }],
       };
     }
@@ -127,7 +128,7 @@ export function resolveIntent(intent: VoiceIntent, ctx: VoiceContext, heard: str
     }
     case "filter":
       if (!ctx.search) return needSearch();
-      return { reply: reply(say("Showing only trains with confirmed seats.", "Sirf confirm seat wali trains dikha raha hoon.")), actions: [{ type: "filter", onlyAvailable: intent.only_available ?? true }] };
+      return { reply: reply(say("Showing only trains with confirmed seats.", "Sirf confirm seat wali trains dikha rahe hain.")), actions: [{ type: "filter", onlyAvailable: intent.only_available ?? true }] };
     case "show_tab":
       if (!ctx.search) return needSearch();
       return {
@@ -136,19 +137,19 @@ export function resolveIntent(intent: VoiceIntent, ctx: VoiceContext, heard: str
       };
     case "select_option":
       if (!ctx.search) return needSearch();
-      return { reply: reply(say(`Opening option ${intent.option_index ?? 1}.`, `Option ${intent.option_index ?? 1} khol raha hoon.`)), actions: [{ type: "tab", tab: "connect" }, { type: "select_option", index: Math.max(1, intent.option_index ?? 1) }] };
+      return { reply: reply(say(`Opening option ${intent.option_index ?? 1}.`, `Option ${intent.option_index ?? 1} khol rahe hain.`)), actions: [{ type: "tab", tab: "connect" }, { type: "select_option", index: Math.max(1, intent.option_index ?? 1) }] };
 
     case "add_passengers": {
       if (!ctx.booking) return needBooking();
       const passengers = (intent.passengers ?? []).filter((p) => p.name.trim());
       if (!passengers.length) return { reply: say("Who should I add? Say a name, age and gender.", "Kisko add karun? Naam, umar aur gender boliye."), actions: [] };
-      return { reply: reply(say(`Adding ${passengers.map((p) => p.name).join(", ")}.`, `${passengers.map((p) => p.name).join(", ")} ko add kar raha hoon.`)), actions: [{ type: "add_passengers", passengers }] };
+      return { reply: reply(say(`Adding ${passengers.map((p) => p.name).join(", ")}.`, `${passengers.map((p) => p.name).join(", ")} ko add kar rahe hain.`)), actions: [{ type: "add_passengers", passengers }] };
     }
     case "remove_passenger": {
       if (!ctx.booking) return needBooking();
       const name = intent.passengers?.[0]?.name;
       if (!name) return { reply: say("Who should I remove?", "Kisko hataun?"), actions: [] };
-      return { reply: reply(say(`Removing ${name}.`, `${name} ko hata raha hoon.`)), actions: [{ type: "remove_passenger", name }] };
+      return { reply: reply(say(`Removing ${name}.`, `${name} ko hata rahe hain.`)), actions: [{ type: "remove_passenger", name }] };
     }
     case "set_option": {
       if (!ctx.booking) return needBooking();
@@ -160,25 +161,25 @@ export function resolveIntent(intent: VoiceIntent, ctx: VoiceContext, heard: str
     }
     case "continue":
       if (!ctx.booking) return needBooking();
-      return { reply: reply(say("Taking you to the review page.", "Review page pe le ja raha hoon.")), actions: [{ type: "continue" }] };
+      return { reply: reply(say("Taking you to the review page.", "Review page pe le ja rahe hain.")), actions: [{ type: "continue" }] };
 
     case "navigate": {
       const simple: Record<string, string> = { home: "/", bookings: "/account", trains: "/trains", stations: "/stations", login: "/login", register: "/register", back: "back" };
       if (intent.page && intent.page in simple) {
         if (intent.page === "bookings" && !ctx.loggedIn) return { reply: say("Please sign in to see your bookings.", "Bookings dekhne ke liye pehle login karo."), actions: [{ type: "navigate", href: "/login?next=/account" }] };
-        return { reply: reply(say("Opening.", "Khol raha hoon.")), actions: [{ type: "navigate", href: simple[intent.page] }] };
+        return { reply: reply(say("Opening.", "Khol rahe hain.")), actions: [{ type: "navigate", href: simple[intent.page] }] };
       }
       if (intent.page === "train_route") {
         const listed = ctx.trains ? pickTrain(intent.train, ctx.trains) : null;
         const number = listed?.n ?? (intent.train && /^\d{5}$/.test(intent.train) ? intent.train : lookupTrains(intent.train ?? "", 1)[0]?.number);
         if (!number) return { reply: say("Which train's route?", "Kis train ka route?"), actions: [] };
         const qs = listed ? `?${new URLSearchParams({ from: listed.from, to: listed.to, date: listed.date })}` : "";
-        return { reply: reply(say(`Opening the route of ${number}.`, `${number} ka route khol raha hoon.`)), actions: [{ type: "navigate", href: `/train/${number}${qs}` }] };
+        return { reply: reply(say(`Opening the route of ${number}.`, `${number} ka route khol rahe hain.`)), actions: [{ type: "navigate", href: `/train/${number}${qs}` }] };
       }
       if (intent.page === "station") {
         const s = resolveStation(intent.station);
         if (!s) return { reply: say("Which station?", "Kaunsa station?"), actions: [] };
-        return { reply: reply(say(`Opening ${s.station.name}.`, `${s.station.name} khol raha hoon.`)), actions: [{ type: "navigate", href: `/station/${s.station.code}` }] };
+        return { reply: reply(say(`Opening ${s.station.name}.`, `${s.station.name} khol rahe hain.`)), actions: [{ type: "navigate", href: `/station/${s.station.code}` }] };
       }
       return { reply: say("Where should I go?", "Kahan jaana hai?"), actions: [] };
     }

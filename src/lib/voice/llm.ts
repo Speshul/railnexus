@@ -20,7 +20,7 @@ Places: write place names in English as railway users know them (e.g. "दिल
 Intents:
 - search: find trains (from, to, date, optional cls/quota). If the user only gives a destination and the page already has a search, reuse its "from".
 - book: book a specific train from the visible list. Set train to its number from context.trains (resolve "first", "cheapest", "fastest", "earliest", "Rajdhani", etc. using the list) and cls if said.
-- change_date: same search on another date ("next day", "agle din", "Friday ko").
+- change_date: same search on another date ("Friday ko"). "next day"/"agle din" = context.search.date + 1, "previous day" = minus 1.
 - sort: by departure|arrival|duration|fare ("sabse sasta"=fare, "sabse fast"=duration).
 - filter: only_available=true for "only confirmed seats".
 - show_tab: direct|connections|nearby ("change wali trains"=connections, "paas ke stations"=nearby).
@@ -33,7 +33,11 @@ Intents:
 - help: user asks what they can say.
 - unknown: anything else, including payment requests. You can never pay or enter card/UPI details; say the user must press Pay themselves.
 
-"reply": one short sentence confirming what you are doing, in the user's language style (Hinglish in Roman script if they used Hindi/Hinglish). Use null for fields that don't apply.`;
+"reply": one short sentence confirming what you are doing, in the user's language. If the utterance contains ANY Hindi words
+(se, kal, mein, karo, chahiye, dikhao, ...) or Devanagari, reply in Hinglish written in Roman script; only reply in English if the user spoke only English.
+In Hindi, refer to yourself with the polite gender-neutral plural ("dhoondh rahe hain", "kar rahe hain"), never "raha hoon"/"rahi hoon". Use null for fields that don't apply.
+"speech": exactly the same message as "reply", written for a text-to-speech voice. If the reply is Hindi/Hinglish, write it in Devanagari script
+(English words like train names, "sleeper", "AC" may stay in Latin or be transliterated naturally). If the reply is English, repeat it unchanged.`;
 }
 
 function userMessage(text: string, ctx: VoiceContext, alternatives: string[] = []) {
@@ -46,7 +50,7 @@ const S = (type: string, extra: object = {}) => ({ type, nullable: true, ...extr
 const GEMINI_SCHEMA = {
   type: "OBJECT",
   properties: {
-    intent: { type: "STRING", enum: intentSchema.shape.intent.options },
+    intent: { type: "STRING", enum: intentSchema.shape.intent.unwrap().options },
     from: S("STRING"), to: S("STRING"), date: S("STRING"),
     cls: S("STRING", { enum: ["1A", "2A", "3A", "SL", "CC", "EC", "2S"] }),
     quota: S("STRING", { enum: ["GN", "TQ", "LD", "SS"] }),
@@ -66,6 +70,7 @@ const GEMINI_SCHEMA = {
     }),
     insurance: S("BOOLEAN"), auto_upgrade: S("BOOLEAN"), confirm_only: S("BOOLEAN"),
     reply: { type: "STRING" },
+    speech: { type: "STRING" },
   },
   required: [] as string[],
 };
@@ -90,17 +95,30 @@ function parseIntent(raw: string): VoiceIntent {
 async function gemini(text: string, ctx: VoiceContext, today: string, alts: string[]): Promise<VoiceIntent> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("no GEMINI_API_KEY");
-  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
-  const res = await withTimeout(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-goog-api-key": key },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemPrompt(today) }] },
-      contents: [{ role: "user", parts: [{ text: userMessage(text, ctx, alts) }] }],
-      generationConfig: { temperature: 0.1, responseMimeType: "application/json", responseSchema: GEMINI_SCHEMA },
-    }),
-  });
-  if (!res.ok) throw new Error(`gemini ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  // Measured on the free tier: 3.5 Flash with thinking off answers in ~1.3 s; 3.1 Flash-Lite ~3 s (used if
+  // the first model's daily quota is used up). 3.5 Flash-Lite took 8-15 s, too slow for conversation.
+  const models = (process.env.GEMINI_MODELS || "gemini-3.5-flash,gemini-3.1-flash-lite").split(",").map((m) => m.trim());
+  let res: Response | null = null;
+  for (const model of models) {
+    res = await withTimeout(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt(today) }] },
+        contents: [{ role: "user", parts: [{ text: userMessage(text, ctx, alts) }] }],
+        generationConfig: {
+          temperature: 0.1,
+          responseMimeType: "application/json",
+          responseSchema: GEMINI_SCHEMA,
+          thinkingConfig: { thinkingBudget: 0 }, // a lookup task: thinking only adds latency
+        },
+      }),
+    });
+    // Quota exhausted / model unavailable: try the next model.
+    if (res.ok || ![404, 429, 503].includes(res.status)) break;
+    console.warn(`[voice] gemini model ${model} unavailable (${res.status}), trying next`);
+  }
+  if (!res || !res.ok) throw new Error(`gemini ${res?.status}: ${res ? (await res.text()).slice(0, 200) : "no response"}`);
   const data = await res.json();
   const out = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("");
   if (!out) throw new Error("gemini: empty response");
@@ -121,7 +139,7 @@ async function groq(text: string, ctx: VoiceContext, today: string, alts: string
       messages: [
         {
           role: "system",
-          content: `${systemPrompt(today)}\nRespond with a single JSON object with keys: ${Object.keys(GEMINI_SCHEMA.properties).join(", ")}.`,
+          content: `${systemPrompt(today)}\nRespond with a single JSON object with keys: ${Object.keys(GEMINI_SCHEMA.properties).join(", ")}. "intent" must be exactly one of: ${intentSchema.shape.intent.unwrap().options.join(", ")}.`,
         },
         { role: "user", content: userMessage(text, ctx, alts) },
       ],
@@ -133,16 +151,37 @@ async function groq(text: string, ctx: VoiceContext, today: string, alts: string
 }
 
 /** Try each configured provider in order; returns null if none is configured or all fail. */
+const HEDGE_MS = 3000;
+
+/**
+ * Ask Gemini; if it hasn't answered within HEDGE_MS (free tier sometimes stalls), ask Groq too and take
+ * whichever valid answer arrives first. Returns null if no provider is configured or all fail.
+ */
 export async function llmIntent(text: string, ctx: VoiceContext, today: string, alts: string[] = []) {
-  for (const [name, fn] of [["gemini", gemini], ["groq", groq]] as const) {
-    try {
-      return { intent: await fn(text, ctx, today, alts), source: name };
-    } catch (e) {
-      const msg = (e as Error).message;
-      if (!msg.startsWith("no ")) console.warn(`[voice] ${name} failed: ${msg}`);
-    }
-  }
-  return null;
+  type Result = { intent: VoiceIntent; source: "gemini" | "groq" };
+  const attempt = (name: Result["source"], fn: typeof gemini): Promise<Result> =>
+    fn(text, ctx, today, alts)
+      .then((intent) => ({ intent, source: name }))
+      .catch((e: Error) => {
+        if (!e.message.startsWith("no ")) console.warn(`[voice] ${name} failed: ${e.message}`);
+        throw e;
+      });
+  const hasGemini = !!process.env.GEMINI_API_KEY;
+  const hasGroq = !!process.env.GROQ_API_KEY;
+  if (!hasGemini && !hasGroq) return null;
+  if (!hasGemini) return attempt("groq", groq).catch(() => null);
+
+  const first = attempt("gemini", gemini);
+  if (!hasGroq) return first.catch(() => null);
+  const backup = new Promise<Result>((resolve, reject) => {
+    // Start Groq after the hedge delay, or straight away if Gemini fails first.
+    const t = setTimeout(() => attempt("groq", groq).then(resolve, reject), HEDGE_MS);
+    first.catch(() => {
+      clearTimeout(t);
+      attempt("groq", groq).then(resolve, reject);
+    });
+  });
+  return Promise.any([first, backup]).catch(() => null);
 }
 
 export function hasLlm() {

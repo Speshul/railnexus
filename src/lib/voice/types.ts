@@ -22,26 +22,28 @@ export const intentSchema = z.object({
   intent: z.enum([
     "search", "book", "change_date", "sort", "filter", "show_tab", "select_option",
     "add_passengers", "remove_passenger", "set_option", "continue", "navigate", "help", "unknown",
-  ]),
+  ]).catch("unknown"),
   from: z.string().nullish(),
   to: z.string().nullish(),
   date: z.string().nullish(),
-  cls: z.enum(CLASS_CODES).nullish(),
-  quota: z.enum(QUOTA_CODES).nullish(),
+  cls: z.enum(CLASS_CODES).nullish().catch(null),
+  quota: z.enum(QUOTA_CODES).nullish().catch(null),
   train: z.string().nullish(),
-  page: z.enum(PAGES).nullish(),
+  page: z.enum(PAGES).nullish().catch(null),
   station: z.string().nullish(),
-  sort: z.enum(["departure", "arrival", "duration", "fare"]).nullish(),
+  sort: z.enum(["departure", "arrival", "duration", "fare"]).nullish().catch(null),
   only_available: z.boolean().nullish(),
-  tab: z.enum(["direct", "connections", "nearby"]).nullish(),
-  option_index: z.number().int().nullish(),
+  tab: z.enum(["direct", "connections", "nearby"]).nullish().catch(null),
+  option_index: z.number().int().nullish().catch(null),
   passengers: z
-    .array(z.object({ name: z.string(), age: z.number().int().nullish(), gender: z.enum(["M", "F", "T"]).nullish() }))
+    .array(z.object({ name: z.string(), age: z.number().int().nullish(), gender: z.enum(["M", "F", "T"]).nullish().catch(null) }))
     .nullish(),
   insurance: z.boolean().nullish(),
   auto_upgrade: z.boolean().nullish(),
   confirm_only: z.boolean().nullish(),
   reply: z.string().default(""),
+  /** reply for text-to-speech: Devanagari when Hindi, so a Hindi voice pronounces it properly */
+  speech: z.string().nullish(),
 });
 export type VoiceIntent = z.infer<typeof intentSchema>;
 
@@ -59,4 +61,4 @@ export type VoiceAction =
   | { type: "set_options"; insurance?: boolean; autoUpgrade?: boolean; confirmOnly?: boolean }
   | { type: "continue" };
 
-export type VoiceResponse = { reply: string; actions: VoiceAction[]; source: "gemini" | "groq" | "rules"; heard?: string };
+export type VoiceResponse = { reply: string; speech?: string; actions: VoiceAction[]; source: "gemini" | "groq" | "rules"; heard?: string };

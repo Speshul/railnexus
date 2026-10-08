@@ -95,6 +95,38 @@ function recordUntilPause(
   });
 }
 
+const DEVANAGARI = /[ऀ-ॿ]/;
+
+/**
+ * Best installed voice for Hindi ("hi") or Indian English ("en"). Neural voices sound far less robotic:
+ * Edge ships "Microsoft Swara/Madhur Online (Natural)", Chrome ships "Google हिन्दी".
+ */
+function pickVoice(voices: SpeechSynthesisVoice[], kind: "hi" | "en", preferred?: string | null) {
+  const lang = (v: SpeechSynthesisVoice) => v.lang.toLowerCase().replace("_", "-");
+  const pool = voices.filter((v) => (kind === "hi" ? lang(v).startsWith("hi") : lang(v) === "en-in"));
+  const fallback = kind === "en" ? voices.filter((v) => lang(v).startsWith("en")) : [];
+  const score = (v: SpeechSynthesisVoice) =>
+    (v.name === preferred ? 100 : 0) + (/natural/i.test(v.name) ? 30 : 0) + (/online/i.test(v.name) ? 20 : 0) +
+    (/google/i.test(v.name) ? 15 : 0) + (v.localService ? 0 : 5);
+  return [...(pool.length ? pool : fallback)].sort((a, b) => score(b) - score(a))[0] ?? null;
+}
+
+/**
+ * Run follow-up actions (e.g. "sort") once the URL has changed to `href` and the new page has mounted its
+ * handlers. Watching the full URL (not just the path) also covers search -> search with new query params.
+ */
+function runAfterNavigation(href: string, then: () => void) {
+  const target = new URL(href, window.location.origin);
+  const startedAt = Date.now();
+  const timer = setInterval(() => {
+    const here = window.location.pathname + window.location.search;
+    if (here === target.pathname + target.search || Date.now() - startedAt > 6000) {
+      clearInterval(timer);
+      setTimeout(then, 300);
+    }
+  }, 100);
+}
+
 const EXAMPLES = ["Kal Pune se Delhi sleeper", "Sabse sasti wali book karo 3A mein", "Agle din ke trains", "Meri bookings dikhao"];
 const MIC_DENIED = "Microphone permission was denied. Allow it in the address bar, or type your command below.";
 
@@ -115,9 +147,24 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
   const [reply, setReply] = useState("");
   const [error, setError] = useState("");
   const [typed, setTyped] = useState("");
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [hindiVoiceName, setHindiVoiceName] = useState<string | null>(() => readPref("voice-hindi"));
+  const hindiVoices = voices.filter((v) => v.lang.toLowerCase().startsWith("hi"));
+
+  // Browsers load voices asynchronously and announce it with "voiceschanged".
+  useEffect(() => {
+    const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
+    if (!synth) return;
+    const load = () => setVoices(synth.getVoices());
+    synth.addEventListener("voiceschanged", load);
+    const t = setTimeout(load, 0);
+    return () => {
+      clearTimeout(t);
+      synth.removeEventListener("voiceschanged", load);
+    };
+  }, []);
   const recRef = useRef<SpeechRec | null>(null);
   const stopRecordingRef = useRef<(() => void) | null>(null);
-  const pendingRef = useRef<VoiceAction[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Is enhanced (Whisper) recognition configured on the server?
@@ -131,17 +178,6 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
   const hasBrowserRec = typeof window !== "undefined" && !!getRecognition();
   const useEnhanced = (mode === "enhanced" && enhancedOk !== false) || !hasBrowserRec;
 
-  // Actions queued before a navigation (e.g. "sort") run once the new page has mounted its handlers.
-  useEffect(() => {
-    if (!pendingRef.current.length) return;
-    const t = setTimeout(() => {
-      const queue = pendingRef.current;
-      pendingRef.current = [];
-      queue.forEach((a) => bridge.dispatch(a));
-    }, 400);
-    return () => clearTimeout(t);
-  }, [pathname, bridge]);
-
   useEffect(
     () => () => {
       recRef.current?.abort();
@@ -151,16 +187,18 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
     []
   );
 
-  function speak(text: string) {
+  /** Speak `text` (shown on screen); `spoken` is the Devanagari version for a Hindi voice when the reply is Hindi. */
+  function speak(text: string, spoken?: string) {
     if (muted || !text || typeof window === "undefined" || !window.speechSynthesis) return setPhase("idle");
     window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    // Replies are Roman-script Hinglish or English; an Indian-English voice reads both naturally.
-    const voices = window.speechSynthesis.getVoices();
-    const v = voices.find((x) => x.lang === "en-IN") ?? voices.find((x) => x.lang === "hi-IN") ?? voices.find((x) => x.lang.startsWith("en"));
+    const hindiVoice = pickVoice(voices, "hi", hindiVoiceName);
+    // Devanagari needs a Hindi voice; without one, read the Roman-script reply with an Indian-English voice.
+    const useHindi = !!spoken && DEVANAGARI.test(spoken) && !!hindiVoice;
+    const v = useHindi ? hindiVoice : pickVoice(voices, "en");
+    const u = new SpeechSynthesisUtterance(useHindi ? spoken! : text);
     if (v) u.voice = v;
-    u.lang = v?.lang ?? "en-IN";
-    u.rate = 1.05;
+    u.lang = v?.lang ?? (useHindi ? "hi-IN" : "en-IN");
+    u.rate = useHindi ? 1 : 1.05;
     u.onend = () => setPhase("idle");
     u.onerror = () => setPhase("idle");
     setPhase("speaking");
@@ -172,9 +210,15 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
     for (let i = 0; i < actions.length; i++) {
       const a = actions[i];
       if (a.type === "navigate") {
-        if (a.href === "back") router.back();
-        else router.push(a.href);
-        pendingRef.current = actions.slice(i + 1);
+        if (a.href === "back") {
+          router.back();
+          return override;
+        }
+        // Only ever navigate within this site.
+        if (!a.href.startsWith("/") || a.href.startsWith("//")) return "Sorry, I can't open that.";
+        router.push(a.href);
+        const rest = actions.slice(i + 1);
+        if (rest.length) runAfterNavigation(a.href, () => rest.forEach((x) => bridge.dispatch(x)));
         return override;
       }
       const [handled, msg] = bridge.dispatch(a);
@@ -204,7 +248,7 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
       const override = run(data.actions);
       const say = override || data.reply;
       setReply(say);
-      speak(say);
+      speak(say, override ? undefined : data.speech);
     } catch (e) {
       setError((e as Error).message || "Couldn't reach the assistant.");
       setPhase("idle");
@@ -340,6 +384,26 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
             </div>
           </div>
 
+          {hindiVoices.length > 1 && (
+            <label className="flex items-center gap-2 border-b border-slate-100 px-4 py-1.5 text-xs text-slate-600">
+              Hindi voice
+              <select className="input w-auto flex-1 py-0.5 text-xs" value={pickVoice(voices, "hi", hindiVoiceName)?.name ?? ""}
+                onChange={(e) => {
+                  setHindiVoiceName(e.target.value);
+                  savePref("voice-hindi", e.target.value);
+                  const v = hindiVoices.find((x) => x.name === e.target.value);
+                  if (v && !muted) {
+                    window.speechSynthesis.cancel();
+                    const u = new SpeechSynthesisUtterance("नमस्ते, मैं आपकी टिकट बुक करने में मदद करूँगा।");
+                    u.voice = v;
+                    u.lang = v.lang;
+                    window.speechSynthesis.speak(u);
+                  }
+                }}>
+                {hindiVoices.map((v) => <option key={v.name} value={v.name}>{v.name}</option>)}
+              </select>
+            </label>
+          )}
           {enhancedOk && hasBrowserRec && (
             <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-1.5 text-xs text-slate-600">
               Recognition

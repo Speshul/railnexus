@@ -1,6 +1,7 @@
 // "Enhanced" speech-to-text via Groq's hosted Whisper. More tolerant of accents and atypical speech
 // than the browser's built-in recognizer, and it can be primed with words we expect to hear.
 // Needs GROQ_API_KEY.
+import { clientKey, rateLimited } from "@/lib/ratelimit";
 
 export function GET() {
   return Response.json({ available: !!process.env.GROQ_API_KEY });
@@ -9,6 +10,7 @@ export function GET() {
 export async function POST(req: Request) {
   const key = process.env.GROQ_API_KEY;
   if (!key) return Response.json({ error: "Enhanced recognition needs a GROQ_API_KEY in .env.local." }, { status: 501 });
+  if (rateLimited(`stt:${clientKey(req)}`, 15)) return Response.json({ error: "Too many recordings. Wait a few seconds." }, { status: 429 });
 
   const form = await req.formData();
   const audio = form.get("audio");

@@ -1,19 +1,10 @@
 import { z } from "zod";
+import { clientKey, rateLimited } from "@/lib/ratelimit";
 import { llmIntent } from "@/lib/voice/llm";
-import { ruleIntent } from "@/lib/voice/rules";
+import { fastIntent, ruleIntent } from "@/lib/voice/rules";
 import { resolveIntent } from "@/lib/voice/resolve";
 import { todayIST } from "@/lib/dates";
-import type { VoiceContext, VoiceResponse } from "@/lib/voice/types";
-
-// Small in-memory limiter so one tab can't burn through the free AI quota.
-const hits = new Map<string, number[]>();
-function limited(key: string, perMinute = 20) {
-  const now = Date.now();
-  const recent = (hits.get(key) ?? []).filter((t) => now - t < 60000);
-  recent.push(now);
-  hits.set(key, recent);
-  return recent.length > perMinute;
-}
+import type { VoiceContext, VoiceIntent, VoiceResponse } from "@/lib/voice/types";
 
 const bodySchema = z.object({
   text: z.string().trim().min(1).max(300),
@@ -22,8 +13,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-  if (limited(ip)) return Response.json({ error: "Too many voice commands. Wait a few seconds." }, { status: 429 });
+  if (rateLimited(`voice:${clientKey(req)}`, 20)) return Response.json({ error: "Too many voice commands. Wait a few seconds." }, { status: 429 });
 
   const raw = await req.text();
   if (raw.length > 12000) return Response.json({ error: "Request too large" }, { status: 413 });
@@ -41,14 +31,28 @@ export async function POST(req: Request) {
   const today = todayIST();
 
   const alts = parsed.data.alternatives;
-  const llm = await llmIntent(text, ctx, today, alts);
-  // Offline parser: take the first recognizer guess it understands.
-  const intent =
-    llm?.intent ??
-    [text, ...alts].map((t) => ruleIntent(t, ctx, today)).find((i) => i.intent !== "unknown") ??
-    ruleIntent(text, ctx, today);
+  const fast = fastIntent(text, ctx, today);
+  const llm = fast ? null : await llmIntent(text, ctx, today, alts);
+  let intent: VoiceIntent;
+  let source: VoiceResponse["source"] = "rules";
+  if (fast) {
+    intent = fast;
+  } else if (llm && llm.intent.intent !== "unknown") {
+    intent = llm.intent;
+    source = llm.source;
+  } else {
+    // No model answered, or it couldn't classify: try the rule parser on every recognizer guess.
+    intent = [text, ...alts].map((t) => ruleIntent(t, ctx, today)).find((i) => i.intent !== "unknown") ?? ruleIntent(text, ctx, today);
+    // If the rules don't understand either, keep the model's own explanation (e.g. why it can't do something).
+    if (intent.intent === "unknown" && llm?.intent.reply) {
+      intent = llm.intent;
+      source = llm.source;
+    }
+  }
   const out = resolveIntent(intent, ctx, text, today);
-  const res: VoiceResponse & { intent?: unknown } = { ...out, source: llm?.source ?? "rules", heard: text };
+  // The spoken version only matches when the model's own reply is used (not a resolver message like "station not found").
+  const speech = intent.speech && out.reply === intent.reply?.trim() ? intent.speech : undefined;
+  const res: VoiceResponse & { intent?: unknown } = { ...out, speech, source, heard: text };
   if (process.env.NODE_ENV === "development") res.intent = intent; // visible in dev only, for debugging
   return Response.json(res);
 }

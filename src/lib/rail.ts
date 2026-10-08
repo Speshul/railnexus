@@ -108,16 +108,23 @@ export function searchStations(q: string, limit = 10): Station[] {
     )
     .all({ exact: query.toUpperCase(), prefix: `${query}%`, word: `% ${query}%`, contains: `%${query}%`, limit }) as Row[];
 
-  const out = rows as unknown as (Station & { rank: number })[];
-  if (aliasCodes.size) {
-    const have = new Set(out.map((s) => s.code));
-    const extra = [...aliasCodes].filter((c) => !have.has(c)).map(getStation).filter((s): s is Station => !!s);
-    // alias matches rank right after exact code matches
-    const exact = out.filter((s) => s.rank === 0);
-    const rest = out.filter((s) => s.rank !== 0);
-    return [...exact, ...extra, ...rest].slice(0, limit).map(stripRank);
+  let out = rows as unknown as (Station & { rank: number })[];
+  // An exact code match ("DEL" = Denduluru, "GOA" = Gohad Road) usually isn't what someone typing a place
+  // name means. Keep it first only if the input looks like a code (all capitals) or no much busier station's
+  // name starts with the same letters.
+  const exactCode = out.find((s) => s.rank === 0);
+  const typedAsCode = query === query.toUpperCase() && /[A-Z]/.test(query);
+  if (exactCode && !typedAsCode) {
+    const busierName = out.some((s) => s.rank === 1 && s.train_count > exactCode.train_count * 2);
+    if (busierName || ALIASES[lq]) out = [...out.filter((s) => s !== exactCode && s.rank <= 1), exactCode, ...out.filter((s) => s.rank > 1)];
   }
-  return out.map(stripRank);
+  if (aliasCodes.size) {
+    const aliasHits = [...aliasCodes].map((c) => out.find((s) => s.code === c) ?? getStation(c)).filter((s): s is Station & { rank: number } => !!s);
+    const keepExactFirst = exactCode && typedAsCode;
+    // A city name ("goa", "bengaluru") goes straight to that city's stations.
+    out = [...(keepExactFirst ? [exactCode] : []), ...aliasHits, ...out.filter((s) => !aliasCodes.has(s.code) && !(keepExactFirst && s === exactCode))];
+  }
+  return out.slice(0, limit).map(stripRank);
 }
 
 function stripRank(s: Station & { rank?: number }): Station {

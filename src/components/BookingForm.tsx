@@ -76,12 +76,14 @@ export function BookingForm({ journey, user, saved }: { journey: Journey; user: 
     add_passengers: (a) => {
       const missing: string[] = [];
       let count = passengers.filter((p) => p.name || p.age).length;
+      const added = new Set(usedNames); // names already on the form or added earlier in this command
       for (const vp of a.passengers) {
         if (count >= max + 2) return `A ticket can have at most ${max} passengers plus 2 infants.`;
         const q = vp.name.toLowerCase().trim();
         const match = saved.find((s) => s.name.toLowerCase() === q || s.name.toLowerCase().split(" ").includes(q) || s.name.toLowerCase().includes(q));
         if (match) {
-          if (usedNames.has(match.name.toLowerCase())) continue;
+          if (added.has(match.name.toLowerCase())) continue;
+          added.add(match.name.toLowerCase());
           addSaved(match);
         } else {
           const p: P = { ...blank(journey.premium), name: titleCase(vp.name), age: vp.age != null ? String(vp.age) : "", gender: vp.gender ?? "" };

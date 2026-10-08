@@ -71,7 +71,7 @@ export function ruleIntent(input: string, ctx: VoiceContext, today: string): Voi
   const date = parseDate(t, today);
 
   if (/\b(pay|payment|upi|card|bhugtan)\b/.test(t))
-    return { ...base, reply: "Payment aapko khud Pay button dabake karna hoga, main payment nahi kar sakta." };
+    return { ...base, reply: "Payment aapko khud Pay button dabake karna hoga, ye hum nahi kar sakte." };
   if (/\b(help|madad|what can you do|kya kar sakte)\b/.test(t)) return { ...base, intent: "help" };
 
   // navigation
@@ -132,4 +132,20 @@ export function ruleIntent(input: string, ctx: VoiceContext, today: string): Voi
   if (onlyTo && ctx.search) return { ...base, intent: "search", from: ctx.search.fromName, to: clean(onlyTo[1]), date, cls, quota };
   if (date && ctx.search) return { ...base, intent: "change_date", date };
   return base;
+}
+
+const FAST_INTENTS = new Set<VoiceIntent["intent"]>([
+  "navigate", "change_date", "continue", "set_option", "help", "sort", "filter", "show_tab", "select_option",
+]);
+
+/**
+ * Short, unambiguous commands ("agle din", "aage badho", "meri bookings dikhao", "payment kar do") are answered
+ * by the rule parser directly: instant, no API quota used. Anything longer or richer goes to the language model.
+ */
+export function fastIntent(input: string, ctx: VoiceContext, today: string): VoiceIntent | null {
+  if (input.trim().split(/\s+/).length > 6) return null;
+  const i = ruleIntent(input, ctx, today);
+  if (FAST_INTENTS.has(i.intent)) return i;
+  if (i.intent === "unknown" && i.reply) return i; // e.g. refusing to pay
+  return null;
 }
