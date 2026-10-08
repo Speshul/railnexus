@@ -1,12 +1,14 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Loader2, Mic, MicOff, Send, Volume2, VolumeX, X } from "lucide-react";
+import { Loader2, Mic, MicOff, Pencil, Send, Volume2, VolumeX, X } from "lucide-react";
 import { useVoiceBridge } from "./VoiceBridge";
 import type { VoiceAction, VoiceContext, VoiceResponse } from "@/lib/voice/types";
 
 type Phase = "idle" | "listening" | "thinking" | "speaking";
 type Lang = "en-IN" | "hi-IN";
+/** enhanced = record and transcribe with Whisper (better with accents/atypical speech); standard = browser recognizer */
+type Mode = "enhanced" | "standard";
 
 // Minimal typing for the Web Speech API (not in TS's DOM lib everywhere).
 type SpeechRec = {
@@ -29,8 +31,72 @@ function readPref(key: string) {
     return null;
   }
 }
+const savePref = (k: string, v: string) => {
+  try {
+    localStorage.setItem(k, v);
+  } catch {
+    /* storage unavailable */
+  }
+};
+
+/**
+ * Record from the mic until the speaker pauses. Learns the room's noise floor from the first few
+ * readings, then stops after ~1.5 s of quiet (or 15 s total, or 7 s with no speech at all).
+ */
+function recordUntilPause(
+  stream: MediaStream,
+  onLevel: (level: number) => void,
+  exposeStop: (stop: () => void) => void
+): Promise<{ blob: Blob; spoke: boolean }> {
+  return new Promise((resolve) => {
+    const rec = new MediaRecorder(stream);
+    const chunks: Blob[] = [];
+    rec.ondataavailable = (e) => {
+      if (e.data.size) chunks.push(e.data);
+    };
+    const ac = new AudioContext();
+    const analyser = ac.createAnalyser();
+    analyser.fftSize = 1024;
+    ac.createMediaStreamSource(stream).connect(analyser);
+    const buf = new Float32Array(analyser.fftSize);
+    const startedAt = Date.now();
+    let floor = 0;
+    let samples = 0;
+    let spoke = false;
+    let lastLoud = startedAt;
+    const stop = () => {
+      if (rec.state === "recording") rec.stop();
+    };
+    const timer = setInterval(() => {
+      analyser.getFloatTimeDomainData(buf);
+      let sum = 0;
+      for (const x of buf) sum += x * x;
+      const rms = Math.sqrt(sum / buf.length);
+      onLevel(Math.min(1, rms * 10));
+      const now = Date.now();
+      if (samples < 3) {
+        floor = (floor * samples + rms) / ++samples;
+        return;
+      }
+      if (rms > Math.max(0.012, floor * 2.5)) {
+        spoke = true;
+        lastLoud = now;
+      }
+      if ((spoke && now - lastLoud > 1500) || now - startedAt > 15000 || (!spoke && now - startedAt > 7000)) stop();
+    }, 100);
+    rec.onstop = () => {
+      clearInterval(timer);
+      stream.getTracks().forEach((t) => t.stop());
+      ac.close();
+      resolve({ blob: new Blob(chunks, { type: rec.mimeType }), spoke });
+    };
+    exposeStop(stop);
+    rec.start(250);
+  });
+}
 
 const EXAMPLES = ["Kal Pune se Delhi sleeper", "Sabse sasti wali book karo 3A mein", "Agle din ke trains", "Meri bookings dikhao"];
+const MIC_DENIED = "Microphone permission was denied. Allow it in the address bar, or type your command below.";
 
 export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
   const router = useRouter();
@@ -41,16 +107,29 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
   // Per-browser preferences; the panel that shows them only renders after a click, so no hydration mismatch.
   const [lang, setLang] = useState<Lang>(() => (readPref("voice-lang") === "hi-IN" ? "hi-IN" : "en-IN"));
   const [muted, setMuted] = useState(() => readPref("voice-muted") === "1");
+  const [mode, setMode] = useState<Mode>(() => (readPref("voice-mode") === "standard" ? "standard" : "enhanced"));
+  const [enhancedOk, setEnhancedOk] = useState<boolean | null>(null);
+  const [level, setLevel] = useState(0);
   const [interim, setInterim] = useState("");
   const [heard, setHeard] = useState("");
   const [reply, setReply] = useState("");
   const [error, setError] = useState("");
   const [typed, setTyped] = useState("");
   const recRef = useRef<SpeechRec | null>(null);
-  const recorderRef = useRef<MediaRecorder | null>(null);
+  const stopRecordingRef = useRef<(() => void) | null>(null);
   const pendingRef = useRef<VoiceAction[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const savePref = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* ignore */ } };
+  // Is enhanced (Whisper) recognition configured on the server?
+  useEffect(() => {
+    if (!open || enhancedOk !== null) return;
+    fetch("/api/transcribe")
+      .then((r) => r.json())
+      .then((d) => setEnhancedOk(!!d.available))
+      .catch(() => setEnhancedOk(false));
+  }, [open, enhancedOk]);
+  const hasBrowserRec = typeof window !== "undefined" && !!getRecognition();
+  const useEnhanced = (mode === "enhanced" && enhancedOk !== false) || !hasBrowserRec;
 
   // Actions queued before a navigation (e.g. "sort") run once the new page has mounted its handlers.
   useEffect(() => {
@@ -63,7 +142,14 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
     return () => clearTimeout(t);
   }, [pathname, bridge]);
 
-  useEffect(() => () => { recRef.current?.abort(); window.speechSynthesis?.cancel(); }, []);
+  useEffect(
+    () => () => {
+      recRef.current?.abort();
+      stopRecordingRef.current?.();
+      window.speechSynthesis?.cancel();
+    },
+    []
+  );
 
   function speak(text: string) {
     if (muted || !text || typeof window === "undefined" || !window.speechSynthesis) return setPhase("idle");
@@ -98,7 +184,7 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
     return override;
   }
 
-  async function send(text: string) {
+  async function send(text: string, alternatives: string[] = []) {
     const t = text.trim();
     if (!t) return;
     setHeard(t);
@@ -111,7 +197,7 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
       const res = await fetch("/api/voice", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: t, context }),
+        body: JSON.stringify({ text: t, alternatives, context }),
       });
       const data = (await res.json()) as VoiceResponse & { error?: string };
       if (!res.ok) throw new Error(data.error || "Something went wrong");
@@ -125,65 +211,76 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
     }
   }
 
-  async function startRecorderFallback() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const rec = new MediaRecorder(stream);
-      const chunks: Blob[] = [];
-      rec.ondataavailable = (e) => chunks.push(e.data);
-      rec.onstop = async () => {
-        stream.getTracks().forEach((tr) => tr.stop());
-        setPhase("thinking");
-        const fd = new FormData();
-        fd.set("audio", new Blob(chunks, { type: rec.mimeType }));
-        const r = await fetch("/api/transcribe", { method: "POST", body: fd }).catch(() => null);
-        const d = r ? await r.json() : { error: "Network error" };
-        if (!r?.ok || !d.text) {
-          setError(d.error ?? "Couldn't hear anything.");
-          setPhase("idle");
-          return;
-        }
-        send(d.text);
-      };
-      recorderRef.current = rec;
-      rec.start();
-      setPhase("listening");
-      setTimeout(() => rec.state === "recording" && rec.stop(), 8000);
-    } catch {
-      setError("Microphone permission was denied. Allow it in the address bar, or type your command below.");
-      setPhase("idle");
-    }
+  /** Names likely to be spoken on this page; Whisper uses them to spell what it hears. */
+  function hintWords() {
+    const c = bridge.context();
+    const words = [c.search?.fromName, c.search?.toName, ...(c.trains ?? []).slice(0, 5).map((t) => t.name), ...(c.booking?.saved ?? [])];
+    return [...new Set(words.filter(Boolean))].join(", ");
   }
 
-  function startListening() {
-    window.speechSynthesis?.cancel();
-    setError("");
-    setInterim("");
-    const Rec = getRecognition();
-    if (!Rec) return startRecorderFallback();
+  /** Record until the speaker pauses, then transcribe with Whisper. */
+  async function startEnhanced() {
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    } catch {
+      setError(MIC_DENIED);
+      setPhase("idle");
+      return;
+    }
+    setPhase("listening");
+    const { blob, spoke } = await recordUntilPause(stream, setLevel, (stop) => (stopRecordingRef.current = stop));
+    stopRecordingRef.current = null;
+    setLevel(0);
+    if (!spoke) {
+      setError("I didn't hear anything. Tap the mic and try again, a little closer to the microphone.");
+      setPhase("idle");
+      return;
+    }
+    setPhase("thinking");
+    const fd = new FormData();
+    fd.set("audio", blob);
+    fd.set("lang", lang === "hi-IN" ? "hi" : "en");
+    fd.set("hints", hintWords());
+    const r = await fetch("/api/transcribe", { method: "POST", body: fd }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : { error: "Network error" };
+    if (!r?.ok || !d.text) {
+      setError(d.error ?? "Couldn't make out any words. Try again, or type it below.");
+      setPhase("idle");
+      return;
+    }
+    send(d.text);
+  }
+
+  /** Browser recognizer, asking for its top 5 guesses so the assistant can pick the one that makes sense. */
+  function startStandard(Rec: new () => SpeechRec) {
     const rec = new Rec();
     rec.lang = lang;
     rec.interimResults = true;
     rec.continuous = false;
-    rec.maxAlternatives = 1;
+    rec.maxAlternatives = 5;
     let finalText = "";
+    let finalAlts: string[] = [];
     rec.onresult = (e) => {
       let text = "";
       for (let i = 0; i < e.results.length; i++) {
-        text += e.results[i][0].transcript;
-        if (e.results[i].isFinal) finalText = text;
+        const r = e.results[i];
+        text += r[0].transcript;
+        if (r.isFinal) {
+          finalText = text;
+          finalAlts = Array.from({ length: r.length }, (_, j) => r[j].transcript).slice(1);
+        }
       }
       setInterim(text);
     };
     rec.onerror = (e) => {
-      if (e.error === "not-allowed" || e.error === "service-not-allowed")
-        setError("Microphone permission was denied. Allow it in the address bar, or type your command below.");
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") setError(MIC_DENIED);
       else if (e.error === "no-speech") setError("I didn't hear anything. Tap the mic and try again.");
       else if (e.error !== "aborted") setError(`Speech recognition error: ${e.error}`);
     };
     rec.onend = () => {
       recRef.current = null;
-      if (finalText) send(finalText);
+      if (finalText) send(finalText, finalAlts);
       else setPhase((p) => (p === "listening" ? "idle" : p));
     };
     recRef.current = rec;
@@ -191,15 +288,29 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
     rec.start();
   }
 
+  function startListening() {
+    window.speechSynthesis?.cancel();
+    setError("");
+    setInterim("");
+    const Rec = getRecognition();
+    if (useEnhanced || !Rec) startEnhanced();
+    else startStandard(Rec);
+  }
+
   function stopListening() {
     recRef.current?.stop();
-    if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+    stopRecordingRef.current?.();
   }
 
   const onMic = () => {
     if (!open) setOpen(true);
     if (phase === "listening") stopListening();
     else if (phase !== "thinking") startListening();
+  };
+
+  const editHeard = () => {
+    setTyped(heard);
+    setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const busy = phase === "thinking";
@@ -210,9 +321,9 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
           <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
             <span className="font-semibold">Voice assistant</span>
             <div className="ml-auto flex items-center gap-1">
-              <div className="flex rounded-md border border-slate-200 p-0.5 text-xs" role="group" aria-label="Listening language">
+              <div className="flex rounded-md border border-slate-200 p-0.5 text-xs" role="group" aria-label="Language you speak">
                 {(["en-IN", "hi-IN"] as Lang[]).map((l) => (
-                  <button key={l} onClick={() => { setLang(l); savePref("voice-lang", l); }}
+                  <button key={l} onClick={() => { setLang(l); savePref("voice-lang", l); }} aria-pressed={lang === l}
                     className={`rounded px-2 py-0.5 ${lang === l ? "bg-brand text-white" : "text-slate-600"}`}>
                     {l === "en-IN" ? "English" : "हिंदी"}
                   </button>
@@ -229,11 +340,42 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
             </div>
           </div>
 
+          {enhancedOk && hasBrowserRec && (
+            <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-1.5 text-xs text-slate-600">
+              Recognition
+              <div className="flex rounded-md border border-slate-200 p-0.5" role="group" aria-label="Speech recognition mode">
+                {(["enhanced", "standard"] as Mode[]).map((m) => (
+                  <button key={m} onClick={() => { setMode(m); savePref("voice-mode", m); }} aria-pressed={mode === m}
+                    title={m === "enhanced" ? "Whisper: better with accents and unusual voices; replies after you pause" : "Browser's built-in recognizer: shows words as you speak"}
+                    className={`rounded px-2 py-0.5 ${mode === m ? "bg-brand text-white" : ""}`}>
+                    {m === "enhanced" ? "Enhanced" : "Standard"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2 px-4 py-3 text-sm" aria-live="polite">
             {phase === "listening" && (
-              <p className="text-slate-500">{interim ? <span className="text-slate-900">{interim}</span> : "Listening… speak now"}</p>
+              <div>
+                <p className="text-slate-500">
+                  {interim ? <span className="text-slate-900">{interim}</span> : useEnhanced ? "Listening… speak, then pause. I'll stop when you finish." : "Listening… speak now"}
+                </p>
+                {useEnhanced && (
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100" aria-hidden>
+                    <div className="h-full rounded-full bg-ok transition-[width] duration-100" style={{ width: `${Math.round(level * 100)}%` }} />
+                  </div>
+                )}
+              </div>
             )}
-            {heard && phase !== "listening" && <p className="rounded-lg bg-slate-100 px-3 py-2 text-slate-800">“{heard}”</p>}
+            {heard && phase !== "listening" && (
+              <div className="flex items-start gap-2 rounded-lg bg-slate-100 px-3 py-2 text-slate-800">
+                <span className="flex-1">“{heard}”</span>
+                <button onClick={editHeard} className="flex shrink-0 items-center gap-1 text-xs font-medium text-brand hover:underline" aria-label="Edit what I heard">
+                  <Pencil className="size-3" /> Edit
+                </button>
+              </div>
+            )}
             {busy && <p className="flex items-center gap-2 text-slate-500"><Loader2 className="size-4 animate-spin" /> Working on it…</p>}
             {reply && !busy && <p className="rounded-lg bg-brand-light px-3 py-2 text-slate-900">{reply}</p>}
             {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-bad">{error}</p>}
@@ -251,7 +393,7 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
           </div>
 
           <form className="flex gap-2 border-t border-slate-100 p-2" onSubmit={(e) => { e.preventDefault(); send(typed); setTyped(""); }}>
-            <input className="input py-1.5" placeholder="Or type a command…" value={typed} onChange={(e) => setTyped(e.target.value)} disabled={busy} />
+            <input ref={inputRef} className="input py-1.5" placeholder="Or type a command…" value={typed} onChange={(e) => setTyped(e.target.value)} disabled={busy} />
             <button className="btn-brand px-3 py-1.5" disabled={busy || !typed.trim()} aria-label="Send command"><Send className="size-4" /></button>
           </form>
         </div>

@@ -17,6 +17,7 @@ function limited(key: string, perMinute = 20) {
 
 const bodySchema = z.object({
   text: z.string().trim().min(1).max(300),
+  alternatives: z.array(z.string().max(300)).max(5).default([]),
   context: z.record(z.string(), z.unknown()).default({}),
 });
 
@@ -39,9 +40,15 @@ export async function POST(req: Request) {
   const ctx = parsed.data.context as unknown as VoiceContext;
   const today = todayIST();
 
-  const llm = await llmIntent(text, ctx, today);
-  const intent = llm?.intent ?? ruleIntent(text, ctx, today);
+  const alts = parsed.data.alternatives;
+  const llm = await llmIntent(text, ctx, today, alts);
+  // Offline parser: take the first recognizer guess it understands.
+  const intent =
+    llm?.intent ??
+    [text, ...alts].map((t) => ruleIntent(t, ctx, today)).find((i) => i.intent !== "unknown") ??
+    ruleIntent(text, ctx, today);
   const out = resolveIntent(intent, ctx, text, today);
-  const res: VoiceResponse = { ...out, source: llm?.source ?? "rules", heard: text };
+  const res: VoiceResponse & { intent?: unknown } = { ...out, source: llm?.source ?? "rules", heard: text };
+  if (process.env.NODE_ENV === "development") res.intent = intent; // visible in dev only, for debugging
   return Response.json(res);
 }

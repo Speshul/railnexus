@@ -8,6 +8,9 @@ function systemPrompt(today: string) {
   const days = Array.from({ length: 8 }, (_, i) => `${addDays(today, i)} ${formatDate(addDays(today, i), { weekday: "long" })}`).join(", ");
   return `You are the voice assistant of RailNexus, an Indian train ticket booking website.
 Users speak English, Hindi or Hinglish (Hindi may arrive in Devanagari or Roman script). Convert ONE utterance into a JSON intent.
+The text comes from speech recognition and may contain mistakes: misheard words, merged/split words, or names spelled by sound
+(the speaker may have an accent or a nasal voice). When several possible hearings are given, use the one that makes sense for
+train booking. Correct misheard place names to the closest real Indian railway station or city ("poona"->"Pune", "lucknau"->"Lucknow").
 
 Dates: today is ${today}. Next days: ${days}. "kal"=tomorrow, "parso"=day after tomorrow, "aaj"=today, "agle <day>"/"next <day>"=that weekday in the coming week. Output YYYY-MM-DD.
 Classes (cls): 1A=first AC, 2A=2 tier AC/second AC, 3A=3 tier/third AC/3AC, SL=sleeper, CC=chair car, EC=executive chair car, 2S=second sitting/general seat.
@@ -33,8 +36,9 @@ Intents:
 "reply": one short sentence confirming what you are doing, in the user's language style (Hinglish in Roman script if they used Hindi/Hinglish). Use null for fields that don't apply.`;
 }
 
-function userMessage(text: string, ctx: VoiceContext) {
-  return `Context: ${JSON.stringify(ctx)}\nUser said: ${text}`;
+function userMessage(text: string, ctx: VoiceContext, alternatives: string[] = []) {
+  const alts = alternatives.filter((a) => a && a !== text);
+  return `Context: ${JSON.stringify(ctx)}\nUser said: ${text}${alts.length ? `\nOther possible hearings: ${alts.join(" | ")}` : ""}`;
 }
 
 // Gemini structured-output schema (OpenAPI subset). Mirrors intentSchema.
@@ -63,8 +67,10 @@ const GEMINI_SCHEMA = {
     insurance: S("BOOLEAN"), auto_upgrade: S("BOOLEAN"), confirm_only: S("BOOLEAN"),
     reply: { type: "STRING" },
   },
-  required: ["intent", "reply"],
+  required: [] as string[],
 };
+// Gemini skips optional fields; requiring every one (nullable) makes it fill or explicitly null each.
+GEMINI_SCHEMA.required = Object.keys(GEMINI_SCHEMA.properties);
 
 async function withTimeout(url: string, init: RequestInit) {
   const ctrl = new AbortController();
@@ -81,7 +87,7 @@ function parseIntent(raw: string): VoiceIntent {
   return intentSchema.parse(json);
 }
 
-async function gemini(text: string, ctx: VoiceContext, today: string): Promise<VoiceIntent> {
+async function gemini(text: string, ctx: VoiceContext, today: string, alts: string[]): Promise<VoiceIntent> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("no GEMINI_API_KEY");
   const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
@@ -90,7 +96,7 @@ async function gemini(text: string, ctx: VoiceContext, today: string): Promise<V
     headers: { "content-type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: systemPrompt(today) }] },
-      contents: [{ role: "user", parts: [{ text: userMessage(text, ctx) }] }],
+      contents: [{ role: "user", parts: [{ text: userMessage(text, ctx, alts) }] }],
       generationConfig: { temperature: 0.1, responseMimeType: "application/json", responseSchema: GEMINI_SCHEMA },
     }),
   });
@@ -101,7 +107,7 @@ async function gemini(text: string, ctx: VoiceContext, today: string): Promise<V
   return parseIntent(out);
 }
 
-async function groq(text: string, ctx: VoiceContext, today: string): Promise<VoiceIntent> {
+async function groq(text: string, ctx: VoiceContext, today: string, alts: string[]): Promise<VoiceIntent> {
   const key = process.env.GROQ_API_KEY;
   if (!key) throw new Error("no GROQ_API_KEY");
   const model = process.env.GROQ_MODEL || "openai/gpt-oss-20b";
@@ -117,7 +123,7 @@ async function groq(text: string, ctx: VoiceContext, today: string): Promise<Voi
           role: "system",
           content: `${systemPrompt(today)}\nRespond with a single JSON object with keys: ${Object.keys(GEMINI_SCHEMA.properties).join(", ")}.`,
         },
-        { role: "user", content: userMessage(text, ctx) },
+        { role: "user", content: userMessage(text, ctx, alts) },
       ],
     }),
   });
@@ -127,10 +133,10 @@ async function groq(text: string, ctx: VoiceContext, today: string): Promise<Voi
 }
 
 /** Try each configured provider in order; returns null if none is configured or all fail. */
-export async function llmIntent(text: string, ctx: VoiceContext, today: string) {
+export async function llmIntent(text: string, ctx: VoiceContext, today: string, alts: string[] = []) {
   for (const [name, fn] of [["gemini", gemini], ["groq", groq]] as const) {
     try {
-      return { intent: await fn(text, ctx, today), source: name };
+      return { intent: await fn(text, ctx, today, alts), source: name };
     } catch (e) {
       const msg = (e as Error).message;
       if (!msg.startsWith("no ")) console.warn(`[voice] ${name} failed: ${msg}`);

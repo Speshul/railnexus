@@ -390,3 +390,51 @@ export function stats() {
     stops: c("SELECT COUNT(*) c FROM stops WHERE halt = 1"),
   };
 }
+
+// ---- fuzzy station matching (for misheard speech: "pooney" -> Pune, "lucknau" -> Lucknow)
+const GENERIC = /\b(jn|junction|central|cantt|cant|city|terminus|term|trm|halt|road|rd)\b/g;
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
+function bigrams(s: string) {
+  const t = ` ${s} `;
+  const out = new Map<string, number>();
+  for (let i = 0; i < t.length - 1; i++) out.set(t.slice(i, i + 2), (out.get(t.slice(i, i + 2)) ?? 0) + 1);
+  return out;
+}
+function dice(a: Map<string, number>, b: Map<string, number>) {
+  let inter = 0, na = 0, nb = 0;
+  for (const v of a.values()) na += v;
+  for (const v of b.values()) nb += v;
+  for (const [k, v] of a) inter += Math.min(v, b.get(k) ?? 0);
+  return na + nb ? (2 * inter) / (na + nb) : 0;
+}
+let fuzzyIndex: { code: string; trains: number; grams: Map<string, number>[] }[] | null = null;
+
+/** Closest station by spelling similarity, for names a speech recognizer got slightly wrong. */
+export function fuzzyStation(q: string, minScore = 0.55): Station | null {
+  const query = norm(q).replace(GENERIC, "").trim();
+  if (query.length < 3) return null;
+  if (!fuzzyIndex) {
+    const rows = railDb().prepare("SELECT code, name, train_count FROM stations WHERE train_count > 0").all() as {
+      code: string; name: string; train_count: number;
+    }[];
+    fuzzyIndex = rows.map((r) => {
+      const n = norm(r.name);
+      const short = n.replace(GENERIC, "").replace(/\s+/g, " ").trim();
+      // also match the last word alone ("Mumbai Dadar West" -> "dadar west")
+      const tail = short.split(" ").slice(1).join(" ");
+      return { code: r.code, trains: r.train_count, grams: [n, short, tail].filter(Boolean).map(bigrams) };
+    });
+    for (const [alias, codes] of Object.entries(ALIASES)) {
+      fuzzyIndex.push({ code: codes[0], trains: 1000, grams: [bigrams(alias)] });
+    }
+  }
+  const qg = bigrams(query);
+  let best: { code: string; score: number } | null = null;
+  for (const s of fuzzyIndex) {
+    const sim = Math.max(...s.grams.map((g) => dice(qg, g)));
+    // small popularity bonus so big stations win near-ties
+    const score = sim + Math.min(s.trains, 300) / 6000;
+    if (sim >= minScore && (!best || score > best.score)) best = { code: s.code, score };
+  }
+  return best ? getStation(best.code) : null;
+}

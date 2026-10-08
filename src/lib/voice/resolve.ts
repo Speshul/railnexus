@@ -1,5 +1,5 @@
 import "server-only";
-import { cityCodes, getStation, lookupTrains, searchStations, type Station } from "../rail";
+import { cityCodes, fuzzyStation, getStation, lookupTrains, searchStations, type Station } from "../rail";
 import { isValidDate, formatDate, diffDays } from "../dates";
 import { BOOKING_WINDOW_DAYS, CLASSES } from "../constants";
 import type { VoiceAction, VoiceContext, VoiceIntent } from "./types";
@@ -23,7 +23,7 @@ function resolveStation(name: string | null | undefined): { station: Station; ci
     const s = getStation(city[0]);
     if (s) return { station: s, city: true };
   }
-  const hit = searchStations(q, 1)[0];
+  const hit = searchStations(q, 1)[0] ?? fuzzyStation(q);
   return hit ? { station: hit, city: false } : null;
 }
 
