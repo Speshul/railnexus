@@ -21,6 +21,30 @@ Rebuild the train database (stop the dev server first on Windows, since it locks
 npm run data
 ```
 
+## Voice assistant (Phase 2)
+
+Tap the orange mic button (bottom right, every page) and speak in English, Hindi or Hinglish:
+
+- "Kal Pune se Delhi sleeper" / "trains from Mumbai to Lucknow on Friday in 3AC"
+- "Sabse sasti wali 3A mein book karo" / "book the Rajdhani in 2A" / "fastest train dikhao" / "agle din"
+- On the passenger page: "Asha aur Demo Traveller ko add karo", "insurance nahi chahiye", "aage badho"
+- "Meri bookings dikhao", "12951 ka route dikhao", "help"
+
+It can search, choose trains and fill passenger details. It can never pay; that is always the user's click.
+
+**How it works:** browser speech recognition (Chrome/Edge, `en-IN` or `hi-IN`) turns speech into text. A language model
+turns the text into a structured intent (`src/lib/voice/llm.ts`). The site resolves that against its own data, such as
+station names to codes or "cheapest" to a train (`src/lib/voice/resolve.ts`). The page then performs one of a fixed set
+of actions (`src/components/voice/`). Providers: Google Gemini first, Groq as backup, and an offline rule parser
+(`src/lib/voice/rules.ts`) if neither is available, so voice keeps working with no keys or no quota.
+
+**Setup:** put your keys in `.env.local` in the project folder (template included, never committed), then restart:
+
+```
+GEMINI_API_KEY=...   # free at https://aistudio.google.com
+GROQ_API_KEY=...     # optional backup + speech-to-text for Firefox/Safari, free at https://console.groq.com
+```
+
 ## What works (Phase 1)
 
 - **Search** between any two of ~8,000 stations by name, code, old or new names (e.g. "CSMT", "Prayagraj", "Bengaluru"), with an optional *include nearby stations (30 km)* toggle.
@@ -62,6 +86,6 @@ The source data dates from around 2016, so some newer trains (e.g. Vande Bharat)
 ## Roadmap
 
 1. ~~Search, routes, booking up to checkout~~ (done)
-2. Voice booking and navigation
+2. ~~Voice booking and navigation~~ (done)
 3. Razorpay test-mode payment, PNR generation, berth allocation, e-ticket, cancellation and refunds
 4. Visual design pass

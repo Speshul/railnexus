@@ -7,6 +7,21 @@ import { CLASSES, CLASS_ORDER, TRAIN_TYPE_FILTERS, type ClassCode, type Quota } 
 import { formatDate, formatDuration } from "@/lib/dates";
 import { inr } from "@/lib/format";
 import { TrainCard } from "./TrainCard";
+import { useVoiceContext, useVoiceHandlers } from "./voice/VoiceBridge";
+import type { VoiceContext } from "@/lib/voice/types";
+
+/** Compact description of a journey for the voice assistant's context. */
+const voiceTrain = (j: JourneyResult) => ({
+  n: j.number, name: j.name, from: j.from.code, to: j.to.code, dep: j.from.time, arr: j.to.time, dur: j.duration, date: j.date,
+  classes: j.classes.filter((c) => c.avail.bookable).map((c) => `${c.cls}:${c.fare}:${c.avail.label}`).join("|"),
+});
+
+function openNearbyOptions() {
+  const el = document.getElementById("nearby-options") as HTMLDetailsElement | null;
+  if (!el) return "There are no nearby-station options for this search.";
+  el.open = true;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+}
 
 const SLOTS = [
   { key: "0", label: "00–06", from: 0, to: 360 },
@@ -90,6 +105,27 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
     };
     return out.sort((a, b) => key[sort](a) - key[sort](b));
   }, [results, types, classes, depSlots, arrSlots, onlyAvail, hideUnreserved, fromStn, toStn, sort]);
+
+  const voiceCtx = useMemo<Partial<VoiceContext>>(
+    () => ({
+      search: {
+        from: params.from, to: params.to, fromName: data.fromStation?.name ?? params.from, toName: data.toStation?.name ?? params.to,
+        date: params.date, quota: params.quota, cls: params.cls, nearby: params.nearby,
+      },
+      trains: tab === "direct" ? filtered.slice(0, 15).map(voiceTrain) : undefined,
+      nearbyOptions: alternatives.length,
+    }),
+    [params, data.fromStation, data.toStation, tab, filtered, alternatives.length]
+  );
+  useVoiceContext(voiceCtx);
+  useVoiceHandlers({
+    sort: (a) => { setTab("direct"); setSort(a.by); },
+    filter: (a) => { setTab("direct"); setOnlyAvail(a.onlyAvailable); },
+    tab: (a) => {
+      if (a.tab === "nearby") return openNearbyOptions();
+      setTab(a.tab);
+    },
+  });
 
   const activeFilters = types.size + classes.size + depSlots.size + arrSlots.size + fromStn.size + toStn.size + (onlyAvail ? 1 : 0) + (hideUnreserved ? 1 : 0);
   const reset = () => {
@@ -243,6 +279,21 @@ function Connections({ data, alternatives, nearbyHref }: { data: SearchResponse;
   }, [key, params]);
 
   const loaded = state?.key === key ? state : null;
+  const openLegs = loaded?.list && open !== null ? loaded.list[open]?.legs : undefined;
+  const voiceCtx = useMemo<Partial<VoiceContext>>(
+    () => ({ connections: loaded?.list?.length ?? 0, ...(openLegs ? { trains: openLegs.map(voiceTrain) } : {}) }),
+    [loaded?.list?.length, openLegs]
+  );
+  useVoiceContext(voiceCtx);
+  useVoiceHandlers({
+    select_option: (a) => {
+      const n = loaded?.list?.length ?? 0;
+      if (!n) return "There are no journeys with a change to open yet.";
+      if (a.index > n) return `There are only ${n} options.`;
+      setOpen(a.index - 1);
+      setTimeout(() => document.getElementById(`journey-option-${a.index - 1}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    },
+  });
   const noDirect = data.results.length === 0;
   const nearby = alternatives.length > 0 && <NearbyAlternatives data={data} alternatives={alternatives} nearbyHref={nearbyHref} />;
 
@@ -277,7 +328,7 @@ function Connections({ data, alternatives, nearbyHref }: { data: SearchResponse;
       </div>
       {nearby}
       {loaded.list!.map((c, n) => (
-        <ConnectionOption key={c.legs[0].number + c.legs[1].number} c={c} quota={params.quota} open={open === n}
+        <ConnectionOption key={c.legs[0].number + c.legs[1].number} id={`journey-option-${n}`} c={c} quota={params.quota} open={open === n}
           onToggle={() => setOpen(open === n ? null : n)} />
       ))}
     </div>
@@ -289,13 +340,13 @@ function cheapestBookable(j: JourneyResult) {
   return fares.length ? Math.min(...fares) : null;
 }
 
-function ConnectionOption({ c, quota, open, onToggle }: { c: ConnectionResult; quota: Quota; open: boolean; onToggle: () => void }) {
+function ConnectionOption({ id, c, quota, open, onToggle }: { id: string; c: ConnectionResult; quota: Quota; open: boolean; onToggle: () => void }) {
   const [l1, l2] = c.legs;
   const f1 = cheapestBookable(l1);
   const f2 = cheapestBookable(l2);
   const seatsBoth = [l1, l2].every((l) => l.classes.some((x) => x.avail.status === "AVAILABLE"));
   return (
-    <article className={`card overflow-hidden ${open ? "border-brand ring-1 ring-brand" : ""}`}>
+    <article id={id} className={`card scroll-mt-4 overflow-hidden ${open ? "border-brand ring-1 ring-brand" : ""}`}>
       <button type="button" onClick={onToggle} aria-expanded={open}
         className="grid w-full gap-3 p-4 text-left hover:bg-slate-50 sm:grid-cols-[1fr_auto] sm:items-center">
         <div className="min-w-0">
@@ -346,7 +397,7 @@ function NearbyAlternatives({ data, alternatives, nearbyHref }: { data: SearchRe
   const fromChanged = best.from.code !== params.from;
   const toChanged = best.to.code !== params.to;
   return (
-    <details className="group overflow-hidden rounded-xl border border-brand/30 bg-brand-light">
+    <details id="nearby-options" className="group scroll-mt-4 overflow-hidden rounded-xl border border-brand/30 bg-brand-light">
       <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">
         <Footprints className="size-5 shrink-0 text-brand" />
         <span className="min-w-0 flex-1 basis-56">

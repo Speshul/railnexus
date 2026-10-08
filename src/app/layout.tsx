@@ -5,6 +5,8 @@ import { TrainFront } from "lucide-react";
 import { getUser } from "@/lib/auth";
 import { logout } from "@/app/actions/auth";
 import { APP_NAME } from "@/lib/constants";
+import { VoiceBridgeProvider } from "@/components/voice/VoiceBridge";
+import { VoiceAssistant } from "@/components/voice/VoiceAssistant";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -20,6 +22,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
+        <VoiceBridgeProvider>
         <header className="bg-brand text-white">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
             <Link href="/" className="flex items-center gap-2 text-lg font-bold">
@@ -54,6 +57,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           {APP_NAME} is a student project, not affiliated with Indian Railways or IRCTC. Train data: datameet/railways (CC0).
           Fares and seat availability are simulated.
         </footer>
+        <VoiceAssistant loggedIn={!!user} />
+        </VoiceBridgeProvider>
       </body>
     </html>
   );

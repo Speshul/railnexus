@@ -1,5 +1,5 @@
 "use client";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useRef, useState } from "react";
 import { Loader2, Plus, Trash2, UserPlus } from "lucide-react";
 import { createBooking, type BookingFormState } from "@/app/actions/booking";
 import type { SavedPassenger } from "@/lib/booking";
@@ -8,6 +8,7 @@ import {
 } from "@/lib/constants";
 import { bookingFare, passengerKind } from "@/lib/fare";
 import { inr } from "@/lib/format";
+import { useVoiceContext, useVoiceHandlers } from "./voice/VoiceBridge";
 
 type Journey = {
   train: string; from: string; to: string; date: string; cls: ClassCode; quota: Quota;
@@ -58,6 +59,60 @@ export function BookingForm({ journey, user, saved }: { journey: Journey; user: 
   };
   const usedNames = new Set(passengers.map((p) => p.name.toLowerCase()));
 
+  // ---- voice assistant: expose the form and accept passenger / option / continue commands
+  const formRef = useRef<HTMLFormElement>(null);
+  const voiceCtx = useMemo(
+    () => ({
+      booking: {
+        train: journey.train, cls: journey.cls, saved: saved.map((s) => s.name),
+        passengers: passengers.filter((p) => p.name).map((p) => p.name), insuranceChosen: insurance !== null,
+      },
+    }),
+    [journey.train, journey.cls, saved, passengers, insurance]
+  );
+  useVoiceContext(voiceCtx);
+  const titleCase = (n: string) => n.trim().replace(/\s+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  useVoiceHandlers({
+    add_passengers: (a) => {
+      const missing: string[] = [];
+      let count = passengers.filter((p) => p.name || p.age).length;
+      for (const vp of a.passengers) {
+        if (count >= max + 2) return `A ticket can have at most ${max} passengers plus 2 infants.`;
+        const q = vp.name.toLowerCase().trim();
+        const match = saved.find((s) => s.name.toLowerCase() === q || s.name.toLowerCase().split(" ").includes(q) || s.name.toLowerCase().includes(q));
+        if (match) {
+          if (usedNames.has(match.name.toLowerCase())) continue;
+          addSaved(match);
+        } else {
+          const p: P = { ...blank(journey.premium), name: titleCase(vp.name), age: vp.age != null ? String(vp.age) : "", gender: vp.gender ?? "" };
+          if (!p.age || !p.gender) missing.push(p.name);
+          setPassengers((ps) => {
+            const empty = ps.findIndex((x) => !x.name && !x.age);
+            return empty >= 0 ? ps.map((x, i) => (i === empty ? p : x)) : [...ps, p];
+          });
+        }
+        count++;
+      }
+      if (missing.length) return `Added ${missing.join(", ")}. Please fill in the age and gender.`;
+    },
+    remove_passenger: (a) => {
+      const q = a.name.toLowerCase();
+      const hit = passengers.find((p) => p.name.toLowerCase().includes(q));
+      if (!hit) return `There's no passenger called ${a.name}.`;
+      setPassengers((ps) => (ps.length === 1 ? [blank(journey.premium)] : ps.filter((p) => p.key !== hit.key)));
+    },
+    set_options: (a) => {
+      if (a.insurance !== undefined) setInsurance(a.insurance);
+      if (a.autoUpgrade !== undefined) setAutoUpgrade(a.autoUpgrade);
+      if (a.confirmOnly !== undefined) setConfirmOnly(a.confirmOnly);
+    },
+    continue: () => {
+      if (!passengers.some((p) => p.name && p.age && p.gender)) return "Add at least one passenger with name, age and gender first.";
+      if (insurance === null) return "Do you want travel insurance? Say yes or no.";
+      formRef.current?.requestSubmit();
+    },
+  });
+
   const submit = (formData: FormData) => {
     if (insurance === null) {
       setLocalError("Please choose whether you want travel insurance.");
@@ -76,7 +131,7 @@ export function BookingForm({ journey, user, saved }: { journey: Journey; user: 
   };
 
   return (
-    <form action={submit} className="grid gap-4 lg:grid-cols-[1fr_20rem]">
+    <form ref={formRef} action={submit} className="grid gap-4 lg:grid-cols-[1fr_20rem]">
       <div className="space-y-4">
         <section className="card p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

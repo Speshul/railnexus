@@ -78,6 +78,12 @@ const ALIASES: Record<string, string[]> = {
   katra: ["SVDK"], "vaishno devi": ["SVDK"], pune: ["PUNE"], poona: ["PUNE"],
 };
 
+/** Station codes for a city-level name like "Mumbai" or "Delhi" (several stations), else []. */
+export function cityCodes(name: string): string[] {
+  const codes = ALIASES[name.trim().toLowerCase()];
+  return codes && codes.length > 1 ? codes : [];
+}
+
 export function searchStations(q: string, limit = 10): Station[] {
   const query = q.trim();
   if (!query) return [];
