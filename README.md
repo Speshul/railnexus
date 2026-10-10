@@ -21,11 +21,26 @@ Rebuild the train database (stop the dev server first on Windows, since it locks
 npm run data
 ```
 
+## Accessibility
+
+Targets WCAG 2.2 AA; every main page passes an automated axe-core audit with zero violations, including with all
+display settings switched on.
+
+- **Accessibility menu** in the header (remembered per browser, applied before first paint): text size up to 125%,
+  high contrast, an easy-to-read font (Atkinson Hyperlegible) and reduced motion (also automatic when the device asks).
+- **Keyboard**: skip-to-content link, clear focus outlines, arrow-key station suggestions, Escape closes menus and
+  the voice panel; no auto-focus that skips past the header.
+- **Screen readers**: landmarks, current page announced in the nav, live results count, labelled controls, table
+  captions and text descriptions for maps.
+- **Contrast**: brand orange darkened to #c2410c and secondary grey to #5a6a82 so text is at least 4.5:1 on every
+  surface. Availability is always written out, never shown by colour alone.
+- Statement page at `/accessibility`.
+
 ## Payments, tickets and cancellations (Phase 3)
 
 - **Razorpay test mode checkout** (real Razorpay popup, no real money): the server creates the order from the held seats,
   then verifies the payment signature *and* re-checks amount and status with Razorpay before issuing tickets.
-  Test with UPI `success@razorpay` (or `failure@razorpay`) or card `4111 1111 1111 1111`.
+  Test with UPI `success@razorpay` (or `failure@razorpay`) or card `4100 2800 0000 1007`.
 - On payment each passenger gets a queue position, which becomes a **confirmed berth** (`CNF/B3/34/LB`), **RAC** or
   **waitlist** number. Berths keep groups together, honour preferences and give seniors a lower berth. Each train
   gets a **10-digit PNR**.
@@ -103,6 +118,10 @@ Every page's state lives in the URL (`/search?from=NDLS&to=HWH&date=...`), and s
 | 8,990 stations with GPS coordinates | Per-stop distance (great-circle, scaled to official train distance) |
 | 415k stop records with timings | Untimed stops interpolated from distance |
 | Train classes | Fares (modelled on IR's fare structure) and seat availability (deterministic per train/date/class) |
+
+About 2% of trains (91, mostly Durontos) have no halts marked in the source data (every row has arrival = departure).
+Their stops are inferred from how often other trains halt at each station; checked against trains that do mark
+halts, this matches real halts about 75% of the time. These train pages say the stop list is estimated.
 
 The source data dates from around 2016, so some newer trains (e.g. Vande Bharat) and renumberings are missing.
 

@@ -39,7 +39,7 @@ export function SearchForm({ defaults = {}, today, compact = false }: { defaults
   return (
     <form onSubmit={submit} className={compact ? "grid gap-3 md:grid-cols-[1fr_auto_1fr_10rem_9rem_9rem_auto] md:items-end" : "grid gap-4"}>
       <div className={compact ? "contents" : "grid items-end gap-2 md:grid-cols-[1fr_auto_1fr]"}>
-        <StationInput label="From" value={from} onChange={setFrom} autoFocus={!compact && !from} />
+        <StationInput label="From" value={from} onChange={setFrom} />
         <button
           type="button"
           onClick={() => { setFrom(to); setTo(from); }}

@@ -138,7 +138,8 @@ async function main() {
       number TEXT PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL, type_name TEXT NOT NULL, zone TEXT,
       from_code TEXT NOT NULL, to_code TEXT NOT NULL, departure TEXT, arrival TEXT,
       duration_min INTEGER, distance INTEGER, classes TEXT NOT NULL, run_days INTEGER NOT NULL,
-      reservable INTEGER NOT NULL, return_train TEXT, stop_count INTEGER NOT NULL, halt_count INTEGER NOT NULL
+      reservable INTEGER NOT NULL, return_train TEXT, stop_count INTEGER NOT NULL, halt_count INTEGER NOT NULL,
+      halts_inferred INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE stops (
       train_number TEXT NOT NULL, seq INTEGER NOT NULL, station_code TEXT NOT NULL,
@@ -172,11 +173,45 @@ async function main() {
     byTrain.get(s.train_number).push(s);
   }
 
+  // ---- halt statistics, for trains whose source data marks no halts at all (~2%: every row has
+  // arrival == departure). For each station: how many trains list it, and how many actually stop there,
+  // overall and among premium trains. Measured against trains that do mark halts, the rules below agree
+  // with real halts ~75% of the time (precision) and find 60-90% of them (recall), depending on type.
+  const isMarkedHalt = (r) => r.arrival !== "None" && r.departure !== "None" && r.arrival !== r.departure;
+  const PREMIUM_STATS = new Set(["Raj", "Drnt", "Shtb", "SF"]);
+  const listed = new Map(), halted = new Map(), pListed = new Map(), pHalted = new Map();
+  const bump = (m, k) => m.set(k, (m.get(k) ?? 0) + 1);
+  const trainType = new Map(trainsRaw.features.map((f) => [f.properties.number, f.properties.type]));
+  for (const [num, rows] of byTrain) {
+    const mid = [...rows].sort((a, b) => a.id - b.id).slice(1, -1);
+    if (!mid.some(isMarkedHalt)) continue;
+    const premium = PREMIUM_STATS.has(trainType.get(num));
+    for (const r of mid) {
+      bump(listed, r.station_code);
+      if (premium) bump(pListed, r.station_code);
+      if (isMarkedHalt(r)) {
+        bump(halted, r.station_code);
+        if (premium) bump(pHalted, r.station_code);
+      }
+    }
+  }
+  const PASSENGER_LIKE = new Set(["Pass", "Toy", "MEMU", "DEMU", "Hyd", "SKr", "Del", "Klkt"]);
+  /** Should this listed station count as a halt, for a train with no halt data? */
+  function inferHalt(type, code, distance) {
+    if (PASSENGER_LIKE.has(type) || (!type && distance < 300)) return true; // stopping trains halt everywhere listed
+    const premium = ["Raj", "Drnt", "Shtb"].includes(type);
+    const L = (premium ? pListed : listed).get(code) ?? 0;
+    const H = (premium ? pHalted : halted).get(code) ?? 0;
+    const threshold = premium ? 0.7 : ["SF", "GR", "JShtb"].includes(type) ? 0.6 : 0.5;
+    return L >= 5 && H / L >= threshold;
+  }
+  let inferredTrains = 0;
+
   const insStop = db.prepare(
     `INSERT INTO stops VALUES (?,?,?,?,?,?,?,?,?,?,?)`
   );
   const insTrain = db.prepare(
-    `INSERT INTO trains VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO trains VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   );
 
   db.exec("BEGIN");
@@ -293,6 +328,14 @@ async function main() {
       s.halt = isEnd || (s.timed && haltMin !== null && haltMin > 0);
       s.haltMin = isEnd ? null : haltMin;
     });
+    // No halts marked anywhere in the source for this train: infer them from the rest of the network.
+    const haltsInferred = n > 2 && !stops.slice(1, -1).some((s) => s.halt);
+    if (haltsInferred) {
+      inferredTrains++;
+      stops.forEach((s, i) => {
+        if (i > 0 && i < n - 1 && s.timed && inferHalt(p.type, s.code, p.distance)) s.halt = true;
+      });
+    }
 
     // drop physically impossible records (bad source data)
     const dur = stops[n - 1].arrAbs - stops[0].depAbs;
@@ -331,7 +374,8 @@ async function main() {
       reservable,
       p.return_train || null,
       stops.length,
-      haltCount
+      haltCount,
+      haltsInferred ? 1 : 0
     );
   }
 
@@ -350,6 +394,7 @@ async function main() {
   `);
 
   const count = (t) => db.prepare(`SELECT COUNT(*) c FROM ${t}`).get().c;
+  console.log(`halts inferred for ${inferredTrains} trains whose source data marks none`);
   console.log(`rail.db built: ${count("trains")} trains, ${count("stations")} stations, ${count("stops")} stops (skipped ${skipped})`);
   db.close();
   try {

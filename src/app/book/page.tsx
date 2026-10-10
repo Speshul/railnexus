@@ -47,7 +47,7 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
       <ol className="mb-4 flex flex-wrap gap-2 text-xs font-medium text-slate-500">
-        <li className="text-slate-400">1. Search</li><li>›</li>
+        <li className="text-slate-500">1. Search</li><li>›</li>
         <li className="text-brand">2. Passenger details</li><li>›</li>
         <li>3. Review</li><li>›</li>
         <li>4. Payment</li>

@@ -217,7 +217,7 @@ export function BookingForm({ journeys, quota, user, saved }: {
                     ) : <span className="hidden md:block" />}
                     <button type="button" aria-label={`Remove passenger ${i + 1}`} disabled={passengers.length === 1}
                       onClick={() => setPassengers((ps) => ps.filter((x) => x.key !== p.key))}
-                      className="flex items-center justify-center rounded-lg px-2 text-slate-400 hover:bg-red-50 hover:text-bad disabled:opacity-30">
+                      className="flex items-center justify-center rounded-lg px-2 text-slate-500 hover:bg-red-50 hover:text-bad disabled:opacity-30">
                       <Trash2 className="size-4" />
                     </button>
                   </div>

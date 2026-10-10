@@ -158,7 +158,7 @@ function AvailabilityPanel({ j, cls, quota, bookHref }: { j: JourneyResult; cls:
               <div key={d.date} className={`rounded-lg border bg-white p-2 text-sm ${d.date === j.date ? "border-brand" : "border-slate-200"}`}>
                 <div className="text-xs text-slate-500">{formatDate(d.date)}{d.date === j.date && " · your date"}</div>
                 {!d.runs || !a ? (
-                  <div className="py-1 text-slate-400">Doesn&apos;t run</div>
+                  <div className="py-1 text-slate-500">Doesn&apos;t run</div>
                 ) : (
                   <>
                     <div className={`font-semibold ${availTone(a.status)}`}>{availText(a)}</div>

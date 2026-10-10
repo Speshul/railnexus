@@ -100,7 +100,7 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
             {TABS.map((x) => (
               <Link key={x.key} href={`/account?tab=${x.key}`} aria-current={tab === x.key ? "page" : undefined}
                 className={`rounded-md px-3 py-1.5 ${tab === x.key ? "bg-brand text-white" : "text-slate-600 hover:bg-slate-50"}`}>
-                {x.label} <span className="opacity-70">({grouped[x.key].length})</span>
+                {x.label} <span className={tab === x.key ? "text-white/90" : "text-slate-500"}>({grouped[x.key].length})</span>
               </Link>
             ))}
           </nav>

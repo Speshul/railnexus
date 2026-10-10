@@ -35,6 +35,7 @@ export function TrainLookup({ autoFocus }: { autoFocus?: boolean }) {
       <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
       <input
         className="input pl-9"
+        aria-label="Search trains by number or name"
         placeholder="Train number or name, e.g. 12951 or Rajdhani"
         value={q}
         autoFocus={autoFocus}

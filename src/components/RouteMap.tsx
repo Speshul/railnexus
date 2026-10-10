@@ -34,7 +34,8 @@ export default function RouteMap({ stops, height = 420, showPassing = false }: {
   const bounds: LatLngBoundsExpression = seg.map((s) => [s.lat!, s.lng!] as [number, number]);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200" style={{ height }}>
+    <div className="overflow-hidden rounded-lg border border-slate-200" style={{ height }} role="region"
+      aria-label={`Map of the route through ${pts.filter((s) => s.halt).length} stops, from ${pts[0].name} to ${pts[pts.length - 1].name}. Every stop is also listed in text on this page.`}>
       <MapContainer bounds={bounds} boundsOptions={{ padding: [24, 24] }} scrollWheelZoom={false} style={{ height: "100%", width: "100%" }}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

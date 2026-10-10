@@ -2,11 +2,14 @@
 
 /* Functional base theme. Visual design pass comes in a later phase. */
 @theme inline {
+  /* WCAG AA: Tailwind's slate-500 (#62748e) drops to 4.2:1 on the light-blue tints; this passes on every surface used. */
+  --color-slate-500: #5a6a82;
   --color-brand: #0b3a75;
   --color-brand-dark: #072a56;
   --color-brand-light: #e8f0fb;
-  --color-accent: #f26b1d;
-  --color-accent-dark: #d4580f;
+  /* WCAG AA: white text on accent is 5.2:1 (the earlier #f26b1d was 3.0:1) */
+  --color-accent: #c2410c;
+  --color-accent-dark: #9a3412;
   --color-ok: #15803d;
   --color-warn: #b45309;
   --color-bad: #b91c1c;
@@ -15,8 +18,13 @@
 }
 
 body {
-  background: #f4f6fa;
+  background: #f8fafc;
   color: #172033;
+}
+/* body copy uses the readable font when chosen in the accessibility menu */
+:root[data-a11y-font="readable"] body {
+  font-family: var(--font-readable), system-ui, sans-serif;
+  letter-spacing: 0.01em;
 }
 
 @utility card {
@@ -42,4 +50,80 @@ body {
 }
 .leaflet-container {
   font-family: inherit;
+}
+
+/* ---------------------------------------------------------------- accessibility */
+
+/* Clear keyboard focus everywhere (mouse clicks don't show it). */
+:focus-visible {
+  outline: 3px solid #c2410c;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+header :focus-visible {
+  outline-color: #fdba74;
+}
+
+/* Text size: everything is sized in rem, so scaling the root scales the whole site. */
+:root[data-a11y-text="lg"] {
+  font-size: 112.5%;
+}
+:root[data-a11y-text="xl"] {
+  font-size: 125%;
+}
+
+/* Reduced motion: on request, or automatically when the device asks for it. */
+:root[data-a11y-motion="reduce"] *,
+:root[data-a11y-motion="reduce"] *::before,
+:root[data-a11y-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast: near-black text, strong borders, underlined links, no faint greys or shadows. */
+:root[data-a11y-contrast="high"] body {
+  background: #ffffff;
+  color: #000000;
+}
+:root[data-a11y-contrast="high"] :is(.text-slate-400, .text-slate-500, .text-slate-600, .text-slate-700) {
+  color: #111111 !important;
+}
+:root[data-a11y-contrast="high"] :is(.border-slate-100, .border-slate-200, .border-slate-300) {
+  border-color: #333333 !important;
+}
+:root[data-a11y-contrast="high"] :is(.card, .input) {
+  border-width: 2px;
+  border-color: #222222 !important;
+  box-shadow: none;
+}
+:root[data-a11y-contrast="high"] main a:not(.btn, .btn-primary, .btn-secondary, .btn-brand, .card) {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+:root[data-a11y-contrast="high"] .text-ok {
+  color: #065f46 !important;
+}
+:root[data-a11y-contrast="high"] .text-warn {
+  color: #7c2d12 !important;
+}
+:root[data-a11y-contrast="high"] .text-bad {
+  color: #7f1d1d !important;
+}
+:root[data-a11y-contrast="high"] :is(.bg-slate-50, .bg-slate-100, .bg-brand-light) {
+  background-color: #ffffff !important;
+}
+:root[data-a11y-contrast="high"] header {
+  background: #000000;
 }

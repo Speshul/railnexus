@@ -34,6 +34,8 @@ export type Train = {
   return_train: string | null;
   stop_count: number;
   halt_count: number;
+  /** source data marked no halts for this train; stops were inferred from where similar trains halt */
+  halts_inferred: number;
 };
 
 export type Stop = {

@@ -71,6 +71,12 @@ export default async function TrainPage({ params, searchParams }: PageProps<"/tr
               emphasis: segment ? s.seq === segment.from || s.seq === segment.to : s.seq === 0 || s.seq === stops.length - 1,
             }))}
           />
+          {train.halts_inferred === 1 && (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              The source timetable doesn&apos;t mark which stations this train stops at, so its stops are estimated from where
+              similar trains on the same route halt. Timings are from the original data.
+            </p>
+          )}
           <ScheduleTable stops={stops} segment={segment} />
         </div>
 

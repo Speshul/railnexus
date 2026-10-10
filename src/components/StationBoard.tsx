@@ -25,8 +25,8 @@ export function StationBoard({ code, trains, date, today }: { code: string; trai
   return (
     <div className="card overflow-hidden">
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 p-3">
-        <input className="input max-w-xs" placeholder="Filter by train, number, origin…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select className="input w-auto" value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
+        <input className="input max-w-xs" aria-label="Filter trains by name, number or route" placeholder="Filter by train, number, origin…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <select className="input w-auto" aria-label="Which trains to show" value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
           <option value="all">All trains</option>
           <option value="originating">Starting here</option>
           <option value="terminating">Ending here</option>

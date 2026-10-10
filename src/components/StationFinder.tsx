@@ -4,5 +4,5 @@ import { StationInput } from "./StationInput";
 
 export function StationFinder() {
   const router = useRouter();
-  return <StationInput label="Station" value={null} autoFocus onChange={(s) => s && router.push(`/station/${s.code}`)} />;
+  return <StationInput label="Station" value={null} onChange={(s) => s && router.push(`/station/${s.code}`)} />;
 }

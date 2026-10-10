@@ -66,7 +66,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
           <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
             <div>
               <h1 className="text-xl font-bold">
-                {fromStation.name} <span className="text-slate-400">→</span> {toStation.name}
+                {fromStation.name} <span className="text-slate-500">→</span> {toStation.name}
               </h1>
               <p className="text-sm text-slate-600">
                 {formatDate(params.date, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · {QUOTAS[params.quota].name} quota

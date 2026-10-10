@@ -166,6 +166,23 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
   const recRef = useRef<SpeechRec | null>(null);
   const stopRecordingRef = useRef<(() => void) | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const micRef = useRef<HTMLButtonElement>(null);
+
+  // Escape closes the panel (and stops listening/speaking); focus goes back to the mic button.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      recRef.current?.abort();
+      stopRecordingRef.current?.();
+      window.speechSynthesis?.cancel();
+      setOpen(false);
+      setPhase("idle");
+      micRef.current?.focus();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
 
   // Is enhanced (Whisper) recognition configured on the server?
   useEffect(() => {
@@ -453,7 +470,7 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
                 </div>
               </div>
             )}
-            <p className="text-[11px] text-slate-400">I can search, choose trains and fill passenger details. Payment is always done by you.</p>
+            <p className="text-xs text-slate-500">I can search, choose trains and fill passenger details. Payment is always done by you.</p>
           </div>
 
           <form className="flex gap-2 border-t border-slate-100 p-2" onSubmit={(e) => { e.preventDefault(); send(typed); setTyped(""); }}>
@@ -464,7 +481,9 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
       )}
 
       <button
+        ref={micRef}
         onClick={onMic}
+        aria-expanded={open}
         aria-label={phase === "listening" ? "Stop listening" : "Speak to the voice assistant"}
         className={`print:hidden fixed bottom-6 right-4 z-50 flex size-14 items-center justify-center rounded-full text-white shadow-lg transition ${
           phase === "listening" ? "bg-bad ring-4 ring-red-200" : "bg-accent hover:bg-accent-dark"

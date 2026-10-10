@@ -225,7 +225,7 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
                 </p>
               )}
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="text-sm text-slate-500">Showing {filtered.length} of {results.length} trains. Pick a class on any train to book it.</p>
+                <p className="text-sm text-slate-500" role="status" aria-live="polite">Showing {filtered.length} of {results.length} trains. Pick a class on any train to book it.</p>
                 <details className="text-sm">
                   <summary className="cursor-pointer text-brand hover:underline">What do these terms mean?</summary>
                   <dl className="card mt-2 max-w-md space-y-1.5 p-3 text-xs text-slate-600">

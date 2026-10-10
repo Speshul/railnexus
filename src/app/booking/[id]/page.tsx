@@ -136,9 +136,9 @@ export default async function TripPage({ params, searchParams }: PageProps<"/boo
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
       <ol className="mb-4 flex flex-wrap gap-2 text-xs font-medium text-slate-500">
-        <li className="text-slate-400">1. Search</li><li>›</li>
-        <li className="text-slate-400">2. Passenger details</li><li>›</li>
-        <li className={pending ? "text-brand" : "text-slate-400"}>3. Review</li><li>›</li>
+        <li className="text-slate-500">1. Search</li><li>›</li>
+        <li className="text-slate-500">2. Passenger details</li><li>›</li>
+        <li className={pending ? "text-brand" : "text-slate-500"}>3. Review</li><li>›</li>
         <li className={paid ? "text-brand" : ""}>4. {paid ? "Booked" : "Payment"}</li>
       </ol>
 

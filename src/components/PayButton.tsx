@@ -90,7 +90,7 @@ export function PayButton({ tripId, amountPaise }: { tripId: string; amountPaise
       <div className="rounded-md border border-dashed border-slate-300 p-2 text-xs text-slate-600">
         <p className="mb-1 flex items-center gap-1 font-semibold"><ShieldCheck className="size-3.5" /> Razorpay test mode: no real money</p>
         <p>UPI: <code>success@razorpay</code> (or <code>failure@razorpay</code> to see a failed payment)</p>
-        <p>Card: <code>4111 1111 1111 1111</code>, any future expiry, any CVV</p>
+        <p>Card: <code>4100 2800 0000 1007</code>, any future expiry, any CVV</p>
       </div>
     </div>
   );

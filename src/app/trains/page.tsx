@@ -20,7 +20,7 @@ export default function TrainsPage() {
     <div className="mx-auto max-w-6xl px-4 py-6">
       <h1 className="mb-1 text-2xl font-bold">Trains</h1>
       <p className="mb-4 text-sm text-slate-600">Search any train by number or name to see its full route, stops and fares.</p>
-      <div className="card mb-6 max-w-xl p-4"><TrainLookup autoFocus /></div>
+      <div className="card mb-6 max-w-xl p-4"><TrainLookup /></div>
       {[...groups.entries()].map(([type, list]) => (
         <section key={type} className="mb-6">
           <h2 className="mb-2 text-lg font-semibold">{type} trains <span className="text-sm font-normal text-slate-500">({list.length})</span></h2>

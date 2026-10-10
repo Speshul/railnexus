@@ -69,6 +69,8 @@ export function StationInput({
           role="combobox"
           aria-expanded={open}
           aria-controls={`${id}-list`}
+          aria-autocomplete="list"
+          aria-activedescendant={open && options.length && text.trim().length >= 2 ? `${id}-opt-${active}` : undefined}
           onChange={(e) => {
             setText(e.target.value);
             setOpen(true);
@@ -93,6 +95,7 @@ export function StationInput({
           {options.map((s, i) => (
             <li
               key={s.code}
+              id={`${id}-opt-${i}`}
               role="option"
               aria-selected={i === active}
               onMouseDown={(e) => { e.preventDefault(); choose(s); }}

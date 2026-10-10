@@ -18,6 +18,7 @@ export function ScheduleTable({ stops, segment }: { stops: Stop[]; segment: { fr
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
+          <caption className="sr-only">Timetable: arrival, departure, halt and distance for each station</caption>
           <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
             <tr>
               <th className="px-3 py-2">#</th>
@@ -37,7 +38,7 @@ export function ScheduleTable({ stops, segment }: { stops: Stop[]; segment: { fr
               return (
                 <tr
                   key={s.seq}
-                  className={`border-t border-slate-100 ${!s.halt ? "text-slate-400" : ""} ${inSeg ? "bg-brand-light/60" : ""} ${isEnd ? "font-semibold" : ""}`}
+                  className={`border-t border-slate-100 ${!s.halt ? "text-slate-500" : ""} ${inSeg ? "bg-brand-light/60" : ""} ${isEnd ? "font-semibold" : ""}`}
                 >
                   <td className="px-3 py-1.5 tabular-nums">{s.halt ? haltNo : ""}</td>
                   <td className="px-3 py-1.5">
