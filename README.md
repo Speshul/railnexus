@@ -34,7 +34,20 @@ display settings switched on.
   captions and text descriptions for maps.
 - **Contrast**: brand orange darkened to #c2410c and secondary grey to #5a6a82 so text is at least 4.5:1 on every
   surface. Availability is always written out, never shown by colour alone.
+- **Hindi (हिंदी)**: the whole interface is translated; first-time visitors are asked to pick English or Hindi
+  (like IRCTC), and a header button switches at any time. Station and train names stay in English, as on real
+  tickets. Hindi pages also pass axe, use a Devanagari font (Noto Sans Devanagari) and set `<html lang="hi">`.
+  The voice assistant defaults to Hindi speech when the site is in Hindi.
 - Statement page at `/accessibility`.
+
+### How translation works
+
+- `src/i18n/en.ts` holds every English string; `src/i18n/hi.ts` is typed against it, so a missing Hindi string fails
+  the build. Strings use `{name}` placeholders, and plurals use `key.one` / `key.other`.
+- The `lang` cookie stores the choice (`src/app/actions/locale.ts`). Server components call `getT()`, client
+  components call `useT()`.
+- Server logic (validation, cancellation rules, availability notes) returns message keys rather than sentences, and
+  the page translates them. Dates and durations are formatted with `hi-IN` when the site is in Hindi.
 
 ## Payments, tickets and cancellations (Phase 3)
 
@@ -106,6 +119,7 @@ src/lib/availability.ts  simulated seat inventory + confirmation probability
 src/lib/booking.ts       validation rules, seat holds, booking records
 src/lib/search.ts        search service shared by pages and the JSON API
 src/app/api/*            JSON endpoints: stations, trains, search, availability
+src/i18n/*               English/Hindi dictionaries and translation helpers
 ```
 
 Every page's state lives in the URL (`/search?from=NDLS&to=HWH&date=...`), and search is exposed as a JSON API. The Phase 2 voice assistant will drive the site through these.

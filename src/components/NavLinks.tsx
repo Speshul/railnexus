@@ -1,19 +1,21 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useT } from "@/i18n/client";
 
 /** Main navigation; marks the current section for screen readers (aria-current) and visually. */
 export function NavLinks({ loggedIn }: { loggedIn: boolean }) {
   const path = usePathname();
+  const t = useT();
   const links = [
-    { href: "/", label: "Book Tickets", match: (p: string) => p === "/" || p.startsWith("/search") || p.startsWith("/book") },
-    { href: "/trains", label: "Trains", match: (p: string) => p.startsWith("/train") },
-    { href: "/stations", label: "Stations", match: (p: string) => p.startsWith("/station") },
-    { href: "/pnr", label: "PNR Status", match: (p: string) => p.startsWith("/pnr") },
-    ...(loggedIn ? [{ href: "/account", label: "My Bookings", match: (p: string) => p.startsWith("/account") || p.startsWith("/booking") || p.startsWith("/ticket") }] : []),
+    { href: "/", label: t("nav.book"), match: (p: string) => p === "/" || p.startsWith("/search") || p.startsWith("/book") },
+    { href: "/trains", label: t("nav.trains"), match: (p: string) => p.startsWith("/train") },
+    { href: "/stations", label: t("nav.stations"), match: (p: string) => p.startsWith("/station") },
+    { href: "/pnr", label: t("nav.pnr"), match: (p: string) => p.startsWith("/pnr") },
+    ...(loggedIn ? [{ href: "/account", label: t("nav.bookings"), match: (p: string) => p.startsWith("/account") || p.startsWith("/booking") || p.startsWith("/ticket") }] : []),
   ];
   return (
-    <nav aria-label="Main" className="flex flex-wrap gap-4 text-sm text-white/85">
+    <nav aria-label={t("nav.label")} className="flex flex-wrap gap-4 text-sm text-white/85">
       {links.map((l) => {
         const current = l.match(path);
         return (

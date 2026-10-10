@@ -2,24 +2,28 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { railDb } from "@/lib/db";
 import { StationFinder } from "@/components/StationFinder";
+import { getT } from "@/i18n/server";
 
-export const metadata: Metadata = { title: "Stations" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("stns.title") };
+}
 
-export default function StationsPage() {
+export default async function StationsPage() {
+  const t = await getT();
   const busiest = railDb()
     .prepare("SELECT code, name, state, train_count FROM stations ORDER BY train_count DESC LIMIT 40")
     .all() as { code: string; name: string; state: string | null; train_count: number }[];
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
-      <h1 className="mb-1 text-2xl font-bold">Stations</h1>
-      <p className="mb-4 text-sm text-slate-600">Find a station to see every train that stops there, its timings and nearby stations.</p>
+      <h1 className="mb-1 text-2xl font-bold">{t("stns.title")}</h1>
+      <p className="mb-4 text-sm text-slate-600">{t("stns.body")}</p>
       <div className="card mb-6 max-w-xl p-4"><StationFinder /></div>
-      <h2 className="mb-3 text-lg font-semibold">Busiest stations</h2>
+      <h2 className="mb-3 text-lg font-semibold">{t("stns.busiest")}</h2>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {busiest.map((s) => (
           <Link key={s.code} href={`/station/${s.code}`} className="card flex items-center justify-between p-3 text-sm hover:border-brand">
             <span><b>{s.name}</b> <span className="font-mono text-xs text-slate-500">{s.code}</span></span>
-            <span className="text-xs text-slate-500">{s.train_count} trains</span>
+            <span className="text-xs text-slate-500">{t("stns.trains", { n: s.train_count })}</span>
           </Link>
         ))}
       </div>

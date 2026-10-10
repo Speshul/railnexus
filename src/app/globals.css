@@ -13,7 +13,7 @@
   --color-ok: #15803d;
   --color-warn: #b45309;
   --color-bad: #b91c1c;
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-geist-sans), var(--font-devanagari);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -23,7 +23,7 @@ body {
 }
 /* body copy uses the readable font when chosen in the accessibility menu */
 :root[data-a11y-font="readable"] body {
-  font-family: var(--font-readable), system-ui, sans-serif;
+  font-family: var(--font-readable), var(--font-devanagari), system-ui, sans-serif;
   letter-spacing: 0.01em;
 }
 

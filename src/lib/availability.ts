@@ -7,6 +7,7 @@ import { appDb } from "./db";
 import { CLASSES, BOOKING_WINDOW_DAYS, type ClassCode, type Quota } from "./constants";
 import { diffDays, todayIST, nowMinutesIST, weekday, addDays } from "./dates";
 import { getStops, type Segment, type Stop } from "./rail";
+import { msg, type Msg } from "@/i18n/core";
 
 export type AvailStatus = "AVAILABLE" | "RAC" | "WL" | "REGRET" | "NOT_OPEN" | "DEPARTED" | "UNRESERVED" | "NA";
 
@@ -17,7 +18,8 @@ export type Availability = {
   /** probability (0-1) that a booking made now ends up confirmed */
   chance: number;
   bookable: boolean;
-  note?: string;
+  /** explanation, as a translatable message */
+  note?: Msg;
 };
 
 const COACHES: Record<ClassCode, number> = { "1A": 1, "2A": 2, "3A": 5, SL: 10, EC: 1, CC: 6, "2S": 4, UR: 0 };
@@ -158,22 +160,22 @@ export function findSplit(seg: Segment, cls: ClassCode, quota: Quota, seats = 1)
 }
 
 export function getAvailability(seg: Segment, cls: ClassCode, quota: Quota): Availability {
-  const na = (status: AvailStatus, label: string, note?: string): Availability => ({ status, count: 0, label, chance: 0, bookable: false, note });
+  const na = (status: AvailStatus, label: string, note?: Msg): Availability => ({ status, count: 0, label, chance: 0, bookable: false, note });
   if (!seg.train.classes.includes(cls)) return na("NA", "Not offered");
-  if (!seg.train.reservable || cls === "UR") return na("UNRESERVED", "Unreserved", "No reservation needed. Buy a ticket at the station or on UTS.");
+  if (!seg.train.reservable || cls === "UR") return na("UNRESERVED", "Unreserved", msg("note.unreserved"));
 
   const today = todayIST();
   const ahead = diffDays(seg.date, today);
   if (ahead < 0) return na("DEPARTED", "Departed");
   if (ahead === 0 && (seg.from.dep_min! % 1440) <= nowMinutesIST()) return na("DEPARTED", "Departed");
-  if (ahead > BOOKING_WINDOW_DAYS) return na("NOT_OPEN", "Not open", `Booking opens ${BOOKING_WINDOW_DAYS} days before the journey.`);
+  if (ahead > BOOKING_WINDOW_DAYS) return na("NOT_OPEN", "Not open", msg("note.window", { days: BOOKING_WINDOW_DAYS }));
   if (quota === "TQ") {
-    if (cls === "1A" || cls === "EC") return na("NA", "No Tatkal", "Tatkal quota is not available in this class.");
-    if (ahead > 1) return na("NOT_OPEN", "Opens later", `Tatkal opens on ${addDays(seg.date, -1)} (one day before the journey).`);
+    if (cls === "1A" || cls === "EC") return na("NA", "No Tatkal", msg("note.noTatkalClass"));
+    if (ahead > 1) return na("NOT_OPEN", "Opens later", msg("note.tatkalOpens", { date: addDays(seg.date, -1) }));
   }
 
   const { pool, racSlots, maxWl, sold } = inventory(seg, cls, quota);
-  if (pool === 0) return na("NA", "No quota", "This quota is not available in this class.");
+  if (pool === 0) return na("NA", "No quota", msg("note.noQuota"));
 
   if (sold < pool) {
     const left = pool - sold;
@@ -183,12 +185,12 @@ export function getAvailability(seg: Segment, cls: ClassCode, quota: Quota): Ava
   if (racSlots) {
     if (over < racSlots) {
       const n = over + 1;
-      return { status: "RAC", count: n, label: `RAC ${n}`, chance: 0.95, bookable: true, note: "RAC: shared side-lower berth, likely to confirm." };
+      return { status: "RAC", count: n, label: `RAC ${n}`, chance: 0.95, bookable: true, note: msg("note.rac") };
     }
     over -= racSlots;
   }
   const wl = over + 1;
-  if (wl > maxWl) return na("REGRET", "Regret", "Waitlist is full for this date.");
+  if (wl > maxWl) return na("REGRET", "Regret", msg("note.regret"));
   // Expected cancellations scale with quota size and time left before the chart is prepared.
   const expected = pool * (quota === "TQ" ? 0.04 : 0.1) * Math.min(1.2, 0.35 + ahead / 25);
   const chance = Math.max(0.03, Math.min(0.97, 1 / (1 + Math.exp((wl - expected) / (expected * 0.35 + 1)))));

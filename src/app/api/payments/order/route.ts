@@ -1,18 +1,20 @@
 import { getUser } from "@/lib/auth";
 import { appDb } from "@/lib/db";
 import { getTrip } from "@/lib/booking";
+import { getT } from "@/i18n/server";
 import { createOrder, publicKeyId, razorpayConfigured } from "@/lib/razorpay";
 
 // POST { tripId } -> Razorpay order for the held seats (reused if the user retries).
 export async function POST(req: Request) {
   const user = await getUser();
-  if (!user) return Response.json({ error: "Please sign in again." }, { status: 401 });
-  if (!razorpayConfigured()) return Response.json({ error: "Payments aren't configured (Razorpay test keys missing)." }, { status: 503 });
+  const t = await getT();
+  if (!user) return Response.json({ error: t("err.signInAgain") }, { status: 401 });
+  if (!razorpayConfigured()) return Response.json({ error: t("pay.notConfigured") }, { status: 503 });
   const { tripId } = (await req.json().catch(() => ({}))) as { tripId?: string };
   const trip = tripId ? getTrip(tripId, user.id) : null;
-  if (!trip) return Response.json({ error: "Booking not found." }, { status: 404 });
-  if (trip.status === "CONFIRMED") return Response.json({ error: "This booking is already paid." }, { status: 409 });
-  if (trip.status !== "PENDING_PAYMENT") return Response.json({ error: "Your seat hold has expired. Please book again." }, { status: 410 });
+  if (!trip) return Response.json({ error: t("err.notFound") }, { status: 404 });
+  if (trip.status === "CONFIRMED") return Response.json({ error: t("pay.alreadyPaid") }, { status: 409 });
+  if (trip.status !== "PENDING_PAYMENT") return Response.json({ error: t("pay.holdExpired") }, { status: 410 });
 
   const db = appDb();
   const existing = db
@@ -27,7 +29,7 @@ export async function POST(req: Request) {
       });
       orderId = order.id;
     } catch (e) {
-      return Response.json({ error: `Couldn't start the payment: ${(e as Error).message}` }, { status: 502 });
+      return Response.json({ error: t("pay.startFailed", { msg: (e as Error).message }) }, { status: 502 });
     }
     db.prepare("INSERT INTO payments (order_id, trip_id, user_id, amount_paise, status, created_at) VALUES (?, ?, ?, ?, 'CREATED', ?)")
       .run(orderId, trip.id, user.id, trip.totalPaise, Date.now());

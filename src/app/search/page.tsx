@@ -5,15 +5,20 @@ import { SearchForm } from "@/components/SearchForm";
 import { ResultsView } from "@/components/ResultsView";
 import { alternativeRoutes, parseSearchParams, searchJourneys } from "@/lib/search";
 import { addDays, diffDays, formatDate, todayIST } from "@/lib/dates";
-import { BOOKING_WINDOW_DAYS, QUOTAS } from "@/lib/constants";
+import { BOOKING_WINDOW_DAYS } from "@/lib/constants";
+import { getT } from "@/i18n/server";
+import type { MessageKey } from "@/i18n/core";
 
 export async function generateMetadata({ searchParams }: PageProps<"/search">): Promise<Metadata> {
   const p = parseSearchParams(await searchParams);
-  return { title: p ? `${p.from} to ${p.to} trains` : "Search trains" };
+  const t = await getT();
+  return { title: p ? t("searchPage.title", { from: p.from, to: p.to }) : t("searchPage.titleEmpty") };
 }
 
 export default async function SearchPage({ searchParams }: PageProps<"/search">) {
   const today = todayIST();
+  const t = await getT();
+  const L = t.locale;
   const params = parseSearchParams(await searchParams);
   if (!params) {
     return (
@@ -58,9 +63,9 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
       </div>
 
       {!fromStation || !toStation ? (
-        <div className="card p-8 text-center text-slate-600">Unknown station code. Please pick stations from the suggestions.</div>
+        <div className="card p-8 text-center text-slate-600">{t("searchPage.unknown")}</div>
       ) : fromStation.code === toStation.code ? (
-        <div className="card p-8 text-center text-slate-600">From and To are the same station. Please choose a different destination.</div>
+        <div className="card p-8 text-center text-slate-600">{t("searchPage.same")}</div>
       ) : (
         <>
           <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
@@ -69,24 +74,23 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
                 {fromStation.name} <span className="text-slate-500">→</span> {toStation.name}
               </h1>
               <p className="text-sm text-slate-600">
-                {formatDate(params.date, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · {QUOTAS[params.quota].name} quota
-                {params.nearby && (
-                  <> · including {data.fromCodes.length - 1} + {data.toCodes.length - 1} nearby stations</>
-                )}
+                {formatDate(params.date, { weekday: "long", day: "numeric", month: "long", year: "numeric" }, L)} ·{" "}
+                {t("searchPage.quota", { quota: t(`quota.${params.quota}` as MessageKey) })}
+                {params.nearby && <> · {t("searchPage.nearby", { a: data.fromCodes.length - 1, b: data.toCodes.length - 1 })}</>}
               </p>
             </div>
-            <nav className="flex items-center gap-1 text-sm" aria-label="Change date">
-              <Link href={qs(addDays(params.date, -1))} aria-label="Previous day"
+            <nav className="flex items-center gap-1 text-sm" aria-label={t("searchPage.changeDate")}>
+              <Link href={qs(addDays(params.date, -1))} aria-label={t("searchPage.prev")}
                 className={`rounded-md p-1.5 hover:bg-white ${diffDays(params.date, today) <= 0 ? "pointer-events-none opacity-30" : ""}`}>
                 <ChevronLeft className="size-4" />
               </Link>
               {strip.map((d) => (
                 <Link key={d} href={qs(d)}
                   className={`rounded-md px-2.5 py-1.5 ${d === params.date ? "bg-brand font-semibold text-white" : "hover:bg-white"}`}>
-                  {formatDate(d, { weekday: "short", day: "numeric" })}
+                  {formatDate(d, { weekday: "short", day: "numeric" }, L)}
                 </Link>
               ))}
-              <Link href={qs(addDays(params.date, 1))} aria-label="Next day"
+              <Link href={qs(addDays(params.date, 1))} aria-label={t("searchPage.next")}
                 className={`rounded-md p-1.5 hover:bg-white ${diffDays(params.date, today) >= BOOKING_WINDOW_DAYS ? "pointer-events-none opacity-30" : ""}`}>
                 <ChevronRight className="size-4" />
               </Link>

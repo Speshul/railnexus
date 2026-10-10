@@ -4,6 +4,7 @@ import { SearchForm } from "@/components/SearchForm";
 import { TrainLookup } from "@/components/TrainLookup";
 import { stats } from "@/lib/rail";
 import { addDays, todayIST } from "@/lib/dates";
+import { getT } from "@/i18n/server";
 
 const POPULAR: [string, string, string, string][] = [
   ["NDLS", "New Delhi", "BCT", "Mumbai Central"],
@@ -16,7 +17,8 @@ const POPULAR: [string, string, string, string][] = [
   ["ADI", "Ahmedabad", "BCT", "Mumbai Central"],
 ];
 
-export default function Home() {
+export default async function Home() {
+  const t = await getT();
   const today = todayIST();
   const s = stats();
   const tomorrow = addDays(today, 1);
@@ -24,9 +26,9 @@ export default function Home() {
     <>
       <section className="bg-gradient-to-b from-brand to-brand-dark pb-24 pt-10 text-white">
         <div className="mx-auto max-w-6xl px-4">
-          <h1 className="text-3xl font-bold md:text-4xl">Book train tickets across India</h1>
+          <h1 className="text-3xl font-bold md:text-4xl">{t("home.title")}</h1>
           <p className="mt-2 max-w-2xl text-white/80">
-            {s.trains.toLocaleString("en-IN")} trains · {s.stations.toLocaleString("en-IN")} stations · every route and stop on a map.
+            {t("home.subtitle", { trains: s.trains.toLocaleString("en-IN"), stations: s.stations.toLocaleString("en-IN") })}
           </p>
         </div>
       </section>
@@ -36,7 +38,7 @@ export default function Home() {
         </div>
 
         <section className="mt-10">
-          <h2 className="mb-3 text-lg font-semibold">Popular routes</h2>
+          <h2 className="mb-3 text-lg font-semibold">{t("home.popular")}</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {POPULAR.map(([f, fn, t, tn]) => (
               <Link
@@ -58,22 +60,22 @@ export default function Home() {
         <section className="mt-10 grid gap-4 md:grid-cols-3">
           <div className="card p-5">
             <Route className="mb-2 size-6 text-accent" />
-            <h3 className="font-semibold">Look up a train</h3>
-            <p className="mb-3 text-sm text-slate-600">Full timetable, every stop, and the route on a map.</p>
+            <h3 className="font-semibold">{t("home.lookup.title")}</h3>
+            <p className="mb-3 text-sm text-slate-600">{t("home.lookup.body")}</p>
             <TrainLookup />
           </div>
           <Link href="/stations" className="card p-5 hover:border-brand">
             <MapPinned className="mb-2 size-6 text-accent" />
-            <h3 className="font-semibold">Explore stations</h3>
-            <p className="text-sm text-slate-600">See every train that stops at a station, and other stations nearby.</p>
+            <h3 className="font-semibold">{t("home.stations.title")}</h3>
+            <p className="text-sm text-slate-600">{t("home.stations.body")}</p>
           </Link>
           <div className="card p-5">
             <Ticket className="mb-2 size-6 text-accent" />
-            <h3 className="font-semibold">Smarter booking</h3>
+            <h3 className="font-semibold">{t("home.smart.title")}</h3>
             <ul className="mt-1 list-disc space-y-1 pl-4 text-sm text-slate-600">
-              <li>Confirmation chance for waitlisted tickets</li>
-              <li>Connecting journeys when no direct train runs</li>
-              <li>Search nearby stations in the same city</li>
+              <li>{t("home.smart.1")}</li>
+              <li>{t("home.smart.2")}</li>
+              <li>{t("home.smart.3")}</li>
             </ul>
           </div>
         </section>

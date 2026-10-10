@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Loader2, Mic, MicOff, Pencil, Send, Volume2, VolumeX, X } from "lucide-react";
 import { useVoiceBridge } from "./VoiceBridge";
+import { useT } from "@/i18n/client";
 import type { VoiceAction, VoiceContext, VoiceResponse } from "@/lib/voice/types";
 
 type Phase = "idle" | "listening" | "thinking" | "speaking";
@@ -128,16 +129,19 @@ function runAfterNavigation(href: string, then: () => void) {
 }
 
 const EXAMPLES = ["Kal Pune se Delhi sleeper", "Sabse sasti wali book karo 3A mein", "Agle din ke trains", "Meri bookings dikhao"];
-const MIC_DENIED = "Microphone permission was denied. Allow it in the address bar, or type your command below.";
 
 export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
   const router = useRouter();
+  const tr = useT();
   const pathname = usePathname();
   const bridge = useVoiceBridge();
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   // Per-browser preferences; the panel that shows them only renders after a click, so no hydration mismatch.
-  const [lang, setLang] = useState<Lang>(() => (readPref("voice-lang") === "hi-IN" ? "hi-IN" : "en-IN"));
+  const [lang, setLang] = useState<Lang>(() => {
+    const saved = readPref("voice-lang");
+    return saved === "hi-IN" || (!saved && tr.locale === "hi") ? "hi-IN" : "en-IN";
+  });
   const [muted, setMuted] = useState(() => readPref("voice-muted") === "1");
   const [mode, setMode] = useState<Mode>(() => (readPref("voice-mode") === "standard" ? "standard" : "enhanced"));
   const [enhancedOk, setEnhancedOk] = useState<boolean | null>(null);
@@ -261,13 +265,13 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
         body: JSON.stringify({ text: t, alternatives, context }),
       });
       const data = (await res.json()) as VoiceResponse & { error?: string };
-      if (!res.ok) throw new Error(data.error || "Something went wrong");
+      if (!res.ok) throw new Error(data.error || tr("voice.wrong"));
       const override = run(data.actions);
       const say = override || data.reply;
       setReply(say);
       speak(say, override ? undefined : data.speech);
     } catch (e) {
-      setError((e as Error).message || "Couldn't reach the assistant.");
+      setError((e as Error).message || tr("voice.unreachable"));
       setPhase("idle");
     }
   }
@@ -285,7 +289,7 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     } catch {
-      setError(MIC_DENIED);
+      setError(tr("voice.micDenied"));
       setPhase("idle");
       return;
     }
@@ -304,9 +308,9 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
     fd.set("lang", lang === "hi-IN" ? "hi" : "en");
     fd.set("hints", hintWords());
     const r = await fetch("/api/transcribe", { method: "POST", body: fd }).catch(() => null);
-    const d = r ? await r.json().catch(() => ({})) : { error: "Network error" };
+    const d = r ? await r.json().catch(() => ({})) : { error: tr("voice.network") };
     if (!r?.ok || !d.text) {
-      setError(d.error ?? "Couldn't make out any words. Try again, or type it below.");
+      setError(d.error ?? tr("voice.noWords"));
       setPhase("idle");
       return;
     }
@@ -335,9 +339,9 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
       setInterim(text);
     };
     rec.onerror = (e) => {
-      if (e.error === "not-allowed" || e.error === "service-not-allowed") setError(MIC_DENIED);
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") setError(tr("voice.micDenied"));
       else if (e.error === "no-speech") setError("I didn't hear anything. Tap the mic and try again.");
-      else if (e.error !== "aborted") setError(`Speech recognition error: ${e.error}`);
+      else if (e.error !== "aborted") setError(tr("voice.recError", { e: e.error }));
     };
     rec.onend = () => {
       recRef.current = null;
@@ -378,11 +382,11 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
   return (
     <>
       {open && (
-        <div role="dialog" aria-label="Voice assistant" className="print:hidden fixed bottom-24 right-4 z-50 w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div role="dialog" aria-label={tr("voice.title")} className="print:hidden fixed bottom-24 right-4 z-50 w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white shadow-2xl">
           <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
-            <span className="font-semibold">Voice assistant</span>
+            <span className="font-semibold">{tr("voice.title")}</span>
             <div className="ml-auto flex items-center gap-1">
-              <div className="flex rounded-md border border-slate-200 p-0.5 text-xs" role="group" aria-label="Language you speak">
+              <div className="flex rounded-md border border-slate-200 p-0.5 text-xs" role="group" aria-label={tr("voice.speakLang")}>
                 {(["en-IN", "hi-IN"] as Lang[]).map((l) => (
                   <button key={l} onClick={() => { setLang(l); savePref("voice-lang", l); }} aria-pressed={lang === l}
                     className={`rounded px-2 py-0.5 ${lang === l ? "bg-brand text-white" : "text-slate-600"}`}>
@@ -391,11 +395,11 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
                 ))}
               </div>
               <button onClick={() => { setMuted(!muted); savePref("voice-muted", muted ? "0" : "1"); if (!muted) window.speechSynthesis?.cancel(); }}
-                aria-label={muted ? "Turn voice replies on" : "Mute voice replies"} className="rounded p-1.5 text-slate-500 hover:bg-slate-100">
+                aria-label={muted ? tr("voice.unmute") : tr("voice.mute")} className="rounded p-1.5 text-slate-500 hover:bg-slate-100">
                 {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
               </button>
               <button onClick={() => { stopListening(); window.speechSynthesis?.cancel(); setOpen(false); setPhase("idle"); }}
-                aria-label="Close voice assistant" className="rounded p-1.5 text-slate-500 hover:bg-slate-100">
+                aria-label={tr("voice.close")} className="rounded p-1.5 text-slate-500 hover:bg-slate-100">
                 <X className="size-4" />
               </button>
             </div>
@@ -403,7 +407,7 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
 
           {hindiVoices.length > 1 && (
             <label className="flex items-center gap-2 border-b border-slate-100 px-4 py-1.5 text-xs text-slate-600">
-              Hindi voice
+              {tr("voice.hindiVoice")}
               <select className="input w-auto flex-1 py-0.5 text-xs" value={pickVoice(voices, "hi", hindiVoiceName)?.name ?? ""}
                 onChange={(e) => {
                   setHindiVoiceName(e.target.value);
@@ -423,13 +427,13 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
           )}
           {enhancedOk && hasBrowserRec && (
             <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-1.5 text-xs text-slate-600">
-              Recognition
-              <div className="flex rounded-md border border-slate-200 p-0.5" role="group" aria-label="Speech recognition mode">
+              {tr("voice.recognition")}
+              <div className="flex rounded-md border border-slate-200 p-0.5" role="group" aria-label={tr("voice.recMode")}>
                 {(["enhanced", "standard"] as Mode[]).map((m) => (
                   <button key={m} onClick={() => { setMode(m); savePref("voice-mode", m); }} aria-pressed={mode === m}
-                    title={m === "enhanced" ? "Whisper: better with accents and unusual voices; replies after you pause" : "Browser's built-in recognizer: shows words as you speak"}
+                    title={m === "enhanced" ? tr("voice.enhancedTitle") : tr("voice.standardTitle")}
                     className={`rounded px-2 py-0.5 ${mode === m ? "bg-brand text-white" : ""}`}>
-                    {m === "enhanced" ? "Enhanced" : "Standard"}
+                    {m === "enhanced" ? tr("voice.enhanced") : tr("voice.standard")}
                   </button>
                 ))}
               </div>
@@ -440,7 +444,7 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
             {phase === "listening" && (
               <div>
                 <p className="text-slate-500">
-                  {interim ? <span className="text-slate-900">{interim}</span> : useEnhanced ? "Listening… speak, then pause. I'll stop when you finish." : "Listening… speak now"}
+                  {interim ? <span className="text-slate-900">{interim}</span> : useEnhanced ? tr("voice.listeningPause") : tr("voice.listening")}
                 </p>
                 {useEnhanced && (
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100" aria-hidden>
@@ -452,17 +456,17 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
             {heard && phase !== "listening" && (
               <div className="flex items-start gap-2 rounded-lg bg-slate-100 px-3 py-2 text-slate-800">
                 <span className="flex-1">“{heard}”</span>
-                <button onClick={editHeard} className="flex shrink-0 items-center gap-1 text-xs font-medium text-brand hover:underline" aria-label="Edit what I heard">
-                  <Pencil className="size-3" /> Edit
+                <button onClick={editHeard} className="flex shrink-0 items-center gap-1 text-xs font-medium text-brand hover:underline" aria-label={tr("voice.editLabel")}>
+                  <Pencil className="size-3" aria-hidden /> {tr("voice.edit")}
                 </button>
               </div>
             )}
-            {busy && <p className="flex items-center gap-2 text-slate-500"><Loader2 className="size-4 animate-spin" /> Working on it…</p>}
+            {busy && <p className="flex items-center gap-2 text-slate-500"><Loader2 className="size-4 animate-spin" aria-hidden /> {tr("voice.working")}</p>}
             {reply && !busy && <p className="rounded-lg bg-brand-light px-3 py-2 text-slate-900">{reply}</p>}
             {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-bad">{error}</p>}
             {!heard && phase === "idle" && (
               <div>
-                <p className="mb-1.5 text-slate-600">Tap the mic and say something like:</p>
+                <p className="mb-1.5 text-slate-600">{tr("voice.tryIt")}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {EXAMPLES.map((e) => (
                     <button key={e} onClick={() => send(e)} className="rounded-full border border-slate-200 px-2.5 py-1 text-xs hover:border-brand">{e}</button>
@@ -470,12 +474,12 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
                 </div>
               </div>
             )}
-            <p className="text-xs text-slate-500">I can search, choose trains and fill passenger details. Payment is always done by you.</p>
+            <p className="text-xs text-slate-500">{tr("voice.scope")}</p>
           </div>
 
           <form className="flex gap-2 border-t border-slate-100 p-2" onSubmit={(e) => { e.preventDefault(); send(typed); setTyped(""); }}>
-            <input ref={inputRef} className="input py-1.5" placeholder="Or type a command…" value={typed} onChange={(e) => setTyped(e.target.value)} disabled={busy} />
-            <button className="btn-brand px-3 py-1.5" disabled={busy || !typed.trim()} aria-label="Send command"><Send className="size-4" /></button>
+            <input ref={inputRef} className="input py-1.5" placeholder={tr("voice.placeholder")} value={typed} onChange={(e) => setTyped(e.target.value)} disabled={busy} />
+            <button className="btn-brand px-3 py-1.5" disabled={busy || !typed.trim()} aria-label={tr("voice.send")}><Send className="size-4" aria-hidden /></button>
           </form>
         </div>
       )}
@@ -484,7 +488,7 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
         ref={micRef}
         onClick={onMic}
         aria-expanded={open}
-        aria-label={phase === "listening" ? "Stop listening" : "Speak to the voice assistant"}
+        aria-label={phase === "listening" ? tr("voice.stop") : tr("voice.speak")}
         className={`print:hidden fixed bottom-6 right-4 z-50 flex size-14 items-center justify-center rounded-full text-white shadow-lg transition ${
           phase === "listening" ? "bg-bad ring-4 ring-red-200" : "bg-accent hover:bg-accent-dark"
         }`}

@@ -1,8 +1,10 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BOOKING_WINDOW_DAYS, CLASSES, QUOTAS, type ClassCode, type Quota } from "@/lib/constants";
+import { BOOKING_WINDOW_DAYS, QUOTAS, type ClassCode, type Quota } from "@/lib/constants";
 import { addDays } from "@/lib/dates";
+import { useT } from "@/i18n/client";
+import type { MessageKey } from "@/i18n/core";
 
 type Halt = { code: string; name: string; seq: number; day: number };
 
@@ -14,6 +16,7 @@ export function TrainJourneyPicker({
   defaultQuota?: Quota; runsOn: number;
 }) {
   const router = useRouter();
+  const t = useT();
   const [from, setFrom] = useState(defaultFrom ?? halts[0].code);
   const [to, setTo] = useState(defaultTo ?? halts[halts.length - 1].code);
   const [date, setDate] = useState(defaultDate);
@@ -37,43 +40,43 @@ export function TrainJourneyPicker({
       }}
     >
       <div>
-        <label className="label" htmlFor="jp-from">Boarding</label>
+        <label className="label" htmlFor="jp-from">{t("jp.boarding")}</label>
         <select id="jp-from" className="input" value={from} onChange={(e) => setFrom(e.target.value)}>
           {halts.slice(0, -1).map((h) => <option key={h.seq} value={h.code}>{h.name} ({h.code})</option>)}
         </select>
       </div>
       <div>
-        <label className="label" htmlFor="jp-to">Destination</label>
+        <label className="label" htmlFor="jp-to">{t("jp.destination")}</label>
         <select id="jp-to" className="input" value={validTo} onChange={(e) => setTo(e.target.value)}>
           {toOptions.map((h) => <option key={h.seq} value={h.code}>{h.name} ({h.code})</option>)}
         </select>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="label" htmlFor="jp-date">Date</label>
+          <label className="label" htmlFor="jp-date">{t("jp.date")}</label>
           <input id="jp-date" type="date" className="input" value={date} min={today} max={addDays(today, BOOKING_WINDOW_DAYS)} onChange={(e) => setDate(e.target.value)} />
         </div>
         <div>
-          <label className="label" htmlFor="jp-cls">Class</label>
+          <label className="label" htmlFor="jp-cls">{t("jp.class")}</label>
           <select id="jp-cls" className="input" value={cls} onChange={(e) => setCls(e.target.value as ClassCode)}>
-            {classes.map((c) => <option key={c} value={c}>{c} · {CLASSES[c].name}</option>)}
+            {classes.map((c) => <option key={c} value={c}>{c} · {t(`class.${c}` as MessageKey)}</option>)}
           </select>
         </div>
       </div>
       <div>
-        <label className="label" htmlFor="jp-quota">Quota</label>
+        <label className="label" htmlFor="jp-quota">{t("jp.quota")}</label>
         <select id="jp-quota" className="input" value={quota} onChange={(e) => setQuota(e.target.value as Quota)}>
-          {Object.entries(QUOTAS).map(([k, q]) => <option key={k} value={k}>{q.name}</option>)}
+          {Object.keys(QUOTAS).map((k) => <option key={k} value={k}>{t(`quota.${k}` as MessageKey)}</option>)}
         </select>
       </div>
-      {!runs && <p className="text-xs text-bad">This train doesn&apos;t run from {from} on the selected date.</p>}
-      <button className="btn-primary w-full" disabled={!runs}>Book now</button>
+      {!runs && <p className="text-xs text-bad">{t("jp.noRun", { code: from })}</p>}
+      <button className="btn-primary w-full" disabled={!runs}>{t("jp.book")}</button>
       <button
         type="button"
         className="btn-secondary w-full"
         onClick={() => router.push(`/search?${new URLSearchParams({ from, to: validTo, date, quota, cls })}#${train}`)}
       >
-        Compare with other trains
+        {t("jp.compare")}
       </button>
     </form>
   );

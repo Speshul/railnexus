@@ -3,6 +3,7 @@ import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Polyline, CircleMarker, Tooltip, useMap } from "react-leaflet";
 import { useEffect } from "react";
 import type { LatLngBoundsExpression, LatLngExpression } from "leaflet";
+import { useT } from "@/i18n/client";
 
 export type MapStop = {
   code: string;
@@ -24,9 +25,10 @@ function FitBounds({ bounds }: { bounds: LatLngBoundsExpression | null }) {
 }
 
 export default function RouteMap({ stops, height = 420, showPassing = false }: { stops: MapStop[]; height?: number; showPassing?: boolean }) {
+  const t = useT();
   const pts = stops.filter((s) => s.lat !== null && s.lng !== null);
   if (!pts.length) {
-    return <div className="flex items-center justify-center rounded-lg bg-slate-100 text-sm text-slate-500" style={{ height }}>No map data for this route</div>;
+    return <div className="flex items-center justify-center rounded-lg bg-slate-100 text-sm text-slate-500" style={{ height }}>{t("map.none")}</div>;
   }
   const ll = (s: MapStop): LatLngExpression => [s.lat!, s.lng!];
   const hasSegment = pts.some((s) => s.inSegment);
@@ -35,7 +37,7 @@ export default function RouteMap({ stops, height = 420, showPassing = false }: {
 
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200" style={{ height }} role="region"
-      aria-label={`Map of the route through ${pts.filter((s) => s.halt).length} stops, from ${pts[0].name} to ${pts[pts.length - 1].name}. Every stop is also listed in text on this page.`}>
+      aria-label={t("map.label", { n: pts.filter((s) => s.halt).length, from: pts[0].name, to: pts[pts.length - 1].name })}>
       <MapContainer bounds={bounds} boundsOptions={{ padding: [24, 24] }} scrollWheelZoom={false} style={{ height: "100%", width: "100%" }}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

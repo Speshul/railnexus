@@ -1,5 +1,5 @@
 // Client-safe formatting helpers.
-import { DAY_NAMES } from "./constants";
+import type { MessageKey, T } from "@/i18n/core";
 
 export const inr = (n: number, decimals = false) =>
   new Intl.NumberFormat("en-IN", {
@@ -19,19 +19,23 @@ export function availTone(status: string) {
 }
 
 /** Plain-language availability, e.g. "92 seats available" instead of "AVL 92". */
-export function availText(a: { status: string; count: number; label: string }) {
+export function availText(a: { status: string; count: number; label: string }, t: T) {
   switch (a.status) {
-    case "AVAILABLE": return `${a.count} ${a.count === 1 ? "seat" : "seats"} available`;
-    case "RAC": return `RAC ${a.count}`;
-    case "WL": return `Waitlist #${a.count}`;
-    case "REGRET": return "Sold out";
+    case "AVAILABLE": return t.n("avail.seats", a.count);
+    case "RAC": return t("avail.rac", { n: a.count });
+    case "WL": return t("avail.wl", { n: a.count });
+    case "REGRET": return t("avail.regret");
+    case "DEPARTED": return t("avail.departed");
+    case "NOT_OPEN": return t("avail.notOpen");
+    case "UNRESERVED": return t("avail.unreserved");
+    case "NA": return t("avail.na");
     default: return a.label;
   }
 }
 
-export function runDaysLabel(mask: number) {
-  if (mask === 127) return "Daily";
-  return DAY_NAMES.filter((_, i) => mask & (1 << i)).join(", ");
+export function runDaysLabel(mask: number, t: T) {
+  if (mask === 127) return t("days.daily");
+  return [0, 1, 2, 3, 4, 5, 6].filter((i) => mask & (1 << i)).map((i) => t(`day.${i}` as MessageKey)).join(", ");
 }
 
 export const pct = (x: number) => `${Math.round(x * 100)}%`;

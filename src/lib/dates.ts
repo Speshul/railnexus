@@ -41,14 +41,19 @@ export function weekday(d: string): number {
   return new Date(toUTC(d)).getUTCDay();
 }
 
-export function formatDate(d: string, opts: Intl.DateTimeFormatOptions = { weekday: "short", day: "numeric", month: "short" }) {
-  return new Intl.DateTimeFormat("en-IN", { ...opts, timeZone: "UTC" }).format(new Date(toUTC(d)));
+export function formatDate(
+  d: string,
+  opts: Intl.DateTimeFormatOptions = { weekday: "short", day: "numeric", month: "short" },
+  locale: "en" | "hi" = "en"
+) {
+  return new Intl.DateTimeFormat(locale === "hi" ? "hi-IN" : "en-IN", { ...opts, timeZone: "UTC" }).format(new Date(toUTC(d)));
 }
 
-export function formatDuration(min: number): string {
+export function formatDuration(min: number, locale: "en" | "hi" = "en"): string {
   const h = Math.floor(min / 60);
   const m = min % 60;
-  return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m`;
+  const [hu, mu] = locale === "hi" ? [" घं", " मि"] : ["h", "m"];
+  return h ? `${h}${hu} ${String(m).padStart(2, "0")}${mu}` : `${m}${mu}`;
 }
 
 /** "HH:MM" for an absolute minute offset. */

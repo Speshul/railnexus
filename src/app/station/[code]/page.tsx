@@ -6,15 +6,17 @@ import { isValidDate, todayIST, formatDate } from "@/lib/dates";
 import { RouteMapLazy } from "@/components/RouteMapLazy";
 import type { MapStop } from "@/components/RouteMap";
 import { StationBoard } from "@/components/StationBoard";
+import { getT } from "@/i18n/server";
 
 export async function generateMetadata({ params }: PageProps<"/station/[code]">): Promise<Metadata> {
   const s = getStation((await params).code);
-  return { title: s ? `${s.name} (${s.code})` : "Station not found" };
+  return { title: s ? `${s.name} (${s.code})` : (await getT())("stn.notFound") };
 }
 
 export default async function StationPage({ params, searchParams }: PageProps<"/station/[code]">) {
   const { code } = await params;
   const sp = await searchParams;
+  const t = await getT();
   const station = getStation(code);
   if (!station) notFound();
   const date = typeof sp.date === "string" && isValidDate(sp.date) ? sp.date : undefined;
@@ -24,11 +26,11 @@ export default async function StationPage({ params, searchParams }: PageProps<"/
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
       <div className="card mb-4 p-5">
-        <p className="text-sm text-slate-500">{[station.state, station.zone && `${station.zone} zone`].filter(Boolean).join(" · ") || "Station"}</p>
+        <p className="text-sm text-slate-500">{[station.state, station.zone && t("stn.zone", { zone: station.zone })].filter(Boolean).join(" · ") || t("stn.station")}</p>
         <h1 className="text-2xl font-bold">{station.name} <span className="font-mono text-lg text-slate-500">{station.code}</span></h1>
         {station.address && <p className="text-sm text-slate-600">{station.address}</p>}
         <p className="mt-2 text-sm">
-          <b>{station.train_count}</b> trains stop here{date && <> · showing {trains.length} running on {formatDate(date)}</>}
+          {t("stn.count", { n: station.train_count })}{date && <> · {t("stn.showing", { n: trains.length, date: formatDate(date, undefined, t.locale) })}</>}
         </p>
       </div>
 
@@ -40,7 +42,7 @@ export default async function StationPage({ params, searchParams }: PageProps<"/
           trains={trains.map(({ train, stop }) => ({
             number: train.number,
             name: train.name,
-            type: train.type_name,
+            type: train.type,
             from: train.from_name,
             to: train.to_name,
             fromCode: train.from_code,
@@ -58,17 +60,17 @@ export default async function StationPage({ params, searchParams }: PageProps<"/
             height={260}
             stops={[
               { code: station.code, name: station.name, lat: station.lat, lng: station.lng, halt: true, emphasis: true, inSegment: true },
-              ...nearby.map((n): MapStop => ({ code: n.code, name: n.name, lat: n.lat, lng: n.lng, halt: true, label: `${n.km.toFixed(1)} km away` })),
+              ...nearby.map((n): MapStop => ({ code: n.code, name: n.name, lat: n.lat, lng: n.lng, halt: true, label: t("stn.away", { km: n.km.toFixed(1) }) })),
             ]}
           />
           {nearby.length > 0 && (
             <div className="card p-4">
-              <h2 className="mb-2 font-semibold">Nearby stations</h2>
+              <h2 className="mb-2 font-semibold">{t("stn.nearby")}</h2>
               <ul className="space-y-1 text-sm">
                 {nearby.map((n) => (
                   <li key={n.code} className="flex justify-between gap-2">
                     <Link href={`/station/${n.code}`} className="hover:underline">{n.name} <span className="font-mono text-xs text-slate-500">{n.code}</span></Link>
-                    <span className="text-slate-500">{n.km.toFixed(1)} km</span>
+                    <span className="text-slate-500">{t("stn.km", { km: n.km.toFixed(1) })}</span>
                   </li>
                 ))}
               </ul>

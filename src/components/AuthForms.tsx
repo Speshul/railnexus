@@ -3,6 +3,7 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { login, register, type FormState } from "@/app/actions/auth";
+import { useT } from "@/i18n/client";
 
 function Field({ name, label, type = "text", error, hint, ...rest }: { name: string; label: string; type?: string; error?: string; hint?: React.ReactNode } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
@@ -17,17 +18,18 @@ function Field({ name, label, type = "text", error, hint, ...rest }: { name: str
 
 export function LoginForm({ next }: { next: string }) {
   const [state, action, pending] = useActionState<FormState, FormData>(login, undefined);
+  const t = useT();
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="next" value={next} />
-      <Field name="identifier" label="Username or email" autoComplete="username" required autoFocus defaultValue={state?.values?.identifier} />
-      <Field name="password" label="Password" type="password" autoComplete="current-password" required />
+      <Field name="identifier" label={t("auth.identifier")} autoComplete="username" required autoFocus defaultValue={state?.values?.identifier} />
+      <Field name="password" label={t("auth.password")} type="password" autoComplete="current-password" required />
       {state?.error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-bad">{state.error}</p>}
       <button className="btn-primary w-full" disabled={pending}>
-        {pending && <Loader2 className="size-4 animate-spin" />} Sign in
+        {pending && <Loader2 className="size-4 animate-spin" aria-hidden />} {t("auth.signIn")}
       </button>
       <p className="text-center text-sm text-slate-600">
-        New here? <Link href={`/register?next=${encodeURIComponent(next)}`} className="text-brand hover:underline">Create an account</Link>
+        {t("auth.newHere")} <Link href={`/register?next=${encodeURIComponent(next)}`} className="text-brand hover:underline">{t("auth.create")}</Link>
       </p>
     </form>
   );
@@ -35,6 +37,7 @@ export function LoginForm({ next }: { next: string }) {
 
 export function RegisterForm({ next }: { next: string }) {
   const [state, action, pending] = useActionState<FormState, FormData>(register, undefined);
+  const t = useT();
   const fe = state?.fieldErrors ?? {};
   const v = state?.values ?? {};
   const [username, setUsername] = useState<{ value: string; status: "idle" | "checking" | "available" | "taken" }>({ value: "", status: "idle" });
@@ -48,40 +51,40 @@ export function RegisterForm({ next }: { next: string }) {
     setUsername((cur) => (cur.value === value && r ? { value, status: r.available ? "available" : "taken" } : cur));
   };
   const usernameHint =
-    username.status === "available" ? <span className="text-ok">✓ {username.value} is available</span>
-    : username.status === "taken" ? <span className="text-bad">&quot;{username.value}&quot; is already taken</span>
-    : username.status === "checking" ? "Checking…"
-    : "Your sign-in ID: 3-20 letters, numbers or _";
+    username.status === "available" ? <span className="text-ok">{t("auth.available", { u: username.value })}</span>
+    : username.status === "taken" ? <span className="text-bad">{t("auth.taken", { u: username.value })}</span>
+    : username.status === "checking" ? t("auth.checking")
+    : t("auth.usernameHint");
 
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="next" value={next} />
-      <Field name="full_name" label="Full name" autoComplete="name" required minLength={2} error={fe.full_name} autoFocus
-        defaultValue={v.full_name} hint="As on your ID. Used to fill in passenger details and your tickets." />
+      <Field name="full_name" label={t("auth.fullName")} autoComplete="name" required minLength={2} error={fe.full_name} autoFocus
+        defaultValue={v.full_name} hint={t("auth.fullNameHint")} />
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field name="username" label="Username" autoComplete="username" required pattern="[a-zA-Z0-9_]{3,20}"
-          title="3-20 letters, numbers or underscore" error={fe.username} hint={usernameHint} defaultValue={v.username}
+        <Field name="username" label={t("auth.username")} autoComplete="username" required pattern="[a-zA-Z0-9_]{3,20}"
+          title={t("auth.usernameTitle")} error={fe.username} hint={usernameHint} defaultValue={v.username}
           onBlur={(e) => checkUsername(e.target.value.trim())} />
-        <Field name="phone" label="Mobile number" inputMode="numeric" maxLength={10} pattern="[6-9][0-9]{9}"
-          title="10-digit Indian mobile number starting with 6, 7, 8 or 9" autoComplete="tel-national" required
-          error={fe.phone} defaultValue={v.phone} hint="10 digits, starting with 6-9" />
+        <Field name="phone" label={t("auth.phone")} inputMode="numeric" maxLength={10} pattern="[6-9][0-9]{9}"
+          title={t("auth.phoneTitle")} autoComplete="tel-national" required
+          error={fe.phone} defaultValue={v.phone} hint={t("auth.phoneHint")} />
       </div>
-      <Field name="email" label="Email" type="email" autoComplete="email" required error={fe.email} defaultValue={v.email}
-        hint="Tickets and booking updates are sent here." />
+      <Field name="email" label={t("auth.email")} type="email" autoComplete="email" required error={fe.email} defaultValue={v.email}
+        hint={t("auth.emailHint")} />
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field name="password" label="Password" type="password" autoComplete="new-password" required minLength={8}
+        <Field name="password" label={t("auth.password")} type="password" autoComplete="new-password" required minLength={8}
           error={fe.password} value={pw} onChange={(e) => setPw(e.target.value)}
-          hint={<span className={pw.length >= 8 ? "text-ok" : ""}>{pw.length >= 8 ? "✓ " : ""}At least 8 characters</span>} />
-        <Field name="confirm" label="Confirm password" type="password" autoComplete="new-password" required
+          hint={<span className={pw.length >= 8 ? "text-ok" : ""}>{pw.length >= 8 ? "✓ " : ""}{t("auth.pwHint")}</span>} />
+        <Field name="confirm" label={t("auth.confirm")} type="password" autoComplete="new-password" required
           error={fe.confirm} value={confirm} onChange={(e) => setConfirm(e.target.value)}
-          hint={confirm ? (confirm === pw ? <span className="text-ok">✓ Passwords match</span> : <span className="text-bad">Passwords don&apos;t match yet</span>) : "Type it again"} />
+          hint={confirm ? (confirm === pw ? <span className="text-ok">{t("auth.match")}</span> : <span className="text-bad">{t("auth.noMatch")}</span>) : t("auth.again")} />
       </div>
       {state?.error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-bad">{state.error}</p>}
       <button className="btn-primary w-full" disabled={pending || username.status === "taken" || (!!confirm && confirm !== pw)}>
-        {pending && <Loader2 className="size-4 animate-spin" />} Create account
+        {pending && <Loader2 className="size-4 animate-spin" aria-hidden />} {t("auth.createBtn")}
       </button>
       <p className="text-center text-sm text-slate-600">
-        Already registered? <Link href={`/login?next=${encodeURIComponent(next)}`} className="text-brand hover:underline">Sign in</Link>
+        {t("auth.already")} <Link href={`/login?next=${encodeURIComponent(next)}`} className="text-brand hover:underline">{t("auth.signIn")}</Link>
       </p>
     </form>
   );

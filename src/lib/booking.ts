@@ -11,14 +11,15 @@ import {
 } from "./constants";
 import { isValidDate } from "./dates";
 import type { User } from "./auth";
+import { msg, type MessageKey, type Msg } from "@/i18n/core";
 
 // ---------------------------------------------------------------- input
 
 export const passengerSchema = z.object({
-  name: z.string().trim().min(3, "Name must be 3-30 characters").max(30, "Name must be 3-30 characters")
-    .regex(/^[a-zA-Z .]+$/, "Letters, spaces and dots only"),
-  age: z.coerce.number().int("Enter a whole number").min(0, "Invalid age").max(125, "Invalid age"),
-  gender: z.enum(["M", "F", "T"], { message: "Select gender" }),
+  name: z.string().trim().min(3, "err.name").max(30, "err.name")
+    .regex(/^[a-zA-Z .]+$/, "err.nameChars"),
+  age: z.coerce.number().int("err.wholeNumber").min(0, "err.age").max(125, "err.age"),
+  gender: z.enum(["M", "F", "T"], { message: "err.gender" }),
   berth: z.string().optional().default(""),
   food: z.string().optional().default(""),
   noBerth: z.coerce.boolean().optional().default(false),
@@ -28,7 +29,7 @@ export const legSchema = z.object({
   train: z.string().regex(/^\d{5}$/),
   from: z.string().min(1).max(5),
   to: z.string().min(1).max(5),
-  date: z.string().refine(isValidDate, "Invalid date"),
+  date: z.string().refine(isValidDate, "err.date"),
   cls: z.enum(Object.keys(CLASSES) as [ClassCode, ...ClassCode[]]),
 });
 export type LegInput = z.infer<typeof legSchema>;
@@ -37,9 +38,9 @@ export type LegInput = z.infer<typeof legSchema>;
 export const bookingSchema = z.object({
   legs: z.array(legSchema).min(1).max(2),
   quota: z.enum(Object.keys(QUOTAS) as [Quota, ...Quota[]]),
-  passengers: z.array(passengerSchema).min(1, "Add at least one passenger"),
-  email: z.email("Enter a valid email"),
-  phone: z.string().regex(/^[6-9]\d{9}$/, "Enter a 10-digit mobile number"),
+  passengers: z.array(passengerSchema).min(1, "err.addPassenger"),
+  email: z.email("err.email"),
+  phone: z.string().regex(/^[6-9]\d{9}$/, "err.phone"),
   insurance: z.boolean(),
   autoUpgrade: z.boolean(),
   confirmOnly: z.boolean(),
@@ -50,29 +51,29 @@ export type BookingInput = z.infer<typeof bookingSchema>;
 type ValidLeg = { input: LegInput; segment: Segment; availability: Availability; fare: BookingFare };
 export type ValidationResult =
   | { ok: true; legs: ValidLeg[] }
-  | { ok: false; error: string; fieldErrors?: Record<string, string> };
+  | { ok: false; error: Msg; fieldErrors?: Record<string, MessageKey> };
 
 const berthPrefsFor = (cls: ClassCode): string[] => Object.keys(CLASSES[cls].berth === "sleeper" ? SLEEPER_BERTHS : SEAT_PREFS);
 const minutesOf = (date: string, hhmm: string) => Date.parse(`${date}T${hhmm}:00+05:30`) / 60000;
 
 /** Business rules on top of the schema: quota eligibility, passenger limits, connection timing, availability. */
 export function validateBooking(input: BookingInput): ValidationResult {
-  const fieldErrors: Record<string, string> = {};
+  const fieldErrors: Record<string, MessageKey> = {};
   const legs: Omit<ValidLeg, "availability" | "fare">[] = [];
   for (const [i, leg] of input.legs.entries()) {
     const segment = getSegment(leg.train, leg.from, leg.to, leg.date);
-    const label = input.legs.length > 1 ? `Train ${i + 1} (${leg.train})` : "This train";
-    if (!segment) return { ok: false, error: `${label} doesn't run between these stations on the selected date.` };
-    if (!segment.train.classes.includes(leg.cls)) return { ok: false, error: `${label}: selected class isn't available.` };
+    const label = input.legs.length > 1 ? { k: "err.legLabel" as const, v: { i: i + 1, train: leg.train } } : { k: "err.thisTrain" as const };
+    if (!segment) return { ok: false, error: msg("err.notRunning", { label }) };
+    if (!segment.train.classes.includes(leg.cls)) return { ok: false, error: msg("err.noClass", { label }) };
     legs.push({ input: leg, segment });
   }
   if (legs.length === 2) {
     const arrive = minutesOf(legs[0].segment.arrivalDate, legs[0].segment.to.arr!);
     const depart = minutesOf(legs[1].segment.date, legs[1].segment.from.dep!);
-    if (legs[0].segment.to.code !== legs[1].segment.from.code) return { ok: false, error: "The second train must start where the first one ends." };
+    if (legs[0].segment.to.code !== legs[1].segment.from.code) return { ok: false, error: "err.connectStation" };
     // Split ticket on the same train run: you just move to another seat at that station.
     const sameTrain = legs[0].input.train === legs[1].input.train && legs[0].segment.startDate === legs[1].segment.startDate;
-    if (!sameTrain && depart - arrive < 30) return { ok: false, error: "The second train leaves too soon after the first one arrives." };
+    if (!sameTrain && depart - arrive < 30) return { ok: false, error: "err.connectTime" };
   }
 
   const anyPremium = legs.some((l) => PREMIUM_TYPES.has(l.segment.train.type));
@@ -81,30 +82,34 @@ export function validateBooking(input: BookingInput): ValidationResult {
   const ticketed = input.passengers.filter((p) => p.age >= 5);
   const max = MAX_PASSENGERS[input.quota];
 
-  if (ticketed.length === 0) return { ok: false, error: "Add at least one passenger aged 5 or above." };
-  if (ticketed.length > max) return { ok: false, error: `${QUOTAS[input.quota].name} quota allows at most ${max} passengers per ticket.` };
-  if (infants.length > 2) return { ok: false, error: "At most 2 infants (below 5 years) per ticket." };
-  if (!input.passengers.some((p) => p.age >= 12)) return { ok: false, error: "At least one passenger must be 12 years or older." };
+  if (ticketed.length === 0) return { ok: false, error: "err.needTicketed" };
+  if (ticketed.length > max) return { ok: false, error: msg("err.maxPax", { quota: { k: `quota.${input.quota}` as MessageKey }, max }) };
+  if (infants.length > 2) return { ok: false, error: "err.infants" };
+  if (!input.passengers.some((p) => p.age >= 12)) return { ok: false, error: "err.adult" };
 
   input.passengers.forEach((p, i) => {
-    if (p.berth && !validBerths.has(p.berth)) fieldErrors[`passengers.${i}.berth`] = "Invalid preference";
-    if (p.food && (!anyPremium || !(p.food in FOOD_PREFS))) fieldErrors[`passengers.${i}.food`] = "Invalid meal choice";
-    if (p.noBerth && (p.age < 5 || p.age > 11)) fieldErrors[`passengers.${i}.noBerth`] = "Only for children aged 5-11";
-    if (input.quota === "LD" && p.gender !== "F" && p.age >= 12) fieldErrors[`passengers.${i}.gender`] = "Ladies quota: female passengers (boys under 12 allowed)";
+    if (p.berth && !validBerths.has(p.berth)) fieldErrors[`passengers.${i}.berth`] = "err.berth";
+    if (p.food && (!anyPremium || !(p.food in FOOD_PREFS))) fieldErrors[`passengers.${i}.food`] = "err.food";
+    if (p.noBerth && (p.age < 5 || p.age > 11)) fieldErrors[`passengers.${i}.noBerth`] = "err.noBerthAge";
+    if (input.quota === "LD" && p.gender !== "F" && p.age >= 12) fieldErrors[`passengers.${i}.gender`] = "err.ladies";
     if (input.quota === "SS" && !((p.gender === "M" && p.age >= 60) || (p.gender === "F" && p.age >= 45) || (p.gender === "T" && p.age >= 60)))
-      fieldErrors[`passengers.${i}.age`] = "Needs men 60+ or women 45+";
-    if (input.quota === "TQ" && p.noBerth) fieldErrors[`passengers.${i}.noBerth`] = "Not allowed in Tatkal";
+      fieldErrors[`passengers.${i}.age`] = "err.senior";
+    if (input.quota === "TQ" && p.noBerth) fieldErrors[`passengers.${i}.noBerth`] = "err.noBerthTatkal";
   });
-  if (Object.keys(fieldErrors).length) return { ok: false, error: "Please fix the highlighted passenger details.", fieldErrors };
+  if (Object.keys(fieldErrors).length) return { ok: false, error: "err.fixPassengers", fieldErrors };
 
   const seatsNeeded = input.passengers.filter((p) => p.age >= 5 && !p.noBerth).length;
   const out: ValidLeg[] = [];
   for (const [i, l] of legs.entries()) {
-    const label = legs.length > 1 ? `Train ${i + 1} (${l.input.train}): ` : "";
+    const prefix = legs.length > 1 ? { k: "err.legPrefix" as const, v: { i: i + 1, train: l.input.train } } : { k: "err.none" as const };
     const availability = getAvailability(l.segment, l.input.cls, input.quota);
-    if (!availability.bookable) return { ok: false, error: `${label}Booking not possible: ${availability.note ?? availability.label}` };
+    if (!availability.bookable) {
+      const note = availability.note;
+      const reason = note === undefined ? availability.label : typeof note === "string" ? { k: note } : note;
+      return { ok: false, error: msg("err.notBookable", { prefix, reason }) };
+    }
     if (input.confirmOnly && (availability.status !== "AVAILABLE" || availability.count < seatsNeeded))
-      return { ok: false, error: `${label}Only ${availability.label} available. Untick "Book only if confirmed berths" to join the waitlist.` };
+      return { ok: false, error: msg("err.confirmOnly", { prefix, label: availability.label }) };
     const fare = bookingFare(
       { cls: l.input.cls, km: l.segment.distance, trainType: l.segment.train.type, quota: input.quota, insurance: input.insurance },
       input.passengers.map((p) => ({ age: p.age, noBerth: p.noBerth }))
@@ -348,20 +353,24 @@ function newPnr() {
   }
 }
 
-export class ConfirmationError extends Error {}
+export class ConfirmationError extends Error {
+  constructor(readonly m: Msg) {
+    super(typeof m === "string" ? m : m.k);
+  }
+}
 
 /** After payment: give each passenger CNF/RAC/WL in queue order, allocate berths, issue PNRs. */
 export function confirmTrip(tripId: string) {
   const db = appDb();
   const trip = getTrip(tripId);
-  if (!trip) throw new ConfirmationError("Booking not found.");
+  if (!trip) throw new ConfirmationError("err.notFound");
   db.exec("BEGIN");
   try {
     for (const b of trip.legs) {
       if (b.status === "CONFIRMED") continue;
-      if (b.status !== "PENDING_PAYMENT" && b.status !== "EXPIRED") throw new ConfirmationError("This booking was cancelled.");
+      if (b.status !== "PENDING_PAYMENT" && b.status !== "EXPIRED") throw new ConfirmationError("err.wasCancelled");
       const seg = getSegment(b.train_number, b.from_code, b.to_code, b.journey_date);
-      if (!seg) throw new ConfirmationError("The train no longer runs on this date.");
+      if (!seg) throw new ConfirmationError("err.noLongerRuns");
       const inv = inventory(seg, b.class_code, b.quota, b.id);
       const wlPrefix = b.quota === "GN" ? "GNWL" : `${b.quota}WL`;
       const seated = b.passengers.filter((p) => p.age >= 5 && !p.no_berth);
@@ -373,12 +382,12 @@ export function confirmTrip(tripId: string) {
         else if (pos <= inv.pool + inv.racSlots) statuses.set(p.idx, `RAC ${pos - inv.pool}`);
         else {
           const wl = pos - inv.pool - inv.racSlots;
-          if (wl > inv.maxWl) throw new ConfirmationError(`Train ${b.train_number} sold out while you were paying.`);
+          if (wl > inv.maxWl) throw new ConfirmationError(msg("err.soldOut", { train: b.train_number }));
           statuses.set(p.idx, `${wlPrefix} ${wl}`);
         }
       });
       if (b.options.confirmOnly && cnf.length < seated.length)
-        throw new ConfirmationError(`Confirmed berths on ${b.train_number} ran out while you were paying.`);
+        throw new ConfirmationError(msg("err.cnfRanOut", { train: b.train_number }));
       const seats = allocateBerths(seg, b.class_code, b.id, inv.coaches, cnf.map((p) => ({ idx: p.idx, age: p.age, gender: p.gender, pref: p.berth_pref })));
       const firstCoach = [...seats.values()][0]?.coach ?? null;
       const upd = db.prepare(
@@ -411,27 +420,27 @@ const WL_CLERKAGE = 60;
 
 export type CancelQuote = {
   hoursLeft: number;
-  rows: { idx: number; name: string; status: string; fare: number; charge: number; refund: number; rule: string }[];
+  rows: { idx: number; name: string; status: string; fare: number; charge: number; refund: number; rule: Msg }[];
   refund: number;
   allowed: boolean;
-  reason?: string;
+  reason?: Msg;
 };
 
 export function departureMs(b: BookingRecord) {
   return Date.parse(`${b.journey_date}T${b.fare.dep}:00+05:30`);
 }
 
-/** IRCTC prepares the reservation chart about 4 hours before departure. */
+/** IRCTC prepares the reservation chart about 4 hours before departure. Returns a message key. */
 export function chartStatus(b: BookingRecord, now = Date.now()) {
   const hoursLeft = (departureMs(b) - now) / 3600000;
-  return hoursLeft <= 0 ? "Train departed" : hoursLeft <= 4 ? "Chart prepared" : "Chart not prepared";
+  return hoursLeft <= 0 ? "chart.departed" : hoursLeft <= 4 ? "chart.prepared" : "chart.notPrepared";
 }
 
 /** What the passenger gets back if these passengers are cancelled now. Convenience fee and insurance are never refunded. */
 export function quoteCancellation(b: BookingRecord, idxs: number[], now = Date.now()): CancelQuote {
   const hoursLeft = (departureMs(b) - now) / 3600000;
-  if (b.status !== "CONFIRMED") return { hoursLeft, rows: [], refund: 0, allowed: false, reason: "Only paid bookings can be cancelled." };
-  if (hoursLeft <= 0) return { hoursLeft, rows: [], refund: 0, allowed: false, reason: "The train has already departed." };
+  if (b.status !== "CONFIRMED") return { hoursLeft, rows: [], refund: 0, allowed: false, reason: "cancel.onlyPaid" };
+  if (hoursLeft <= 0) return { hoursLeft, rows: [], refund: 0, allowed: false, reason: "cancel.departed" };
   const ac = CLASSES[b.class_code].ac;
   const rows = b.passengers
     .filter((p) => idxs.includes(p.idx) && !p.cancelled && p.age >= 5)
@@ -439,16 +448,16 @@ export function quoteCancellation(b: BookingRecord, idxs: number[], now = Date.n
       const fare = b.fare.perPassenger[p.idx]?.fare?.total ?? 0;
       const status = p.status ?? "";
       let charge: number;
-      let rule: string;
+      let rule: Msg;
       if (!status.startsWith("CNF")) {
         charge = hoursLeft > 0.5 ? WL_CLERKAGE : fare;
-        rule = hoursLeft > 0.5 ? `RAC/waitlist: clerkage ₹${WL_CLERKAGE}` : "Less than 30 min to departure: no refund";
+        rule = hoursLeft > 0.5 ? msg("rule.clerkage", { amount: WL_CLERKAGE }) : "rule.under30";
       } else {
         const flat = Math.round(FLAT_CHARGE[b.class_code] * (ac ? 1.05 : 1));
-        if (hoursLeft > 48) { charge = flat; rule = `More than 48 h before departure: flat ₹${flat}`; }
-        else if (hoursLeft > 12) { charge = Math.max(flat, Math.round(fare * 0.25)); rule = "48-12 h before departure: 25% of fare (min. flat charge)"; }
-        else if (hoursLeft > 4) { charge = Math.max(flat, Math.round(fare * 0.5)); rule = "12-4 h before departure: 50% of fare (min. flat charge)"; }
-        else { charge = fare; rule = "Chart prepared (under 4 h): no refund"; }
+        if (hoursLeft > 48) { charge = flat; rule = msg("rule.over48", { amount: flat }); }
+        else if (hoursLeft > 12) { charge = Math.max(flat, Math.round(fare * 0.25)); rule = "rule.48to12"; }
+        else if (hoursLeft > 4) { charge = Math.max(flat, Math.round(fare * 0.5)); rule = "rule.12to4"; }
+        else { charge = fare; rule = "rule.chart"; }
       }
       charge = Math.min(charge, fare);
       return { idx: p.idx, name: p.name, status, fare, charge, refund: fare - charge, rule };

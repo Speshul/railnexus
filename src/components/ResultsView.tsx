@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronDown, Clock, Footprints, Loader2, SlidersHorizontal } from "lucide-react";
 import type { AlternativeRoute, ConnectionResult, JourneyResult, SearchResponse } from "@/lib/search";
-import { CLASSES, CLASS_ORDER, TRAIN_TYPE_FILTERS, type ClassCode, type Quota } from "@/lib/constants";
+import { CLASS_ORDER, TRAIN_TYPE_FILTERS, type ClassCode, type Quota } from "@/lib/constants";
+import { useT } from "@/i18n/client";
+import type { MessageKey, T } from "@/i18n/core";
 import { formatDate, formatDuration } from "@/lib/dates";
 import { availText, inr } from "@/lib/format";
 import { bookHref } from "@/lib/trip-url";
@@ -64,6 +66,7 @@ function SlotPicker({ value, set }: { value: Set<string>; set: (s: Set<string>) 
 
 export function ResultsView({ data, alternatives = [], nearbyHref }: { data: SearchResponse; alternatives?: AlternativeRoute[]; nearbyHref: string }) {
   const { results, params } = data;
+  const t = useT();
   const [tab, setTab] = useState<"direct" | "connect">(results.length ? "direct" : "connect");
   const [types, setTypes] = useState<Set<string>>(new Set());
   // The class chosen in the search form pre-filters results, unless no train here offers it.
@@ -138,19 +141,19 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
     <div className="grid gap-4 lg:grid-cols-[15rem_1fr]">
       <aside className={`${showFilters ? "block" : "hidden"} card h-fit space-y-4 p-4 lg:sticky lg:top-4 lg:block`}>
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold">Filters</h2>
-          {activeFilters > 0 && <button onClick={reset} className="text-xs text-brand hover:underline">Reset</button>}
+          <h2 className="font-semibold">{t("res.filters")}</h2>
+          {activeFilters > 0 && <button onClick={reset} className="text-xs text-brand hover:underline">{t("res.reset")}</button>}
         </div>
         <div>
-          <h3 className="label">Availability</h3>
-          <Check checked={onlyAvail} onChange={() => setOnlyAvail(!onlyAvail)}>Confirmed seats only</Check>
+          <h3 className="label">{t("res.availability")}</h3>
+          <Check checked={onlyAvail} onChange={() => setOnlyAvail(!onlyAvail)}>{t("res.onlyConfirmed")}</Check>
           {results.some((r) => !r.reservable) && (
-            <Check checked={hideUnreserved} onChange={() => setHideUnreserved(!hideUnreserved)}>Hide unreserved trains</Check>
+            <Check checked={hideUnreserved} onChange={() => setHideUnreserved(!hideUnreserved)}>{t("res.hideUnreserved")}</Check>
           )}
         </div>
         {(presentClasses.length > 1 || classes.size > 0) && (
           <div>
-            <h3 className="label">Class</h3>
+            <h3 className="label">{t("res.class")}</h3>
             {presentClasses.map((c) => (
               <Check key={c} checked={classes.has(c)} onChange={() => setClasses(toggle(classes, c))}>{c}</Check>
             ))}
@@ -158,23 +161,23 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
         )}
         {presentTypes.length > 1 && (
           <div>
-            <h3 className="label">Train type</h3>
+            <h3 className="label">{t("res.trainType")}</h3>
             {presentTypes.map((f) => (
-              <Check key={f.key} checked={types.has(f.key)} onChange={() => setTypes(toggle(types, f.key))}>{f.label}</Check>
+              <Check key={f.key} checked={types.has(f.key)} onChange={() => setTypes(toggle(types, f.key))}>{t(`filter.${f.key}` as MessageKey)}</Check>
             ))}
           </div>
         )}
         <div>
-          <h3 className="label">Departure from {data.fromStation?.code}</h3>
+          <h3 className="label">{t("res.departure", { code: data.fromStation?.code ?? "" })}</h3>
           <SlotPicker value={depSlots} set={setDepSlots} />
         </div>
         <div>
-          <h3 className="label">Arrival at {data.toStation?.code}</h3>
+          <h3 className="label">{t("res.arrival", { code: data.toStation?.code ?? "" })}</h3>
           <SlotPicker value={arrSlots} set={setArrSlots} />
         </div>
         {fromStations.length > 1 && (
           <div>
-            <h3 className="label">Boarding station</h3>
+            <h3 className="label">{t("res.boarding")}</h3>
             {fromStations.map(([c, n]) => (
               <Check key={c} checked={fromStn.has(c)} onChange={() => setFromStn(toggle(fromStn, c))}>{n} <span className="font-mono text-xs text-slate-500">{c}</span></Check>
             ))}
@@ -182,7 +185,7 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
         )}
         {toStations.length > 1 && (
           <div>
-            <h3 className="label">Destination station</h3>
+            <h3 className="label">{t("res.destination")}</h3>
             {toStations.map(([c, n]) => (
               <Check key={c} checked={toStn.has(c)} onChange={() => setToStn(toggle(toStn, c))}>{n} <span className="font-mono text-xs text-slate-500">{c}</span></Check>
             ))}
@@ -194,23 +197,23 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm">
             <button onClick={() => setTab("direct")} className={`rounded-md px-3 py-1.5 ${tab === "direct" ? "bg-brand text-white" : ""}`}>
-              Direct trains ({results.length})
+              {t("res.tabDirect", { n: results.length })}
             </button>
             <button onClick={() => setTab("connect")} className={`rounded-md px-3 py-1.5 ${tab === "connect" ? "bg-brand text-white" : ""}`}>
-              With 1 change
+              {t("res.tabConnect")}
             </button>
           </div>
           <button onClick={() => setShowFilters(!showFilters)} className="btn-secondary py-1.5 lg:hidden">
-            <SlidersHorizontal className="size-4" /> Filters{activeFilters ? ` (${activeFilters})` : ""}
+            <SlidersHorizontal className="size-4" aria-hidden /> {t("res.filtersBtn")}{activeFilters ? ` (${activeFilters})` : ""}
           </button>
           {tab === "direct" && (
             <label className="ml-auto flex items-center gap-2 text-sm">
-              Sort by
+              {t("res.sortBy")}
               <select className="input w-auto py-1.5" value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
-                <option value="dep">Departure time</option>
-                <option value="arr">Arrival time</option>
-                <option value="dur">Duration</option>
-                <option value="fare">Lowest fare</option>
+                <option value="dep">{t("res.sort.dep")}</option>
+                <option value="arr">{t("res.sort.arr")}</option>
+                <option value="dur">{t("res.sort.dur")}</option>
+                <option value="fare">{t("res.sort.fare")}</option>
               </select>
             </label>
           )}
@@ -221,18 +224,18 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
             <div className="space-y-3">
               {params.cls && !clsOffered && (
                 <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                  None of these trains has {CLASSES[params.cls].name} ({params.cls}), so all classes are shown.
+                  {t("res.clsMissing", { cls: `${t(`class.${params.cls}` as MessageKey)} (${params.cls})` })}
                 </p>
               )}
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="text-sm text-slate-500" role="status" aria-live="polite">Showing {filtered.length} of {results.length} trains. Pick a class on any train to book it.</p>
+                <p className="text-sm text-slate-500" role="status" aria-live="polite">{t("res.showing", { n: filtered.length, total: results.length })}</p>
                 <details className="text-sm">
-                  <summary className="cursor-pointer text-brand hover:underline">What do these terms mean?</summary>
+                  <summary className="cursor-pointer text-brand hover:underline">{t("res.terms")}</summary>
                   <dl className="card mt-2 max-w-md space-y-1.5 p-3 text-xs text-slate-600">
-                    <div><dt className="inline font-semibold text-ok">Seats available</dt><dd className="inline">: you get a confirmed seat/berth straight away.</dd></div>
-                    <div><dt className="inline font-semibold text-warn">RAC</dt><dd className="inline"> (Reservation Against Cancellation): you can board, sharing a side berth; usually upgraded to a full berth.</dd></div>
-                    <div><dt className="inline font-semibold text-bad">Waitlist #n</dt><dd className="inline">: you&apos;re in a queue for cancellations. The % shows how likely it is to confirm.</dd></div>
-                    <div><dt className="inline font-semibold">Classes</dt><dd className="inline">: 1A/2A/3A are AC sleepers (fewer berths per bay = more comfort), SL is non-AC sleeper, CC/EC are AC chair cars, 2S is non-AC seating.</dd></div>
+                    <div><dt className="inline font-semibold text-ok">{t("res.terms.avl")}</dt><dd className="inline">{t("res.terms.avlDef")}</dd></div>
+                    <div><dt className="inline font-semibold text-warn">RAC</dt><dd className="inline">{t("res.terms.racDef")}</dd></div>
+                    <div><dt className="inline font-semibold text-bad">{t("res.terms.wl")}</dt><dd className="inline">{t("res.terms.wlDef")}</dd></div>
+                    <div><dt className="inline font-semibold">{t("res.terms.classes")}</dt><dd className="inline">{t("res.terms.classesDef")}</dd></div>
                   </dl>
                 </details>
               </div>
@@ -244,12 +247,12 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
           ) : (
             <div className="card p-8 text-center text-slate-600">
               {results.length ? (
-                <>No trains match these filters. <button onClick={reset} className="text-brand underline">Clear filters</button></>
+                <>{t("res.noMatch")} <button onClick={reset} className="text-brand underline">{t("res.clear")}</button></>
               ) : (
                 <>
-                  No direct trains on this date.{" "}
-                  {!params.nearby && <>Try including nearby stations, or </>}
-                  <button onClick={() => setTab("connect")} className="text-brand underline">see journeys with one change</button>.
+                  {t("res.noDirect")}{" "}
+                  {!params.nearby && <>{t("res.tryNearby")} </>}
+                  <button onClick={() => setTab("connect")} className="text-brand underline">{t("res.seeChange")}</button>.
                 </>
               )}
             </div>
@@ -264,6 +267,7 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
 
 function Connections({ data, alternatives, nearbyHref }: { data: SearchResponse; alternatives: AlternativeRoute[]; nearbyHref: string }) {
   const { params, fromStation, toStation } = data;
+  const t = useT();
   const key = JSON.stringify(params);
   const [state, setState] = useState<{ key: string; list?: ConnectionResult[]; error?: boolean } | null>(null);
   const [open, setOpen] = useState<number | null>(0);
@@ -302,15 +306,15 @@ function Connections({ data, alternatives, nearbyHref }: { data: SearchResponse;
     return (
       <div className="space-y-3">
         {nearby}
-        <div className="card flex items-center gap-2 p-6 text-sm text-slate-600"><Loader2 className="size-4 animate-spin" /> Finding journeys with one change…</div>
+        <div className="card flex items-center gap-2 p-6 text-sm text-slate-600"><Loader2 className="size-4 animate-spin" aria-hidden /> {t("conn.finding")}</div>
       </div>
     );
-  if (loaded.error) return <div className="card p-6 text-sm text-bad">Couldn&apos;t load journeys with a change.</div>;
+  if (loaded.error) return <div className="card p-6 text-sm text-bad">{t("conn.error")}</div>;
   if (!loaded.list!.length)
     return (
       <div className="space-y-3">
         <div className="card p-8 text-center text-slate-600">
-          No journeys with one change found for this date. Try another date{alternatives.length ? " or a nearby station below" : ""}.
+          {alternatives.length ? t("conn.noneNearby") : t("conn.none")}
         </div>
         {nearby}
       </div>
@@ -320,11 +324,11 @@ function Connections({ data, alternatives, nearbyHref }: { data: SearchResponse;
     <div className="space-y-3">
       <div className="card p-4">
         <h2 className="font-semibold">
-          {noDirect ? `You can still travel from ${fromStation?.name} to ${toStation?.name}` : `${loaded.list!.length} more ways to travel with one change`}
+          {noDirect ? t("conn.stillTravel", { from: fromStation?.name ?? "", to: toStation?.name ?? "" }) : t("conn.moreWays", { n: loaded.list!.length })}
         </h2>
         <p className="text-sm text-slate-600">
-          {noDirect && "No single train runs between these stations on this date, so these journeys use two trains. "}
-          Fastest first. Select a journey to book both trains (each train is a separate ticket).
+          {noDirect && `${t("conn.noSingle")} `}
+          {t("conn.fastest")}
         </p>
       </div>
       {nearby}
@@ -338,6 +342,7 @@ function Connections({ data, alternatives, nearbyHref }: { data: SearchResponse;
 
 /** One checkout for both trains of a connecting journey: pick a class on each, pay once, get two PNRs. */
 function BookBoth({ c, quota }: { c: ConnectionResult; quota: Quota }) {
+  const t = useT();
   const bookable = (j: JourneyResult) => j.classes.filter((x) => x.avail.bookable);
   // default: cheapest class with confirmed seats, else the cheapest bookable one
   const cheapest = (xs: JourneyResult["classes"]) => [...xs].sort((a, b) => a.fare - b.fare)[0];
@@ -351,19 +356,19 @@ function BookBoth({ c, quota }: { c: ConnectionResult; quota: Quota }) {
   );
   return (
     <div className="rounded-lg border border-brand/30 bg-white p-3">
-      <p className="mb-2 text-sm font-semibold">Book both trains together: one payment, two tickets</p>
+      <p className="mb-2 text-sm font-semibold">{t("both.title")}</p>
       <div className="flex flex-wrap items-end gap-3">
         {c.legs.map((l, i) => (
           <label key={l.number} className="text-xs">
-            <span className="label">Train {i + 1} · {l.number}</span>
+            <span className="label">{t("both.train", { i: i + 1, number: l.number })}</span>
             <select className="input w-auto py-1.5" value={cls[i]} onChange={(e) => setCls((v) => v.map((x, k) => (k === i ? (e.target.value as ClassCode) : x)))}>
               {bookable(l).map((x) => (
-                <option key={x.cls} value={x.cls}>{x.cls} · {inr(x.fare)} · {availText(x.avail)}</option>
+                <option key={x.cls} value={x.cls}>{x.cls} · {inr(x.fare)} · {availText(x.avail, t)}</option>
               ))}
             </select>
           </label>
         ))}
-        <Link href={href} className="btn-primary ml-auto">Book both · from {inr(total)}</Link>
+        <Link href={href} className="btn-primary ml-auto">{t("both.book", { fare: inr(total) })}</Link>
       </div>
     </div>
   );
@@ -375,6 +380,8 @@ function cheapestBookable(j: JourneyResult) {
 }
 
 function ConnectionOption({ id, c, quota, open, onToggle }: { id: string; c: ConnectionResult; quota: Quota; open: boolean; onToggle: () => void }) {
+  const t = useT();
+  const L = t.locale;
   const [l1, l2] = c.legs;
   const f1 = cheapestBookable(l1);
   const f2 = cheapestBookable(l2);
@@ -386,31 +393,31 @@ function ConnectionOption({ id, c, quota, open, onToggle }: { id: string; c: Con
         <div className="min-w-0">
           <div className="flex flex-wrap items-baseline gap-x-3">
             <span className="text-xl font-bold tabular-nums">{l1.from.time}</span>
-            <span className="text-sm text-slate-500">{formatDate(l1.date)}</span>
+            <span className="text-sm text-slate-500">{formatDate(l1.date, undefined, L)}</span>
             <ArrowRight className="size-4 self-center text-slate-400" />
             <span className="text-xl font-bold tabular-nums">{l2.to.time}</span>
-            <span className="text-sm text-slate-500">{formatDate(l2.arrivalDate)}</span>
-            <span className="text-sm font-medium text-slate-700">{formatDuration(c.duration)}</span>
+            <span className="text-sm text-slate-500">{formatDate(l2.arrivalDate, undefined, L)}</span>
+            <span className="text-sm font-medium text-slate-700">{formatDuration(c.duration, L)}</span>
           </div>
           <div className="mt-1 text-sm text-slate-700">
-            1 change at <b>{c.via.name}</b> <span className="text-warn">({formatDuration(c.layover)} wait)</span>
+            {t("opt.change", { station: "" })}<b>{c.via.name}</b> <span className="text-warn">{t("opt.wait", { dur: formatDuration(c.layover, L) })}</span>
           </div>
           <div className="truncate text-xs text-slate-500">{l1.number} {l1.name} + {l2.number} {l2.name}</div>
         </div>
         <div className="flex items-center gap-4 sm:flex-col sm:items-end sm:gap-1">
-          {f1 !== null && f2 !== null && <div className="text-sm">from <b className="text-base">{inr(f1 + f2)}</b></div>}
-          <div className={`text-xs font-medium ${seatsBoth ? "text-ok" : "text-warn"}`}>{seatsBoth ? "Seats on both trains" : "Waitlist on one train"}</div>
-          <span className={open ? "btn-secondary py-1.5 text-xs" : "btn-primary py-1.5 text-xs"}>{open ? "Hide" : "Select"}</span>
+          {f1 !== null && f2 !== null && <div className="text-sm">{t("opt.from")} <b className="text-base">{inr(f1 + f2)}</b></div>}
+          <div className={`text-xs font-medium ${seatsBoth ? "text-ok" : "text-warn"}`}>{seatsBoth ? t("opt.seatsBoth") : t("opt.wlOne")}</div>
+          <span className={open ? "btn-secondary py-1.5 text-xs" : "btn-primary py-1.5 text-xs"}>{open ? t("opt.hide") : t("opt.select")}</span>
         </div>
       </button>
       {open && (
         <div className="space-y-2 border-t border-slate-100 bg-slate-50 p-3">
           <BookBoth c={c} quota={quota} />
-          <p className="px-1 pt-1 text-xs text-slate-500">Or book each train separately:</p>
-          <p className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Train 1: {l1.from.name} → {l1.to.name}</p>
+          <p className="px-1 pt-1 text-xs text-slate-500">{t("opt.separately")}</p>
+          <p className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{t("opt.train", { i: 1, from: l1.from.name, to: l1.to.name })}</p>
           <TrainCard j={l1} quota={quota} anchor={false} />
-          <p className="flex items-center gap-1.5 px-1 text-sm text-warn"><Clock className="size-4" /> Change at {c.via.name}: {formatDuration(c.layover)} wait</p>
-          <p className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Train 2: {l2.from.name} → {l2.to.name}</p>
+          <p className="flex items-center gap-1.5 px-1 text-sm text-warn"><Clock className="size-4" aria-hidden /> {t("opt.changeAt", { station: c.via.name, dur: formatDuration(c.layover, L) })}</p>
+          <p className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{t("opt.train", { i: 2, from: l2.from.name, to: l2.to.name })}</p>
           <TrainCard j={l2} quota={quota} anchor={false} />
         </div>
       )}
@@ -418,10 +425,11 @@ function ConnectionOption({ id, c, quota, open, onToggle }: { id: string; c: Con
   );
 }
 
-const kmLabel = (km: number) => (km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`);
+const kmLabel = (km: number, t: T) => (km < 1 ? t("unit.m", { n: Math.round(km * 1000) }) : t("unit.km", { n: km.toFixed(1) }));
 
 function NearbyAlternatives({ data, alternatives, nearbyHref }: { data: SearchResponse; alternatives: AlternativeRoute[]; nearbyHref: string }) {
   const { params, fromStation, toStation } = data;
+  const t = useT();
   const total = new Set(alternatives.flatMap((a) => a.trains.map((t) => t.number))).size;
   const href = (a: AlternativeRoute) => {
     const q = new URLSearchParams({ from: a.from.code, to: a.to.code, date: params.date, quota: params.quota });
@@ -436,21 +444,23 @@ function NearbyAlternatives({ data, alternatives, nearbyHref }: { data: SearchRe
       <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">
         <Footprints className="size-5 shrink-0 text-brand" />
         <span className="min-w-0 flex-1 basis-56">
-          <b>Direct trains are available from nearby stations.</b>{" "}
-          {fromChanged ? `${best.from.name} (${kmLabel(best.from.km)} away)` : best.from.name} →{" "}
-          {toChanged ? `${best.to.name} (${kmLabel(best.to.km)} from ${toStation?.name})` : best.to.name} has {best.count} direct{" "}
-          {best.count === 1 ? "train" : "trains"}
-          {alternatives.length > 1 && <>, plus {alternatives.length - 1} more nearby {alternatives.length === 2 ? "option" : "options"}</>}.
+          <b>{t("near.lead")}</b>{" "}
+          {t(best.count === 1 ? "near.has.one" : "near.has", {
+            from: fromChanged ? t("near.away", { name: best.from.name, dist: kmLabel(best.from.km, t) }) : best.from.name,
+            to: toChanged ? t("near.fromDest", { name: best.to.name, dist: kmLabel(best.to.km, t), dest: toStation?.name ?? "" }) : best.to.name,
+            n: best.count,
+          })}
+          {alternatives.length > 1 && t(alternatives.length === 2 ? "near.more.one" : "near.more", { n: alternatives.length - 1 })}.
         </span>
         <span className="btn-brand w-full shrink-0 py-1.5 sm:w-auto">
-          <span className="group-open:hidden">See {alternatives.length} direct {alternatives.length === 1 ? "option" : "options"}</span>
-          <span className="hidden group-open:inline">Hide options</span>
+          <span className="group-open:hidden">{alternatives.length === 1 ? t("near.see.one") : t("near.see", { n: alternatives.length })}</span>
+          <span className="hidden group-open:inline">{t("near.hide")}</span>
           <ChevronDown className="size-4 transition group-open:rotate-180" />
         </span>
       </summary>
       <div className="bg-white">
       <p className="border-t border-slate-100 px-4 pt-2 text-xs text-slate-500">
-        Stations within 30 km of {fromStation?.name} / {toStation?.name}, closest first.
+        {t("near.within", { from: fromStation?.name ?? "", to: toStation?.name ?? "" })}
       </p>
       <ul className="divide-y divide-slate-100">
         {alternatives.map((a) => {
@@ -467,17 +477,17 @@ function NearbyAlternatives({ data, alternatives, nearbyHref }: { data: SearchRe
                   </div>
                   <div className="flex flex-wrap gap-x-3 text-xs text-slate-500">
                     {changedFrom && (
-                      <span><Footprints className="mr-0.5 inline size-3" />Board {kmLabel(a.from.km)} from {fromStation?.name}</span>
+                      <span><Footprints className="mr-0.5 inline size-3" aria-hidden />{t("near.board", { dist: kmLabel(a.from.km, t), station: fromStation?.name ?? "" })}</span>
                     )}
-                    {changedTo && <span><Footprints className="mr-0.5 inline size-3" />Arrive {kmLabel(a.to.km)} from {toStation?.name}</span>}
-                    <span className="truncate">e.g. {a.trains.slice(0, 2).map((t) => t.name).join(", ")}</span>
+                    {changedTo && <span><Footprints className="mr-0.5 inline size-3" aria-hidden />{t("near.arrive", { dist: kmLabel(a.to.km, t), station: toStation?.name ?? "" })}</span>}
+                    <span className="truncate">{t("near.eg", { names: a.trains.slice(0, 2).map((x) => x.name).join(", ") })}</span>
                   </div>
                 </div>
                 <div className="text-right text-sm">
-                  <div className="font-semibold text-ok">{a.count} direct {a.count === 1 ? "train" : "trains"}</div>
-                  <div className="text-xs text-slate-500">fastest {formatDuration(a.fastest)} · first at {a.earliest}</div>
+                  <div className="font-semibold text-ok">{t.n("near.count", a.count)}</div>
+                  <div className="text-xs text-slate-500">{t("near.fastest", { dur: formatDuration(a.fastest, t.locale), time: a.earliest })}</div>
                 </div>
-                <span className="btn-brand py-1.5 text-xs">View trains</span>
+                <span className="btn-brand py-1.5 text-xs">{t("near.view")}</span>
               </Link>
             </li>
           );
@@ -485,7 +495,7 @@ function NearbyAlternatives({ data, alternatives, nearbyHref }: { data: SearchRe
       </ul>
       <div className="border-t border-slate-100 px-4 py-2 text-sm">
         <Link href={nearbyHref} className="font-medium text-brand hover:underline">
-          Show all {total}+ trains from every nearby station together →
+          {t("near.all", { n: total })}
         </Link>
       </div>
       </div>

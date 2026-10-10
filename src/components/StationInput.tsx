@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
+import { useT } from "@/i18n/client";
 
 export type StationOption = { code: string; name: string; state?: string | null; trains?: number };
 
@@ -18,6 +19,7 @@ export function StationInput({
   autoFocus?: boolean;
 }) {
   const id = useId();
+  const t = useT();
   const [text, setText] = useState(value ? `${value.name} (${value.code})` : "");
   const [options, setOptions] = useState<StationOption[]>([]);
   const [open, setOpen] = useState(false);
@@ -65,7 +67,7 @@ export function StationInput({
           value={text}
           autoFocus={autoFocus}
           autoComplete="off"
-          placeholder={placeholder ?? "Station name or code"}
+          placeholder={placeholder ?? t("station.placeholder")}
           role="combobox"
           aria-expanded={open}
           aria-controls={`${id}-list`}

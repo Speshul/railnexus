@@ -3,6 +3,7 @@ import { appDb } from "@/lib/db";
 import { ConfirmationError, confirmTrip, getTrip } from "@/lib/booking";
 import { capturePayment, fetchPayment, refundPayment, verifySignature } from "@/lib/razorpay";
 import { notifyTicketsIssued } from "@/lib/notify";
+import { getT } from "@/i18n/server";
 
 type Body = { tripId?: string; orderId?: string; paymentId?: string; signature?: string };
 
@@ -10,24 +11,25 @@ type Body = { tripId?: string; orderId?: string; paymentId?: string; signature?:
 // directly for the payment's amount and status before issuing tickets.
 export async function POST(req: Request) {
   const user = await getUser();
-  if (!user) return Response.json({ error: "Please sign in again." }, { status: 401 });
+  const t = await getT();
+  if (!user) return Response.json({ error: t("err.signInAgain") }, { status: 401 });
   const { tripId, orderId, paymentId, signature } = (await req.json().catch(() => ({}))) as Body;
-  if (!tripId || !orderId || !paymentId || !signature) return Response.json({ error: "Incomplete payment details." }, { status: 400 });
+  if (!tripId || !orderId || !paymentId || !signature) return Response.json({ error: t("pay.incomplete") }, { status: 400 });
 
   const db = appDb();
   const pay = db.prepare("SELECT * FROM payments WHERE order_id = ? AND trip_id = ? AND user_id = ?").get(orderId, tripId, user.id) as
     | { status: string; amount_paise: number; payment_id: string | null }
     | undefined;
-  if (!pay) return Response.json({ error: "Unknown payment." }, { status: 404 });
+  if (!pay) return Response.json({ error: t("pay.unknown") }, { status: 404 });
   if (pay.status === "PAID") return Response.json({ ok: true, trip: getTrip(tripId, user.id) }); // already processed (retry/double click)
-  if (!verifySignature(orderId, paymentId, signature)) return Response.json({ error: "Payment signature check failed." }, { status: 400 });
+  if (!verifySignature(orderId, paymentId, signature)) return Response.json({ error: t("pay.badSignature") }, { status: 400 });
 
   let payment;
   try {
     payment = await fetchPayment(paymentId);
-    if (payment.order_id !== orderId || payment.amount !== pay.amount_paise) throw new Error("Payment doesn't match this booking.");
+    if (payment.order_id !== orderId || payment.amount !== pay.amount_paise) throw new Error(t("pay.mismatch"));
     if (payment.status === "authorized") payment = await capturePayment(paymentId, pay.amount_paise);
-    if (payment.status !== "captured") throw new Error(`Payment is ${payment.status}.`);
+    if (payment.status !== "captured") throw new Error(t("pay.status", { status: payment.status }));
   } catch (e) {
     db.prepare("UPDATE payments SET status = 'FAILED', payment_id = ? WHERE order_id = ?").run(paymentId, orderId);
     return Response.json({ error: (e as Error).message }, { status: 402 });
@@ -45,7 +47,7 @@ export async function POST(req: Request) {
     const refund = await refundPayment(paymentId, pay.amount_paise, { trip: tripId, reason: "auto-refund: booking failed" }).catch(() => null);
     db.prepare("UPDATE bookings SET status = 'CANCELLED', refund_paise = total_paise WHERE trip_id = ? AND status IN ('PENDING_PAYMENT', 'EXPIRED')").run(tripId);
     return Response.json(
-      { error: `${e.message} ${refund ? "Your payment has been refunded in full." : "We couldn't refund automatically; it will be reversed by the bank."}`, refunded: !!refund },
+      { error: `${t.msg(e.m)} ${refund ? t("pay.refundedFull") : t("pay.refundManual")}`, refunded: !!refund },
       { status: 409 }
     );
   }
