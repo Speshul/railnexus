@@ -138,10 +138,33 @@ function migrate(db: DatabaseSync) {
       berth_no INTEGER NOT NULL,
       booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
       idx INTEGER NOT NULL,
-      PRIMARY KEY (train_number, train_start_date, class_code, coach, berth_no)
+      PRIMARY KEY (booking_id, idx)
     );
     CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
   `);
+  // A berth can be reused on sections that don't overlap (split tickets, passengers getting off mid-route), so the
+  // key is the passenger, not the berth. Rebuild tables created with the old berth-based key.
+  const def = db.prepare("SELECT sql FROM sqlite_master WHERE name = 'berth_allocations'").get() as { sql: string } | undefined;
+  if (def?.sql.includes("PRIMARY KEY (train_number")) {
+    db.exec(`
+      BEGIN;
+      ALTER TABLE berth_allocations RENAME TO berth_allocations_old;
+      CREATE TABLE berth_allocations (
+        train_number TEXT NOT NULL,
+        train_start_date TEXT NOT NULL,
+        class_code TEXT NOT NULL,
+        coach TEXT NOT NULL,
+        berth_no INTEGER NOT NULL,
+        booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+        idx INTEGER NOT NULL,
+        PRIMARY KEY (booking_id, idx)
+      );
+      INSERT INTO berth_allocations SELECT * FROM berth_allocations_old;
+      DROP TABLE berth_allocations_old;
+      COMMIT;
+    `);
+  }
+  db.exec("CREATE INDEX IF NOT EXISTS berth_run ON berth_allocations(train_number, train_start_date, class_code)");
 }
 
 /** A per-installation secret (e.g. for signing ticket QR codes), created on first use. */

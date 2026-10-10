@@ -171,7 +171,10 @@ export default async function TripPage({ params, searchParams }: PageProps<"/boo
           {trip.legs.map((b, i) => (
             <div key={b.id}>
               {multi && i > 0 && (
-                <p className="flex items-center gap-1.5 px-1 pb-2 text-sm text-warn"><Clock className="size-4" /> Change trains at {b.fare.fromName}</p>
+                <p className="flex items-center gap-1.5 px-1 pb-2 text-sm text-warn">
+                  <Clock className="size-4" />
+                  {b.train_number === trip.legs[0].train_number ? `Change seats at ${b.fare.fromName} (same train)` : `Change trains at ${b.fare.fromName}`}
+                </p>
               )}
               <LegCard b={b} index={i} multi={multi} paid={paid} tripId={trip.id} />
             </div>

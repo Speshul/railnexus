@@ -42,6 +42,7 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
   const ok = legs as NonNullable<(typeof legs)[number]>[];
   const blocked = ok.find((l) => !l.avail.bookable);
   const multi = ok.length > 1;
+  const sameTrain = multi && ok[0].seg.train.number === ok[1].seg.train.number;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
@@ -53,7 +54,11 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
       </ol>
       {multi && (
         <p className="mb-3 rounded-lg border border-brand/30 bg-brand-light px-3 py-2 text-sm">
-          Connecting journey: <b>{ok.length} trains, one payment</b>. Each train gets its own PNR and ticket.
+          {sameTrain ? (
+            <>Split ticket: <b>same train, two tickets, one payment</b>. Both pieces are confirmed; you move to your second seat at {ok[1].seg.from.name}.</>
+          ) : (
+            <>Connecting journey: <b>{ok.length} trains, one payment</b>. Each train gets its own PNR and ticket.</>
+          )}
         </p>
       )}
 
@@ -62,13 +67,13 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
           <div key={i}>
             {multi && i > 0 && (
               <p className="flex items-center gap-1.5 px-1 py-1 text-sm text-warn">
-                <Clock className="size-4" /> Change at {seg.from.name}
+                <Clock className="size-4" /> {sameTrain ? `Change seats at ${seg.from.name} (stay on the same train)` : `Change at ${seg.from.name}`}
               </p>
             )}
             <div className="card p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  {multi && <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Train {i + 1}</p>}
+                  {multi && <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{sameTrain ? `Ticket ${i + 1}` : `Train ${i + 1}`}</p>}
                   <Link href={`/train/${seg.train.number}?from=${seg.from.code}&to=${seg.to.code}&date=${seg.date}`} className="font-semibold hover:underline">
                     <span className="font-mono">{seg.train.number}</span> {seg.train.name}
                   </Link>

@@ -1,13 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2, MapPin } from "lucide-react";
+import { Leaf, Loader2, MapPin, Split } from "lucide-react";
 import type { JourneyResult } from "@/lib/search";
 import type { Availability } from "@/lib/availability";
 import { CLASSES, type ClassCode, type Quota } from "@/lib/constants";
 import { formatDate, formatDuration } from "@/lib/dates";
 import { availText, availTone, inr, pct } from "@/lib/format";
 import { RunDays } from "./RunDays";
+import { bookHref as tripHref } from "@/lib/trip-url";
 
 export function TrainCard({ j, quota, initialClass, anchor = true }: { j: JourneyResult; quota: Quota; initialClass?: ClassCode | null; anchor?: boolean }) {
   const [calendarFor, setCalendarFor] = useState<ClassCode | null>(null);
@@ -67,10 +68,26 @@ export function TrainCard({ j, quota, initialClass, anchor = true }: { j: Journe
                 <div className={`mt-1 text-sm font-semibold ${availTone(c.avail.status)}`}>{availText(c.avail)}</div>
                 {c.avail.status === "WL" && <div className="text-xs text-slate-500">{pct(c.avail.chance)} chance of confirmation</div>}
                 {c.avail.status === "RAC" && <div className="text-xs text-slate-500">Shared berth, usually confirms</div>}
+                {c.split && (
+                  <div className="mt-2 rounded-md border border-green-200 bg-green-50 p-2 text-xs">
+                    <p className="flex items-start gap-1 font-semibold text-ok">
+                      <Split className="mt-0.5 size-3.5 shrink-0" /> Confirmed seats with a split ticket
+                    </p>
+                    <p className="mt-0.5 text-slate-600">
+                      Same train, two tickets: change seats at <b>{c.split.via.name}</b>. {inr(c.split.fare)} ({c.split.extra > 0 ? `+${inr(c.split.extra)}` : "same price"}).
+                    </p>
+                    <Link
+                      href={tripHref(c.split.legs.map((l) => ({ train: j.number, from: l.from, to: l.to, date: l.date, cls: c.cls })), quota)}
+                      className="mt-1.5 inline-flex font-semibold text-ok underline"
+                    >
+                      Book split ticket
+                    </Link>
+                  </div>
+                )}
                 <div className="mt-auto flex items-center gap-2 pt-2">
                   {c.avail.bookable ? (
                     <Link href={bookHref(c.cls)} className="btn-primary flex-1 py-1.5">
-                      {c.avail.status === "AVAILABLE" ? "Book" : "Book (waitlist)"}
+                      {c.avail.status === "AVAILABLE" ? "Book" : c.avail.status === "RAC" ? "Book (RAC)" : "Book (waitlist)"}
                     </Link>
                   ) : (
                     <span className="flex-1 text-xs text-slate-500">{c.avail.note ?? "Not bookable"}</span>
@@ -96,6 +113,11 @@ export function TrainCard({ j, quota, initialClass, anchor = true }: { j: Journe
 
       <div className="border-t border-slate-100 px-4 py-2 text-xs text-slate-500">
         Runs {j.origin} → {j.destination}
+        {j.co2Saved > 0 && (
+          <span className="ml-3 inline-flex items-center gap-1 text-ok">
+            <Leaf className="size-3" /> Saves ~{j.co2Saved} kg CO₂ vs flying
+          </span>
+        )}
       </div>
     </article>
   );

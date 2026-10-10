@@ -34,7 +34,11 @@ function TripCard({ t }: { t: Trip }) {
           <div>
             <div className="flex flex-wrap items-center gap-1 font-semibold">
               {first.fare.fromName} <ArrowRight className="size-4 text-slate-400" /> {last.fare.toName}
-              {t.legs.length > 1 && <span className="rounded bg-brand-light px-1.5 text-xs font-medium text-brand">1 change</span>}
+              {t.legs.length > 1 && (
+                <span className="rounded bg-brand-light px-1.5 text-xs font-medium text-brand">
+                  {t.legs[0].train_number === t.legs[1].train_number ? "split ticket" : "1 change"}
+                </span>
+              )}
             </div>
             <div className="text-sm text-slate-600">
               {formatDate(first.journey_date, { weekday: "short", day: "numeric", month: "short", year: "numeric" })} · {first.fare.dep} ·{" "}

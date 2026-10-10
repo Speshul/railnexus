@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import QRCode from "qrcode";
-import { TrainFront } from "lucide-react";
+import { Leaf, TrainFront } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getBookingByPnr, ticketSignature } from "@/lib/booking";
 import { getStops } from "@/lib/rail";
@@ -10,6 +10,7 @@ import { APP_NAME, CLASSES, FOOD_PREFS, QUOTAS } from "@/lib/constants";
 import { formatDate, formatDuration } from "@/lib/dates";
 import { inr, statusTone } from "@/lib/format";
 import { siteOrigin } from "@/lib/origin";
+import { co2SavedVsFlight } from "@/lib/carbon";
 import { PrintButton } from "@/components/PrintButton";
 
 export async function generateMetadata({ params }: PageProps<"/ticket/[pnr]">): Promise<Metadata> {
@@ -117,6 +118,11 @@ export default async function TicketPage({ params }: PageProps<"/ticket/[pnr]">)
           <div className="space-y-1 text-xs text-slate-600">
             <p><b>Booked:</b> {b.confirmed_at ? new Date(b.confirmed_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "—"} · {active.length} of {b.passengers.length} passengers active</p>
             <p><b>Contact:</b> {b.contact_email} · {b.contact_phone}</p>
+            {co2SavedVsFlight(f.distance) > 0 && (
+              <p className="flex items-center gap-1 text-ok">
+                <Leaf className="size-3.5" /> By train instead of flying, you save ~{co2SavedVsFlight(f.distance) * active.filter((p) => p.age >= 5).length} kg CO₂.
+              </p>
+            )}
             <p>Carry a valid photo ID. RAC passengers may board; waitlisted passengers may not board unless their status confirms.</p>
             <p>Check live status any time at <Link href={`/pnr?n=${pnr}`} className="text-brand underline print:no-underline">PNR status</Link>.</p>
           </div>

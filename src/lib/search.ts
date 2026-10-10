@@ -1,9 +1,10 @@
 import "server-only";
 import { findConnections, findTrains, getStation, nearbyStations, type Segment, type Station } from "./rail";
-import { getAvailability, type Availability } from "./availability";
+import { findSplit, getAvailability, type Availability } from "./availability";
+import { co2SavedVsFlight } from "./carbon";
 import { adultFare } from "./fare";
 import { CLASS_ORDER, QUOTAS, type ClassCode, type Quota } from "./constants";
-import { isValidDate, todayIST } from "./dates";
+import { addDays, isValidDate, todayIST } from "./dates";
 
 export type SearchParams = { from: string; to: string; date: string; quota: Quota; cls?: ClassCode; nearby: boolean };
 
@@ -20,7 +21,17 @@ export function parseSearchParams(sp: Record<string, string | string[] | undefin
   return { from, to, date, quota, cls, nearby: get("nearby") === "1" };
 }
 
-export type ClassOption = { cls: ClassCode; fare: number; avail: Availability };
+/** A waitlisted class that can be booked confirmed by splitting the journey on the same train. */
+export type SplitTicket = {
+  via: { code: string; name: string };
+  legs: [{ from: string; to: string; date: string; seats: number }, { from: string; to: string; date: string; seats: number }];
+  /** fare of both pieces together, per adult */
+  fare: number;
+  /** how much more than a single ticket */
+  extra: number;
+};
+
+export type ClassOption = { cls: ClassCode; fare: number; avail: Availability; split?: SplitTicket };
 
 export type JourneyResult = {
   number: string;
@@ -37,15 +48,36 @@ export type JourneyResult = {
   arrivalDate: string;
   duration: number;
   distance: number;
+  /** kg CO2 saved compared with flying the same distance */
+  co2Saved: number;
   classes: ClassOption[];
 };
 
 export function toJourney(seg: Segment, quota: Quota): JourneyResult {
-  const classes = CLASS_ORDER.filter((c) => seg.train.classes.includes(c)).map((cls) => ({
-    cls,
-    fare: adultFare({ cls, km: seg.distance, trainType: seg.train.type, quota: quota === "TQ" ? "TQ" : "GN" }).total,
-    avail: getAvailability(seg, cls, quota),
-  }));
+  const fareQuota = quota === "TQ" ? "TQ" : "GN";
+  const fareFor = (cls: ClassCode, km: number) => adultFare({ cls, km, trainType: seg.train.type, quota: fareQuota }).total;
+  const classes = CLASS_ORDER.filter((c) => seg.train.classes.includes(c)).map((cls): ClassOption => {
+    const fare = fareFor(cls, seg.distance);
+    const avail = getAvailability(seg, cls, quota);
+    const option: ClassOption = { cls, fare, avail };
+    // Waitlisted or RAC? See if two tickets on this same train (change seats once) would both be confirmed.
+    if (avail.bookable && avail.status !== "AVAILABLE") {
+      const sp = findSplit(seg, cls, quota);
+      if (sp) {
+        const pieces = fareFor(cls, sp.via.dist - seg.from.dist) + fareFor(cls, seg.to.dist - sp.via.dist);
+        option.split = {
+          via: { code: sp.via.code, name: sp.via.name },
+          legs: [
+            { from: seg.from.code, to: sp.via.code, date: seg.date, seats: sp.first },
+            { from: sp.via.code, to: seg.to.code, date: addDays(seg.startDate, sp.via.day - 1), seats: sp.second },
+          ],
+          fare: pieces,
+          extra: pieces - fare,
+        };
+      }
+    }
+    return option;
+  });
   return {
     number: seg.train.number,
     name: seg.train.name,
@@ -61,6 +93,7 @@ export function toJourney(seg: Segment, quota: Quota): JourneyResult {
     arrivalDate: seg.arrivalDate,
     duration: seg.duration,
     distance: seg.distance,
+    co2Saved: co2SavedVsFlight(seg.distance),
     classes,
   };
 }

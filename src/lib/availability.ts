@@ -6,7 +6,7 @@ import "server-only";
 import { appDb } from "./db";
 import { CLASSES, BOOKING_WINDOW_DAYS, type ClassCode, type Quota } from "./constants";
 import { diffDays, todayIST, nowMinutesIST, weekday, addDays } from "./dates";
-import type { Segment } from "./rail";
+import { getStops, type Segment, type Stop } from "./rail";
 
 export type AvailStatus = "AVAILABLE" | "RAC" | "WL" | "REGRET" | "NOT_OPEN" | "DEPARTED" | "UNRESERVED" | "NA";
 
@@ -37,40 +37,124 @@ function pools(cls: ClassCode, coaches: number) {
   return { cap, GN: cap - tq - ld - ss, TQ: tq, LD: ld, SS: ss, rac: CLASSES[cls].rac ? coaches * 9 : 0 };
 }
 
-/** Seats held (unexpired) or confirmed in this app for a train run, optionally excluding one booking. */
-function appSeats(train: string, startDate: string, cls: ClassCode, quota: Quota, excludeBooking = "") {
-  const r = appDb()
-    .prepare(
-      `SELECT COALESCE(SUM(seats), 0) n FROM bookings
-       WHERE train_number = ? AND train_start_date = ? AND class_code = ? AND quota = ? AND id <> ?
-         AND (status = 'CONFIRMED' OR (status = 'PENDING_PAYMENT' AND expires_at > ?))`
-    )
-    .get(train, startDate, cls, quota, excludeBooking, Date.now()) as { n: number };
-  return r.n;
-}
-
 export const coachCount = (seg: Segment, cls: ClassCode) => (seg.train.type === "Pass" && cls === "2S" ? 8 : COACHES[cls]);
 
 export type Inventory = { pool: number; racSlots: number; maxWl: number; sold: number; coaches: number };
 
+// Halting stations per train (static data, so cached for the life of the server).
+const haltCache = new Map<string, Stop[]>();
+function haltsOf(train: string) {
+  let h = haltCache.get(train);
+  if (!h) {
+    h = getStops(train).filter((s) => s.halt);
+    haltCache.set(train, h);
+  }
+  return h;
+}
+
+type SectionLoad = {
+  halts: Stop[];
+  /** seats occupied on each section between consecutive halts */
+  sold: number[];
+  pool: number; racSlots: number; maxWl: number; coaches: number;
+  /** extra seats lost per unit of route covered, because boarding/alighting fragments berths */
+  fragmentation: number;
+  total: number;
+};
+
 /**
- * Quota size and seats already sold for a train run: simulated demand plus this app's own bookings.
- * `excludeBooking` leaves one booking out, so its passengers can be placed in order when it is confirmed.
+ * Seat inventory per section of the route, like IRCTC's: demand peaks mid-route and varies per section, and this
+ * app's bookings only occupy the sections they travel. A long journey needs one berth free for its whole stretch,
+ * which gets harder as passengers get on and off along the way, so a full route can be waitlisted while each half
+ * still has confirmed seats.
  */
-export function inventory(seg: Segment, cls: ClassCode, quota: Quota, excludeBooking = ""): Inventory {
+function sectionLoad(seg: Segment, cls: ClassCode, quota: Quota, excludeBooking = ""): SectionLoad {
+  const halts = haltsOf(seg.train.number);
+  const total = halts[halts.length - 1].dist || 1;
   const coaches = coachCount(seg, cls);
   const p = pools(cls, coaches);
   const pool = p[quota];
-  const ahead = diffDays(seg.date, todayIST());
-  const h = hash(`${seg.train.number}|${seg.startDate}|${cls}|${quota}`);
-  const dow = weekday(seg.date);
+  const key = `${seg.train.number}|${seg.startDate}|${cls}|${quota}`;
+  const ahead = diffDays(seg.startDate, todayIST());
+  const dow = weekday(seg.startDate);
   const weekend = dow === 0 || dow === 5 || dow === 6 ? 1.12 : 1;
   const nearness = ahead <= 2 ? 1.2 : ahead <= 7 ? 1.08 : ahead <= 21 ? 0.95 : ahead <= 40 ? 0.8 : 0.6;
   const pop = POPULARITY[seg.train.type] ?? 1;
   const premiumClass = cls === "1A" || cls === "EC" ? 0.75 : 1;
-  const frac = (0.3 + 0.95 * h) * weekend * nearness * pop * premiumClass;
-  const sold = Math.round(frac * pool) + appSeats(seg.train.number, seg.startDate, cls, quota, excludeBooking);
-  return { pool, racSlots: p.rac && quota === "GN" ? p.rac * 2 : 0, maxWl: Math.max(20, Math.round(pool * 0.4)), sold, coaches };
+  const frac = 0.88 * (0.3 + 0.95 * hash(key)) * weekend * nearness * pop * premiumClass;
+
+  const sold = halts.slice(0, -1).map((a, i) => {
+    const x = (a.dist + halts[i + 1].dist) / 2 / total;
+    const shape = 0.5 + 0.4 * Math.sin(Math.PI * x) + (hash(`${key}|${i}`) - 0.5) * 0.24;
+    return Math.round(Math.max(0, frac * shape) * pool);
+  });
+
+  const idx = new Map<string, number>();
+  halts.forEach((h, i) => { if (!idx.has(h.code)) idx.set(h.code, i); });
+  const rows = appDb()
+    .prepare(
+      `SELECT from_code, to_code, seats FROM bookings
+       WHERE train_number = ? AND train_start_date = ? AND class_code = ? AND quota = ? AND id <> ?
+         AND (status = 'CONFIRMED' OR (status = 'PENDING_PAYMENT' AND expires_at > ?))`
+    )
+    .all(seg.train.number, seg.startDate, cls, quota, excludeBooking, Date.now()) as { from_code: string; to_code: string; seats: number }[];
+  for (const r of rows) {
+    const i0 = idx.get(r.from_code);
+    const i1 = idx.get(r.to_code);
+    if (i0 === undefined || i1 === undefined) continue;
+    for (let i = i0; i < i1; i++) sold[i] += r.seats;
+  }
+  return {
+    halts, sold, pool, coaches, total,
+    racSlots: p.rac && quota === "GN" ? p.rac * 2 : 0,
+    maxWl: Math.max(20, Math.round(pool * 0.4)),
+    fragmentation: 0.4 * Math.min(1, frac) * pool,
+  };
+}
+
+/** Effective seats taken for a stretch of the route (halt index i0 to i1). */
+function soldFor(load: SectionLoad, i0: number, i1: number) {
+  let max = 0;
+  for (let i = i0; i < i1; i++) max = Math.max(max, load.sold[i]);
+  const cover = (load.halts[i1].dist - load.halts[i0].dist) / load.total;
+  return max + Math.round(load.fragmentation * cover);
+}
+
+const haltIndex = (load: SectionLoad, seq: number) => load.halts.findIndex((h) => h.seq === seq);
+
+/**
+ * Quota size and seats already taken for this segment of a train run.
+ * `excludeBooking` leaves one booking out, so its passengers can be placed in order when it is confirmed.
+ */
+export function inventory(seg: Segment, cls: ClassCode, quota: Quota, excludeBooking = ""): Inventory {
+  const load = sectionLoad(seg, cls, quota, excludeBooking);
+  const sold = soldFor(load, haltIndex(load, seg.from.seq), haltIndex(load, seg.to.seq));
+  return { pool: load.pool, racSlots: load.racSlots, maxWl: load.maxWl, sold, coaches: load.coaches };
+}
+
+export type SplitOption = { via: { code: string; name: string; seq: number; day: number; dist: number }; first: number; second: number };
+
+/**
+ * When the whole stretch is waitlisted, find a station to split the journey at so that both pieces (same train,
+ * two tickets, change seats once) have confirmed seats for `seats` passengers. Prefers the split with the most
+ * seats on its tighter piece.
+ */
+export function findSplit(seg: Segment, cls: ClassCode, quota: Quota, seats = 1): SplitOption | null {
+  const load = sectionLoad(seg, cls, quota);
+  if (!load.pool) return null;
+  const i0 = haltIndex(load, seg.from.seq);
+  const i1 = haltIndex(load, seg.to.seq);
+  let best: SplitOption | null = null;
+  for (let k = i0 + 1; k < i1; k++) {
+    const first = load.pool - soldFor(load, i0, k);
+    const second = load.pool - soldFor(load, k, i1);
+    if (first < seats || second < seats) continue;
+    if (!best || Math.min(first, second) > Math.min(best.first, best.second)) {
+      const h = load.halts[k];
+      best = { via: { code: h.code, name: h.name, seq: h.seq, day: h.day, dist: h.dist }, first, second };
+    }
+  }
+  return best;
 }
 
 export function getAvailability(seg: Segment, cls: ClassCode, quota: Quota): Availability {

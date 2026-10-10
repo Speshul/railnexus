@@ -2,7 +2,7 @@ import "server-only";
 import { createHmac, randomBytes, randomInt } from "node:crypto";
 import { z } from "zod";
 import { appDb, appSecret } from "./db";
-import { getSegment, type Segment } from "./rail";
+import { getSegment, getStops, type Segment } from "./rail";
 import { getAvailability, inventory, type Availability } from "./availability";
 import { bookingFare, type BookingFare } from "./fare";
 import {
@@ -70,7 +70,9 @@ export function validateBooking(input: BookingInput): ValidationResult {
     const arrive = minutesOf(legs[0].segment.arrivalDate, legs[0].segment.to.arr!);
     const depart = minutesOf(legs[1].segment.date, legs[1].segment.from.dep!);
     if (legs[0].segment.to.code !== legs[1].segment.from.code) return { ok: false, error: "The second train must start where the first one ends." };
-    if (depart - arrive < 30) return { ok: false, error: "The second train leaves too soon after the first one arrives." };
+    // Split ticket on the same train run: you just move to another seat at that station.
+    const sameTrain = legs[0].input.train === legs[1].input.train && legs[0].segment.startDate === legs[1].segment.startDate;
+    if (!sameTrain && depart - arrive < 30) return { ok: false, error: "The second train leaves too soon after the first one arrives." };
   }
 
   const anyPremium = legs.some((l) => PREMIUM_TYPES.has(l.segment.train.type));
@@ -128,10 +130,12 @@ export function createDraftTrip(user: User, input: BookingInput, v: Extract<Vali
       const premium = PREMIUM_TYPES.has(segment.train.type);
       const prefs = berthPrefsFor(l.input.cls);
       // "Edit passengers" creates a fresh hold; release the old one so seats aren't held twice.
+      // (Never this checkout's own holds: a split ticket books the same train twice.)
       db.prepare(
         `UPDATE bookings SET status = 'CANCELLED'
-         WHERE user_id = ? AND status = 'PENDING_PAYMENT' AND train_number = ? AND train_start_date = ? AND class_code = ? AND quota = ?`
-      ).run(user.id, l.input.train, segment.startDate, l.input.cls, input.quota);
+         WHERE user_id = ? AND status = 'PENDING_PAYMENT' AND train_number = ? AND train_start_date = ? AND class_code = ? AND quota = ?
+           AND trip_id <> ?`
+      ).run(user.id, l.input.train, segment.startDate, l.input.cls, input.quota, tripId);
       const id = newId();
       const snapshot = {
         ...fare,
@@ -292,9 +296,18 @@ function allocateBerths(
 ) {
   const db = appDb();
   const cap = CLASSES[cls].coachCap;
+  // A berth is only taken if its holder's journey overlaps ours: one used Delhi -> Kanpur is free from Kanpur on.
+  const order = new Map<string, number>();
+  getStops(seg.train.number).filter((s) => s.halt).forEach((s, i) => { if (!order.has(s.code)) order.set(s.code, i); });
+  const myFrom = order.get(seg.from.code) ?? 0;
+  const myTo = order.get(seg.to.code) ?? Infinity;
   const taken = new Set(
-    (db.prepare("SELECT coach, berth_no FROM berth_allocations WHERE train_number = ? AND train_start_date = ? AND class_code = ?")
-      .all(seg.train.number, seg.startDate, cls) as { coach: string; berth_no: number }[]).map((r) => `${r.coach}/${r.berth_no}`)
+    (db.prepare(
+      `SELECT a.coach, a.berth_no, b.from_code, b.to_code FROM berth_allocations a JOIN bookings b ON b.id = a.booking_id
+       WHERE a.train_number = ? AND a.train_start_date = ? AND a.class_code = ?`
+    ).all(seg.train.number, seg.startDate, cls) as { coach: string; berth_no: number; from_code: string; to_code: string }[])
+      .filter((r) => (order.get(r.from_code) ?? 0) < myTo && myFrom < (order.get(r.to_code) ?? Infinity))
+      .map((r) => `${r.coach}/${r.berth_no}`)
   );
   // Simulated passengers already occupy some berths; mark a deterministic share of them as taken too.
   const busy = (coach: string, n: number) => hash32(`${seg.train.number}|${seg.startDate}|${coach}|${n}`) % 100 < 55;

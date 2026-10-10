@@ -36,6 +36,10 @@ npm run data
 - **Partial or full cancellation** with IRCTC-style charges (flat fee >48 h, 25% within 48 h, 50% within 12 h, nothing
   after chart preparation; ₹60 clerkage for RAC/WL), refunded through Razorpay's refund API. Seats go back on sale.
 - If seats run out while someone is paying, the payment is **refunded automatically**.
+- **Split tickets**: seat inventory is tracked per section of the route, as on real trains. When a full journey is
+  waitlisted but both halves have seats, results offer a split ticket on the same train (change seats once), with
+  the extra cost shown; both pieces are booked and paid together. Berths are only "taken" where journeys overlap.
+- **Carbon badge**: CO₂ saved vs flying the same distance, on results and e-tickets.
 - Optional `MAKE_WEBHOOK_URL`: every issued ticket is POSTed there as JSON, so a Make.com scenario can email it.
 
 Keys (in `.env.local`): `RAZORPAY_KEY_ID` (must be `rzp_test_...`) and `RAZORPAY_KEY_SECRET`.
