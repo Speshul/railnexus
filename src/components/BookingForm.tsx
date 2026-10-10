@@ -10,8 +10,9 @@ import { bookingFare, passengerKind } from "@/lib/fare";
 import { inr } from "@/lib/format";
 import { useVoiceContext, useVoiceHandlers } from "./voice/VoiceBridge";
 
-type Journey = {
-  train: string; from: string; to: string; date: string; cls: ClassCode; quota: Quota;
+/** One train of the checkout (two for a connecting journey). */
+export type Journey = {
+  train: string; from: string; to: string; date: string; cls: ClassCode;
   km: number; trainType: string; premium: boolean; availStatus: string;
 };
 type P = { key: number; name: string; age: string; gender: string; berth: string; food: string; noBerth: boolean };
@@ -19,7 +20,15 @@ type P = { key: number; name: string; age: string; gender: string; berth: string
 let nextKey = 1;
 const blank = (premium: boolean): P => ({ key: nextKey++, name: "", age: "", gender: "", berth: "", food: premium ? "VEG" : "", noBerth: false });
 
-export function BookingForm({ journey, user, saved }: { journey: Journey; user: { email: string; phone: string; name: string }; saved: SavedPassenger[] }) {
+export function BookingForm({ journeys, quota, user, saved }: {
+  journeys: Journey[]; quota: Quota; user: { email: string; phone: string; name: string }; saved: SavedPassenger[];
+}) {
+  // Passenger rules come from the whole trip: meals if any train serves them, berth options from the first train.
+  const journey = {
+    ...journeys[0], quota,
+    premium: journeys.some((j) => j.premium),
+    availStatus: journeys.every((j) => j.availStatus === "AVAILABLE") ? "AVAILABLE" : "WL",
+  };
   const [state, action, pending] = useActionState<BookingFormState, FormData>(createBooking, undefined);
   const [passengers, setPassengers] = useState<P[]>([blank(journey.premium)]);
   const [email, setEmail] = useState(user.email);
@@ -35,14 +44,24 @@ export function BookingForm({ journey, user, saved }: { journey: Journey; user: 
   const max = MAX_PASSENGERS[journey.quota];
   const fe = state?.fieldErrors ?? {};
 
-  const fare = useMemo(
-    () =>
-      bookingFare(
-        { cls: journey.cls, km: journey.km, trainType: journey.trainType, quota: journey.quota, insurance: !!insurance },
-        passengers.filter((p) => p.age !== "").map((p) => ({ age: Number(p.age), noBerth: p.noBerth }))
-      ),
-    [journey, passengers, insurance]
-  );
+  const fare = useMemo(() => {
+    const pax = passengers.filter((p) => p.age !== "").map((p) => ({ age: Number(p.age), noBerth: p.noBerth }));
+    const legs = journeys.map((j) => bookingFare({ cls: j.cls, km: j.km, trainType: j.trainType, quota, insurance: !!insurance }, pax));
+    const sum = (f: (l: (typeof legs)[number]) => number) => Math.round(legs.reduce((s, l) => s + f(l), 0) * 100) / 100;
+    return {
+      ...legs[0],
+      legs,
+      // per passenger: total across all trains of the trip
+      perPassenger: legs[0].perPassenger.map((p, i) => ({
+        kind: p.kind,
+        fare: p.fare ? { ...p.fare, total: sum((l) => l.perPassenger[i].fare?.total ?? 0) } : null,
+      })),
+      ticketFare: sum((l) => l.ticketFare),
+      convenienceFee: sum((l) => l.convenienceFee),
+      insurance: sum((l) => l.insurance),
+      total: sum((l) => l.total),
+    };
+  }, [journeys, quota, passengers, insurance]);
 
   const update = (key: number, patch: Partial<P>) => setPassengers((ps) => ps.map((p) => (p.key === key ? { ...p, ...patch } : p)));
   const addSaved = (s: SavedPassenger) => {
@@ -64,11 +83,11 @@ export function BookingForm({ journey, user, saved }: { journey: Journey; user: 
   const voiceCtx = useMemo(
     () => ({
       booking: {
-        train: journey.train, cls: journey.cls, saved: saved.map((s) => s.name),
+        train: journeys[0].train, cls: journeys[0].cls, saved: saved.map((s) => s.name),
         passengers: passengers.filter((p) => p.name).map((p) => p.name), insuranceChosen: insurance !== null,
       },
     }),
-    [journey.train, journey.cls, saved, passengers, insurance]
+    [journeys, saved, passengers, insurance]
   );
   useVoiceContext(voiceCtx);
   const titleCase = (n: string) => n.trim().replace(/\s+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -124,7 +143,8 @@ export function BookingForm({ journey, user, saved }: { journey: Journey; user: 
     formData.set(
       "payload",
       JSON.stringify({
-        ...journey,
+        legs: journeys.map(({ train, from, to, date, cls }) => ({ train, from, to, date, cls })),
+        quota,
         passengers: passengers.map((p) => ({ name: p.name, age: p.age, gender: p.gender, berth: p.berth, food: p.food, noBerth: p.noBerth })),
         email, phone, insurance, autoUpgrade, confirmOnly, savePassengers,
       })
@@ -266,7 +286,12 @@ export function BookingForm({ journey, user, saved }: { journey: Journey; user: 
               <dd>{p.fare ? inr(p.fare.total) : "Free"}</dd>
             </div>
           ))}
-          {fare.perPassenger[0]?.fare && (
+          {fare.legs.length > 1 && fare.legs.map((l, i) => (
+            <div key={i} className="flex justify-between text-xs text-slate-500">
+              <dt>Train {i + 1}: {journeys[i].train} ({journeys[i].cls})</dt><dd>{inr(l.ticketFare)}</dd>
+            </div>
+          ))}
+          {fare.legs.length === 1 && fare.perPassenger[0]?.fare && (
             <div className="rounded-md bg-slate-50 p-2 text-xs text-slate-500">
               Per adult: base {inr(fare.perPassenger.find((x) => x.kind === "adult")?.fare?.base ?? 0)}
               {(() => {

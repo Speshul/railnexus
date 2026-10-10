@@ -5,7 +5,8 @@ import { ArrowRight, ChevronDown, Clock, Footprints, Loader2, SlidersHorizontal 
 import type { AlternativeRoute, ConnectionResult, JourneyResult, SearchResponse } from "@/lib/search";
 import { CLASSES, CLASS_ORDER, TRAIN_TYPE_FILTERS, type ClassCode, type Quota } from "@/lib/constants";
 import { formatDate, formatDuration } from "@/lib/dates";
-import { inr } from "@/lib/format";
+import { availText, inr } from "@/lib/format";
+import { bookHref } from "@/lib/trip-url";
 import { TrainCard } from "./TrainCard";
 import { useVoiceContext, useVoiceHandlers } from "./voice/VoiceBridge";
 import type { VoiceContext } from "@/lib/voice/types";
@@ -335,6 +336,39 @@ function Connections({ data, alternatives, nearbyHref }: { data: SearchResponse;
   );
 }
 
+/** One checkout for both trains of a connecting journey: pick a class on each, pay once, get two PNRs. */
+function BookBoth({ c, quota }: { c: ConnectionResult; quota: Quota }) {
+  const bookable = (j: JourneyResult) => j.classes.filter((x) => x.avail.bookable);
+  // default: cheapest class with confirmed seats, else the cheapest bookable one
+  const cheapest = (xs: JourneyResult["classes"]) => [...xs].sort((a, b) => a.fare - b.fare)[0];
+  const initial = (j: JourneyResult) => (cheapest(bookable(j).filter((x) => x.avail.status === "AVAILABLE")) ?? cheapest(bookable(j)))?.cls;
+  const [cls, setCls] = useState<(ClassCode | undefined)[]>(() => c.legs.map(initial));
+  if (c.legs.some((l) => !bookable(l).length)) return null;
+  const total = c.legs.reduce((s, l, i) => s + (l.classes.find((x) => x.cls === cls[i])?.fare ?? 0), 0);
+  const href = bookHref(
+    c.legs.map((l, i) => ({ train: l.number, from: l.from.code, to: l.to.code, date: l.date, cls: cls[i]! })),
+    quota
+  );
+  return (
+    <div className="rounded-lg border border-brand/30 bg-white p-3">
+      <p className="mb-2 text-sm font-semibold">Book both trains together: one payment, two tickets</p>
+      <div className="flex flex-wrap items-end gap-3">
+        {c.legs.map((l, i) => (
+          <label key={l.number} className="text-xs">
+            <span className="label">Train {i + 1} · {l.number}</span>
+            <select className="input w-auto py-1.5" value={cls[i]} onChange={(e) => setCls((v) => v.map((x, k) => (k === i ? (e.target.value as ClassCode) : x)))}>
+              {bookable(l).map((x) => (
+                <option key={x.cls} value={x.cls}>{x.cls} · {inr(x.fare)} · {availText(x.avail)}</option>
+              ))}
+            </select>
+          </label>
+        ))}
+        <Link href={href} className="btn-primary ml-auto">Book both · from {inr(total)}</Link>
+      </div>
+    </div>
+  );
+}
+
 function cheapestBookable(j: JourneyResult) {
   const fares = j.classes.filter((c) => c.avail.bookable).map((c) => c.fare);
   return fares.length ? Math.min(...fares) : null;
@@ -371,7 +405,8 @@ function ConnectionOption({ id, c, quota, open, onToggle }: { id: string; c: Con
       </button>
       {open && (
         <div className="space-y-2 border-t border-slate-100 bg-slate-50 p-3">
-          <p className="px-1 text-xs text-slate-600">Book train 1, then come back to this page and book train 2.</p>
+          <BookBoth c={c} quota={quota} />
+          <p className="px-1 pt-1 text-xs text-slate-500">Or book each train separately:</p>
           <p className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Train 1: {l1.from.name} → {l1.to.name}</p>
           <TrainCard j={l1} quota={quota} anchor={false} />
           <p className="flex items-center gap-1.5 px-1 text-sm text-warn"><Clock className="size-4" /> Change at {c.via.name}: {formatDuration(c.layover)} wait</p>

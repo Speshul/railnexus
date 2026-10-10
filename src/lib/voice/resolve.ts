@@ -164,7 +164,7 @@ export function resolveIntent(intent: VoiceIntent, ctx: VoiceContext, heard: str
       return { reply: reply(say("Taking you to the review page.", "Review page pe le ja rahe hain.")), actions: [{ type: "continue" }] };
 
     case "navigate": {
-      const simple: Record<string, string> = { home: "/", bookings: "/account", trains: "/trains", stations: "/stations", login: "/login", register: "/register", back: "back" };
+      const simple: Record<string, string> = { home: "/", bookings: "/account", pnr: "/pnr", trains: "/trains", stations: "/stations", login: "/login", register: "/register", back: "back" };
       if (intent.page && intent.page in simple) {
         if (intent.page === "bookings" && !ctx.loggedIn) return { reply: say("Please sign in to see your bookings.", "Bookings dekhne ke liye pehle login karo."), actions: [{ type: "navigate", href: "/login?next=/account" }] };
         return { reply: reply(say("Opening.", "Khol rahe hain.")), actions: [{ type: "navigate", href: simple[intent.page] }] };

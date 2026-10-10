@@ -361,7 +361,7 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
   return (
     <>
       {open && (
-        <div role="dialog" aria-label="Voice assistant" className="fixed bottom-24 right-4 z-50 w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div role="dialog" aria-label="Voice assistant" className="print:hidden fixed bottom-24 right-4 z-50 w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white shadow-2xl">
           <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
             <span className="font-semibold">Voice assistant</span>
             <div className="ml-auto flex items-center gap-1">
@@ -466,7 +466,7 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
       <button
         onClick={onMic}
         aria-label={phase === "listening" ? "Stop listening" : "Speak to the voice assistant"}
-        className={`fixed bottom-6 right-4 z-50 flex size-14 items-center justify-center rounded-full text-white shadow-lg transition ${
+        className={`print:hidden fixed bottom-6 right-4 z-50 flex size-14 items-center justify-center rounded-full text-white shadow-lg transition ${
           phase === "listening" ? "bg-bad ring-4 ring-red-200" : "bg-accent hover:bg-accent-dark"
         }`}
       >

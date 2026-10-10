@@ -1,9 +1,9 @@
 import "server-only";
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes, randomInt } from "node:crypto";
 import { z } from "zod";
-import { appDb } from "./db";
+import { appDb, appSecret } from "./db";
 import { getSegment, type Segment } from "./rail";
-import { getAvailability, type Availability } from "./availability";
+import { getAvailability, inventory, type Availability } from "./availability";
 import { bookingFare, type BookingFare } from "./fare";
 import {
   CLASSES, FOOD_PREFS, HOLD_MINUTES, MAX_PASSENGERS, PREMIUM_TYPES, QUOTAS, SEAT_PREFS, SLEEPER_BERTHS,
@@ -11,6 +11,8 @@ import {
 } from "./constants";
 import { isValidDate } from "./dates";
 import type { User } from "./auth";
+
+// ---------------------------------------------------------------- input
 
 export const passengerSchema = z.object({
   name: z.string().trim().min(3, "Name must be 3-30 characters").max(30, "Name must be 3-30 characters")
@@ -22,12 +24,18 @@ export const passengerSchema = z.object({
   noBerth: z.coerce.boolean().optional().default(false),
 });
 
-export const bookingSchema = z.object({
+export const legSchema = z.object({
   train: z.string().regex(/^\d{5}$/),
-  from: z.string().min(1),
-  to: z.string().min(1),
+  from: z.string().min(1).max(5),
+  to: z.string().min(1).max(5),
   date: z.string().refine(isValidDate, "Invalid date"),
   cls: z.enum(Object.keys(CLASSES) as [ClassCode, ...ClassCode[]]),
+});
+export type LegInput = z.infer<typeof legSchema>;
+
+/** One checkout: one train, or two trains of a connecting journey, for the same passengers. */
+export const bookingSchema = z.object({
+  legs: z.array(legSchema).min(1).max(2),
   quota: z.enum(Object.keys(QUOTAS) as [Quota, ...Quota[]]),
   passengers: z.array(passengerSchema).min(1, "Add at least one passenger"),
   email: z.email("Enter a valid email"),
@@ -37,23 +45,36 @@ export const bookingSchema = z.object({
   confirmOnly: z.boolean(),
   savePassengers: z.boolean(),
 });
-
 export type BookingInput = z.infer<typeof bookingSchema>;
 
+type ValidLeg = { input: LegInput; segment: Segment; availability: Availability; fare: BookingFare };
 export type ValidationResult =
-  | { ok: true; segment: Segment; availability: Availability; fare: BookingFare }
+  | { ok: true; legs: ValidLeg[] }
   | { ok: false; error: string; fieldErrors?: Record<string, string> };
 
-/** Business rules on top of the schema: quota eligibility, passenger limits, current availability. */
+const berthPrefsFor = (cls: ClassCode): string[] => Object.keys(CLASSES[cls].berth === "sleeper" ? SLEEPER_BERTHS : SEAT_PREFS);
+const minutesOf = (date: string, hhmm: string) => Date.parse(`${date}T${hhmm}:00+05:30`) / 60000;
+
+/** Business rules on top of the schema: quota eligibility, passenger limits, connection timing, availability. */
 export function validateBooking(input: BookingInput): ValidationResult {
   const fieldErrors: Record<string, string> = {};
-  const segment = getSegment(input.train, input.from, input.to, input.date);
-  if (!segment) return { ok: false, error: "This train doesn't run between these stations on the selected date." };
-  if (!segment.train.classes.includes(input.cls)) return { ok: false, error: "Selected class isn't available on this train." };
+  const legs: Omit<ValidLeg, "availability" | "fare">[] = [];
+  for (const [i, leg] of input.legs.entries()) {
+    const segment = getSegment(leg.train, leg.from, leg.to, leg.date);
+    const label = input.legs.length > 1 ? `Train ${i + 1} (${leg.train})` : "This train";
+    if (!segment) return { ok: false, error: `${label} doesn't run between these stations on the selected date.` };
+    if (!segment.train.classes.includes(leg.cls)) return { ok: false, error: `${label}: selected class isn't available.` };
+    legs.push({ input: leg, segment });
+  }
+  if (legs.length === 2) {
+    const arrive = minutesOf(legs[0].segment.arrivalDate, legs[0].segment.to.arr!);
+    const depart = minutesOf(legs[1].segment.date, legs[1].segment.from.dep!);
+    if (legs[0].segment.to.code !== legs[1].segment.from.code) return { ok: false, error: "The second train must start where the first one ends." };
+    if (depart - arrive < 30) return { ok: false, error: "The second train leaves too soon after the first one arrives." };
+  }
 
-  const premium = PREMIUM_TYPES.has(segment.train.type);
-  const isSleeper = CLASSES[input.cls].berth === "sleeper";
-  const validBerths: string[] = isSleeper ? Object.keys(SLEEPER_BERTHS) : Object.keys(SEAT_PREFS);
+  const anyPremium = legs.some((l) => PREMIUM_TYPES.has(l.segment.train.type));
+  const validBerths = new Set(legs.flatMap((l) => berthPrefsFor(l.input.cls)));
   const infants = input.passengers.filter((p) => p.age < 5);
   const ticketed = input.passengers.filter((p) => p.age >= 5);
   const max = MAX_PASSENGERS[input.quota];
@@ -64,8 +85,8 @@ export function validateBooking(input: BookingInput): ValidationResult {
   if (!input.passengers.some((p) => p.age >= 12)) return { ok: false, error: "At least one passenger must be 12 years or older." };
 
   input.passengers.forEach((p, i) => {
-    if (p.berth && !validBerths.includes(p.berth)) fieldErrors[`passengers.${i}.berth`] = "Invalid preference";
-    if (p.food && (!premium || !(p.food in FOOD_PREFS))) fieldErrors[`passengers.${i}.food`] = "Invalid meal choice";
+    if (p.berth && !validBerths.has(p.berth)) fieldErrors[`passengers.${i}.berth`] = "Invalid preference";
+    if (p.food && (!anyPremium || !(p.food in FOOD_PREFS))) fieldErrors[`passengers.${i}.food`] = "Invalid meal choice";
     if (p.noBerth && (p.age < 5 || p.age > 11)) fieldErrors[`passengers.${i}.noBerth`] = "Only for children aged 5-11";
     if (input.quota === "LD" && p.gender !== "F" && p.age >= 12) fieldErrors[`passengers.${i}.gender`] = "Ladies quota: female passengers (boys under 12 allowed)";
     if (input.quota === "SS" && !((p.gender === "M" && p.age >= 60) || (p.gender === "F" && p.age >= 45) || (p.gender === "T" && p.age >= 60)))
@@ -74,62 +95,67 @@ export function validateBooking(input: BookingInput): ValidationResult {
   });
   if (Object.keys(fieldErrors).length) return { ok: false, error: "Please fix the highlighted passenger details.", fieldErrors };
 
-  const availability = getAvailability(segment, input.cls, input.quota);
-  if (!availability.bookable) return { ok: false, error: `Booking not possible: ${availability.note ?? availability.label}` };
-  if (input.confirmOnly && availability.status !== "AVAILABLE")
-    return { ok: false, error: `Only ${availability.label} available. Untick "Book only if confirmed berths" to join the waitlist.` };
   const seatsNeeded = input.passengers.filter((p) => p.age >= 5 && !p.noBerth).length;
-  if (availability.status === "AVAILABLE" && availability.count < seatsNeeded && input.confirmOnly)
-    return { ok: false, error: `Only ${availability.count} confirmed berths left.` };
-
-  const fare = bookingFare(
-    { cls: input.cls, km: segment.distance, trainType: segment.train.type, quota: input.quota, insurance: input.insurance },
-    input.passengers.map((p) => ({ age: p.age, noBerth: p.noBerth }))
-  );
-  return { ok: true, segment, availability, fare };
+  const out: ValidLeg[] = [];
+  for (const [i, l] of legs.entries()) {
+    const label = legs.length > 1 ? `Train ${i + 1} (${l.input.train}): ` : "";
+    const availability = getAvailability(l.segment, l.input.cls, input.quota);
+    if (!availability.bookable) return { ok: false, error: `${label}Booking not possible: ${availability.note ?? availability.label}` };
+    if (input.confirmOnly && (availability.status !== "AVAILABLE" || availability.count < seatsNeeded))
+      return { ok: false, error: `${label}Only ${availability.label} available. Untick "Book only if confirmed berths" to join the waitlist.` };
+    const fare = bookingFare(
+      { cls: l.input.cls, km: l.segment.distance, trainType: l.segment.train.type, quota: input.quota, insurance: input.insurance },
+      input.passengers.map((p) => ({ age: p.age, noBerth: p.noBerth }))
+    );
+    out.push({ ...l, availability, fare });
+  }
+  return { ok: true, legs: out };
 }
 
-export function createDraftBooking(user: User, input: BookingInput, v: Extract<ValidationResult, { ok: true }>) {
+// ---------------------------------------------------------------- holds (pending payment)
+
+const newId = () => randomBytes(6).toString("hex");
+
+/** Create the seat holds for a checkout. Returns the trip id used for review and payment. */
+export function createDraftTrip(user: User, input: BookingInput, v: Extract<ValidationResult, { ok: true }>) {
   const db = appDb();
-  const id = randomBytes(6).toString("hex");
+  const tripId = newId();
   const now = Date.now();
-  const { segment, fare, availability } = v;
-  const snapshot = {
-    ...fare,
-    trainName: segment.train.name,
-    trainType: segment.train.type,
-    fromName: segment.from.name,
-    toName: segment.to.name,
-    dep: segment.from.dep,
-    arr: segment.to.arr,
-    arrivalDate: segment.arrivalDate,
-    duration: segment.duration,
-    distance: segment.distance,
-    availabilityAtBooking: availability.label,
-    chance: availability.chance,
-  };
   db.exec("BEGIN");
   try {
-    // "Edit passengers" creates a fresh hold; release the old one so seats aren't held twice.
-    db.prepare(
-      `UPDATE bookings SET status = 'CANCELLED'
-       WHERE user_id = ? AND status = 'PENDING_PAYMENT' AND train_number = ? AND train_start_date = ? AND class_code = ? AND quota = ?`
-    ).run(user.id, input.train, segment.startDate, input.cls, input.quota);
-    db.prepare(
-      `INSERT INTO bookings (id, user_id, status, train_number, from_code, to_code, boarding_code, journey_date, train_start_date,
-         class_code, quota, seats, contact_email, contact_phone, options, fare, total_paise, created_at, expires_at)
-       VALUES (?, ?, 'PENDING_PAYMENT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(
-      id, user.id, input.train, input.from, input.to, input.from, input.date, segment.startDate, input.cls, input.quota,
-      fare.seats, input.email, input.phone,
-      JSON.stringify({ insurance: input.insurance, autoUpgrade: input.autoUpgrade, confirmOnly: input.confirmOnly }),
-      JSON.stringify(snapshot), Math.round(fare.total * 100), now, now + HOLD_MINUTES * 60000
-    );
-    const ins = db.prepare(
-      `INSERT INTO booking_passengers (booking_id, idx, name, age, gender, berth_pref, food_pref, no_berth) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    );
-    input.passengers.forEach((p, i) => ins.run(id, i, p.name, p.age, p.gender, p.berth || null, p.food || null, p.noBerth ? 1 : 0));
-
+    for (const [legIdx, l] of v.legs.entries()) {
+      const { segment, fare, availability } = l;
+      const premium = PREMIUM_TYPES.has(segment.train.type);
+      const prefs = berthPrefsFor(l.input.cls);
+      // "Edit passengers" creates a fresh hold; release the old one so seats aren't held twice.
+      db.prepare(
+        `UPDATE bookings SET status = 'CANCELLED'
+         WHERE user_id = ? AND status = 'PENDING_PAYMENT' AND train_number = ? AND train_start_date = ? AND class_code = ? AND quota = ?`
+      ).run(user.id, l.input.train, segment.startDate, l.input.cls, input.quota);
+      const id = newId();
+      const snapshot = {
+        ...fare,
+        trainName: segment.train.name, trainType: segment.train.type, fromName: segment.from.name, toName: segment.to.name,
+        dep: segment.from.dep, arr: segment.to.arr, arrivalDate: segment.arrivalDate, duration: segment.duration,
+        distance: segment.distance, availabilityAtBooking: availability.label, chance: availability.chance,
+      };
+      db.prepare(
+        `INSERT INTO bookings (id, trip_id, leg, user_id, status, train_number, from_code, to_code, boarding_code, journey_date,
+           train_start_date, class_code, quota, seats, contact_email, contact_phone, options, fare, total_paise, created_at, expires_at)
+         VALUES (?, ?, ?, ?, 'PENDING_PAYMENT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        id, tripId, legIdx, user.id, l.input.train, l.input.from, l.input.to, l.input.from, l.input.date, segment.startDate,
+        l.input.cls, input.quota, fare.seats, input.email, input.phone,
+        JSON.stringify({ insurance: input.insurance, autoUpgrade: input.autoUpgrade, confirmOnly: input.confirmOnly }),
+        JSON.stringify(snapshot), Math.round(fare.total * 100), now, now + HOLD_MINUTES * 60000
+      );
+      const ins = db.prepare(
+        `INSERT INTO booking_passengers (booking_id, idx, name, age, gender, berth_pref, food_pref, no_berth) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      );
+      input.passengers.forEach((p, i) =>
+        ins.run(id, i, p.name, p.age, p.gender, prefs.includes(p.berth) ? p.berth : null, premium && p.food ? p.food : null, p.noBerth ? 1 : 0)
+      );
+    }
     if (input.savePassengers) {
       const exists = db.prepare("SELECT 1 FROM saved_passengers WHERE user_id = ? AND name = ? COLLATE NOCASE AND age = ?");
       const save = db.prepare("INSERT INTO saved_passengers (user_id, name, age, gender, berth_pref, food_pref) VALUES (?, ?, ?, ?, ?, ?)");
@@ -142,65 +168,323 @@ export function createDraftBooking(user: User, input: BookingInput, v: Extract<V
     db.exec("ROLLBACK");
     throw e;
   }
-  return id;
+  return tripId;
 }
 
+// ---------------------------------------------------------------- reading
+
+export type Passenger = {
+  idx: number; name: string; age: number; gender: string; berth_pref: string | null; food_pref: string | null;
+  no_berth: number; booking_status: string | null; status: string | null; coach: string | null; berth_no: number | null;
+  berth_type: string | null; cancelled: number; refund_paise: number;
+};
+
 export type BookingRecord = {
-  id: string;
-  user_id: number;
-  pnr: string | null;
-  status: string;
-  train_number: string;
-  from_code: string;
-  to_code: string;
-  journey_date: string;
-  train_start_date: string;
-  class_code: ClassCode;
-  quota: Quota;
-  seats: number;
-  contact_email: string;
-  contact_phone: string;
+  id: string; trip_id: string; leg: number; user_id: number; pnr: string | null; status: string;
+  train_number: string; from_code: string; to_code: string; journey_date: string; train_start_date: string;
+  class_code: ClassCode; quota: Quota; seats: number; contact_email: string; contact_phone: string;
   options: { insurance: boolean; autoUpgrade: boolean; confirmOnly: boolean };
   fare: BookingFare & {
     trainName: string; trainType: string; fromName: string; toName: string; dep: string; arr: string;
     arrivalDate: string; duration: number; distance: number; availabilityAtBooking: string; chance: number;
   };
-  total_paise: number;
-  created_at: number;
-  expires_at: number | null;
-  passengers: { idx: number; name: string; age: number; gender: string; berth_pref: string | null; food_pref: string | null; no_berth: number; status: string | null }[];
+  total_paise: number; refund_paise: number; created_at: number; confirmed_at: number | null; expires_at: number | null;
+  passengers: Passenger[];
 };
 
-export function getBooking(id: string, userId: number): BookingRecord | null {
-  const db = appDb();
-  const row = db.prepare("SELECT * FROM bookings WHERE id = ? AND user_id = ?").get(id, userId) as Record<string, unknown> | undefined;
-  if (!row) return null;
-  if (row.status === "PENDING_PAYMENT" && (row.expires_at as number) < Date.now()) {
-    db.prepare("UPDATE bookings SET status = 'EXPIRED' WHERE id = ?").run(id);
-    row.status = "EXPIRED";
-  }
-  const passengers = db.prepare("SELECT * FROM booking_passengers WHERE booking_id = ? ORDER BY idx").all(id);
+export type Trip = {
+  id: string;
+  /** PENDING_PAYMENT | CONFIRMED | CANCELLED | EXPIRED (CONFIRMED = paid; passengers may still be RAC/WL) */
+  status: string;
+  legs: BookingRecord[];
+  totalPaise: number;
+  refundPaise: number;
+  expiresAt: number | null;
+  payment: { order_id: string; payment_id: string | null; status: string; method: string | null; paid_at: number | null } | null;
+};
+
+function expireStale(db = appDb()) {
+  db.prepare("UPDATE bookings SET status = 'EXPIRED' WHERE status = 'PENDING_PAYMENT' AND expires_at < ?").run(Date.now());
+}
+
+function hydrate(row: Record<string, unknown>): BookingRecord {
+  const passengers = appDb().prepare("SELECT * FROM booking_passengers WHERE booking_id = ? ORDER BY idx").all(row.id as string);
   return {
     ...(row as unknown as BookingRecord),
     options: JSON.parse(row.options as string),
     fare: JSON.parse(row.fare as string),
-    passengers: passengers as unknown as BookingRecord["passengers"],
+    passengers: passengers as unknown as Passenger[],
   };
 }
 
-export function listBookings(userId: number) {
-  appDb()
-    .prepare("UPDATE bookings SET status = 'EXPIRED' WHERE user_id = ? AND status = 'PENDING_PAYMENT' AND expires_at < ?")
-    .run(userId, Date.now());
-  const rows = appDb()
-    .prepare("SELECT id FROM bookings WHERE user_id = ? ORDER BY created_at DESC LIMIT 50")
-    .all(userId) as { id: string }[];
-  return rows.map((r) => getBooking(r.id, userId)!);
+export function getTrip(tripId: string, userId?: number): Trip | null {
+  const db = appDb();
+  expireStale(db);
+  const rows = db
+    .prepare(`SELECT * FROM bookings WHERE trip_id = ? ${userId !== undefined ? "AND user_id = ?" : ""} ORDER BY leg`)
+    .all(...(userId !== undefined ? [tripId, userId] : [tripId])) as Record<string, unknown>[];
+  if (!rows.length) return null;
+  const legs = rows.map(hydrate);
+  const statuses = new Set(legs.map((l) => l.status));
+  const status = statuses.has("CONFIRMED") ? "CONFIRMED" : statuses.has("PENDING_PAYMENT") ? "PENDING_PAYMENT" : legs[0].status;
+  const payment = db
+    .prepare("SELECT order_id, payment_id, status, method, paid_at FROM payments WHERE trip_id = ? ORDER BY (status = 'PAID') DESC, created_at DESC LIMIT 1")
+    .get(tripId) as Trip["payment"] | undefined;
+  return {
+    id: tripId,
+    status,
+    legs,
+    totalPaise: legs.reduce((s, l) => s + l.total_paise, 0),
+    refundPaise: legs.reduce((s, l) => s + l.refund_paise, 0),
+    expiresAt: status === "PENDING_PAYMENT" ? Math.min(...legs.map((l) => l.expires_at ?? Infinity)) : null,
+    payment: payment ?? null,
+  };
 }
 
-export function cancelDraft(id: string, userId: number) {
-  appDb().prepare("UPDATE bookings SET status = 'CANCELLED' WHERE id = ? AND user_id = ? AND status = 'PENDING_PAYMENT'").run(id, userId);
+export function listTrips(userId: number): Trip[] {
+  const db = appDb();
+  expireStale(db);
+  const ids = db
+    .prepare("SELECT trip_id, MAX(created_at) c FROM bookings WHERE user_id = ? GROUP BY trip_id ORDER BY c DESC LIMIT 100")
+    .all(userId) as { trip_id: string }[];
+  return ids.map((r) => getTrip(r.trip_id, userId)!).filter(Boolean);
 }
+
+export function getBookingByPnr(pnr: string): BookingRecord | null {
+  const row = appDb().prepare("SELECT * FROM bookings WHERE pnr = ?").get(pnr) as Record<string, unknown> | undefined;
+  return row ? hydrate(row) : null;
+}
+
+export function cancelDraft(tripId: string, userId: number) {
+  appDb().prepare("UPDATE bookings SET status = 'CANCELLED' WHERE trip_id = ? AND user_id = ? AND status = 'PENDING_PAYMENT'").run(tripId, userId);
+}
+
+// ---------------------------------------------------------------- confirmation: PNR + berth allocation
+
+const BAY: Partial<Record<ClassCode, string[]>> = {
+  "1A": ["LB", "UB"],
+  "2A": ["LB", "UB", "LB", "UB", "SL", "SU"],
+  "3A": ["LB", "MB", "UB", "LB", "MB", "UB", "SL", "SU"],
+  SL: ["LB", "MB", "UB", "LB", "MB", "UB", "SL", "SU"],
+  CC: ["WS", "MS", "AS", "AS", "WS"],
+  EC: ["WS", "AS", "AS", "WS"],
+  "2S": ["WS", "MS", "AS", "AS", "MS", "WS"],
+};
+export const berthTypeOf = (cls: ClassCode, n: number) => {
+  const bay = BAY[cls] ?? ["WS"];
+  return bay[(n - 1) % bay.length];
+};
+const bayOf = (cls: ClassCode, n: number) => Math.floor((n - 1) / (BAY[cls]?.length ?? 1));
+
+function hash32(s: string) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+/**
+ * Pick coach + berth numbers for confirmed passengers: keep the group in one coach and close together,
+ * honour berth preferences, and give seniors a lower berth when they have no preference.
+ */
+function allocateBerths(
+  seg: Segment, cls: ClassCode, bookingId: string, coaches: number,
+  people: { idx: number; age: number; gender: string; pref: string | null }[]
+) {
+  const db = appDb();
+  const cap = CLASSES[cls].coachCap;
+  const taken = new Set(
+    (db.prepare("SELECT coach, berth_no FROM berth_allocations WHERE train_number = ? AND train_start_date = ? AND class_code = ?")
+      .all(seg.train.number, seg.startDate, cls) as { coach: string; berth_no: number }[]).map((r) => `${r.coach}/${r.berth_no}`)
+  );
+  // Simulated passengers already occupy some berths; mark a deterministic share of them as taken too.
+  const busy = (coach: string, n: number) => hash32(`${seg.train.number}|${seg.startDate}|${coach}|${n}`) % 100 < 55;
+  const start = hash32(bookingId) % coaches;
+  const coachOrder = Array.from({ length: coaches }, (_, i) => `${CLASSES[cls].coachPrefix}${((start + i) % coaches) + 1}`);
+  const free = (coach: string) =>
+    Array.from({ length: cap }, (_, i) => i + 1).filter((n) => !taken.has(`${coach}/${n}`) && !busy(coach, n));
+  // first coach with room for everyone, else the emptiest
+  const coach = coachOrder.find((c) => free(c).length >= people.length) ?? coachOrder.sort((a, b) => free(b).length - free(a).length)[0];
+  const pool = free(coach);
+  const senior = (p: { age: number; gender: string }) => (p.gender === "F" ? p.age >= 45 : p.age >= 60);
+  const out = new Map<number, { coach: string; berth: number; type: string }>();
+  let anchorBay: number | null = null;
+  for (const p of people) {
+    const want = p.pref ?? (CLASSES[cls].berth === "sleeper" && senior(p) ? "LB" : null);
+    const near = (n: number) => (anchorBay === null ? 0 : Math.abs(bayOf(cls, n) - anchorBay));
+    const ranked = [...pool].sort((a, b) => {
+      const pa = want && berthTypeOf(cls, a) === want ? 0 : 1;
+      const pb = want && berthTypeOf(cls, b) === want ? 0 : 1;
+      return pa - pb || near(a) - near(b) || a - b;
+    });
+    const n = ranked[0];
+    if (n === undefined) break;
+    pool.splice(pool.indexOf(n), 1);
+    anchorBay ??= bayOf(cls, n);
+    out.set(p.idx, { coach, berth: n, type: berthTypeOf(cls, n) });
+    db.prepare("INSERT INTO berth_allocations (train_number, train_start_date, class_code, coach, berth_no, booking_id, idx) VALUES (?, ?, ?, ?, ?, ?, ?)")
+      .run(seg.train.number, seg.startDate, cls, coach, n, bookingId, p.idx);
+  }
+  return out;
+}
+
+function newPnr() {
+  const db = appDb();
+  for (;;) {
+    const pnr = `${randomInt(2, 9)}${String(randomInt(0, 1e9)).padStart(9, "0")}`;
+    if (!db.prepare("SELECT 1 FROM bookings WHERE pnr = ?").get(pnr)) return pnr;
+  }
+}
+
+export class ConfirmationError extends Error {}
+
+/** After payment: give each passenger CNF/RAC/WL in queue order, allocate berths, issue PNRs. */
+export function confirmTrip(tripId: string) {
+  const db = appDb();
+  const trip = getTrip(tripId);
+  if (!trip) throw new ConfirmationError("Booking not found.");
+  db.exec("BEGIN");
+  try {
+    for (const b of trip.legs) {
+      if (b.status === "CONFIRMED") continue;
+      if (b.status !== "PENDING_PAYMENT" && b.status !== "EXPIRED") throw new ConfirmationError("This booking was cancelled.");
+      const seg = getSegment(b.train_number, b.from_code, b.to_code, b.journey_date);
+      if (!seg) throw new ConfirmationError("The train no longer runs on this date.");
+      const inv = inventory(seg, b.class_code, b.quota, b.id);
+      const wlPrefix = b.quota === "GN" ? "GNWL" : `${b.quota}WL`;
+      const seated = b.passengers.filter((p) => p.age >= 5 && !p.no_berth);
+      const statuses = new Map<number, string>();
+      const cnf: typeof seated = [];
+      seated.forEach((p, k) => {
+        const pos = inv.sold + k + 1;
+        if (pos <= inv.pool) cnf.push(p);
+        else if (pos <= inv.pool + inv.racSlots) statuses.set(p.idx, `RAC ${pos - inv.pool}`);
+        else {
+          const wl = pos - inv.pool - inv.racSlots;
+          if (wl > inv.maxWl) throw new ConfirmationError(`Train ${b.train_number} sold out while you were paying.`);
+          statuses.set(p.idx, `${wlPrefix} ${wl}`);
+        }
+      });
+      if (b.options.confirmOnly && cnf.length < seated.length)
+        throw new ConfirmationError(`Confirmed berths on ${b.train_number} ran out while you were paying.`);
+      const seats = allocateBerths(seg, b.class_code, b.id, inv.coaches, cnf.map((p) => ({ idx: p.idx, age: p.age, gender: p.gender, pref: p.berth_pref })));
+      const firstCoach = [...seats.values()][0]?.coach ?? null;
+      const upd = db.prepare(
+        "UPDATE booking_passengers SET booking_status = ?, status = ?, coach = ?, berth_no = ?, berth_type = ? WHERE booking_id = ? AND idx = ?"
+      );
+      for (const p of b.passengers) {
+        const s = seats.get(p.idx);
+        let text: string;
+        if (s) text = `CNF/${s.coach}/${s.berth}/${s.type}`;
+        else if (statuses.has(p.idx)) text = statuses.get(p.idx)!;
+        else if (p.age < 5) text = "Infant (no ticket)";
+        else text = firstCoach ? `CNF/${firstCoach}/No berth` : "No berth (child)";
+        upd.run(text, text, s?.coach ?? null, s?.berth ?? null, s?.type ?? null, b.id, p.idx);
+      }
+      db.prepare("UPDATE bookings SET status = 'CONFIRMED', pnr = ?, confirmed_at = ?, expires_at = NULL WHERE id = ?").run(newPnr(), Date.now(), b.id);
+    }
+    db.exec("COMMIT");
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
+  return getTrip(tripId)!;
+}
+
+// ---------------------------------------------------------------- cancellation & refunds
+
+// Flat cancellation charge per passenger for confirmed tickets cancelled >48 h before departure (IRCTC-style).
+const FLAT_CHARGE: Record<ClassCode, number> = { "1A": 240, EC: 240, "2A": 200, "3A": 180, CC: 180, SL: 120, "2S": 60, UR: 60 };
+const WL_CLERKAGE = 60;
+
+export type CancelQuote = {
+  hoursLeft: number;
+  rows: { idx: number; name: string; status: string; fare: number; charge: number; refund: number; rule: string }[];
+  refund: number;
+  allowed: boolean;
+  reason?: string;
+};
+
+export function departureMs(b: BookingRecord) {
+  return Date.parse(`${b.journey_date}T${b.fare.dep}:00+05:30`);
+}
+
+/** IRCTC prepares the reservation chart about 4 hours before departure. */
+export function chartStatus(b: BookingRecord, now = Date.now()) {
+  const hoursLeft = (departureMs(b) - now) / 3600000;
+  return hoursLeft <= 0 ? "Train departed" : hoursLeft <= 4 ? "Chart prepared" : "Chart not prepared";
+}
+
+/** What the passenger gets back if these passengers are cancelled now. Convenience fee and insurance are never refunded. */
+export function quoteCancellation(b: BookingRecord, idxs: number[], now = Date.now()): CancelQuote {
+  const hoursLeft = (departureMs(b) - now) / 3600000;
+  if (b.status !== "CONFIRMED") return { hoursLeft, rows: [], refund: 0, allowed: false, reason: "Only paid bookings can be cancelled." };
+  if (hoursLeft <= 0) return { hoursLeft, rows: [], refund: 0, allowed: false, reason: "The train has already departed." };
+  const ac = CLASSES[b.class_code].ac;
+  const rows = b.passengers
+    .filter((p) => idxs.includes(p.idx) && !p.cancelled && p.age >= 5)
+    .map((p) => {
+      const fare = b.fare.perPassenger[p.idx]?.fare?.total ?? 0;
+      const status = p.status ?? "";
+      let charge: number;
+      let rule: string;
+      if (!status.startsWith("CNF")) {
+        charge = hoursLeft > 0.5 ? WL_CLERKAGE : fare;
+        rule = hoursLeft > 0.5 ? `RAC/waitlist: clerkage ₹${WL_CLERKAGE}` : "Less than 30 min to departure: no refund";
+      } else {
+        const flat = Math.round(FLAT_CHARGE[b.class_code] * (ac ? 1.05 : 1));
+        if (hoursLeft > 48) { charge = flat; rule = `More than 48 h before departure: flat ₹${flat}`; }
+        else if (hoursLeft > 12) { charge = Math.max(flat, Math.round(fare * 0.25)); rule = "48-12 h before departure: 25% of fare (min. flat charge)"; }
+        else if (hoursLeft > 4) { charge = Math.max(flat, Math.round(fare * 0.5)); rule = "12-4 h before departure: 50% of fare (min. flat charge)"; }
+        else { charge = fare; rule = "Chart prepared (under 4 h): no refund"; }
+      }
+      charge = Math.min(charge, fare);
+      return { idx: p.idx, name: p.name, status, fare, charge, refund: fare - charge, rule };
+    });
+  return { hoursLeft, rows, refund: rows.reduce((s, r) => s + r.refund, 0), allowed: rows.length > 0 };
+}
+
+/** Mark passengers cancelled, free their berths and record the refund (the Razorpay call is made by the caller). */
+export function applyCancellation(b: BookingRecord, quote: CancelQuote, refund: { id: string; status: string; paymentId: string } | null) {
+  const db = appDb();
+  db.exec("BEGIN");
+  try {
+    let seatsFreed = 0;
+    for (const r of quote.rows) {
+      const p = b.passengers.find((x) => x.idx === r.idx)!;
+      db.prepare("UPDATE booking_passengers SET cancelled = 1, refund_paise = ?, status = 'CAN' WHERE booking_id = ? AND idx = ?")
+        .run(Math.round(r.refund * 100), b.id, r.idx);
+      db.prepare("DELETE FROM berth_allocations WHERE booking_id = ? AND idx = ?").run(b.id, r.idx);
+      if (p.age >= 5 && !p.no_berth) seatsFreed++;
+    }
+    const refundPaise = Math.round(quote.refund * 100);
+    const remaining = b.passengers.filter((p) => !p.cancelled && p.age >= 5 && !quote.rows.some((r) => r.idx === p.idx));
+    db.prepare("UPDATE bookings SET seats = MAX(0, seats - ?), refund_paise = refund_paise + ?, status = ? WHERE id = ?")
+      .run(seatsFreed, refundPaise, remaining.length ? "CONFIRMED" : "CANCELLED", b.id);
+    if (refund) {
+      db.prepare("INSERT INTO refunds (id, payment_id, booking_id, amount_paise, status, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+        .run(refund.id, refund.paymentId, b.id, refundPaise, refund.status, JSON.stringify(quote.rows), Date.now());
+    }
+    db.exec("COMMIT");
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
+}
+
+export function refundsFor(bookingId: string) {
+  return appDb().prepare("SELECT id, amount_paise, status, details, created_at FROM refunds WHERE booking_id = ? ORDER BY created_at").all(bookingId) as {
+    id: string; amount_paise: number; status: string; details: string; created_at: number;
+  }[];
+}
+
+// ---------------------------------------------------------------- ticket QR signature
+
+/** Short signature printed in the ticket QR, so a scanned ticket can be checked as genuine. */
+export function ticketSignature(pnr: string) {
+  return createHmac("sha256", appSecret("ticket")).update(pnr).digest("base64url").slice(0, 16);
+}
+
+// ---------------------------------------------------------------- saved passengers
 
 export type SavedPassenger = { id: number; name: string; age: number; gender: string; berth_pref: string | null; food_pref: string | null };
 

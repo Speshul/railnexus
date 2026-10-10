@@ -23,7 +23,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
         <VoiceBridgeProvider>
-        <header className="bg-brand text-white">
+        <header className="bg-brand text-white print:hidden">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
             <Link href="/" className="flex items-center gap-2 text-lg font-bold">
               <TrainFront className="size-6 text-accent" />
@@ -33,6 +33,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/" className="hover:text-white">Book Tickets</Link>
               <Link href="/trains" className="hover:text-white">Trains</Link>
               <Link href="/stations" className="hover:text-white">Stations</Link>
+              <Link href="/pnr" className="hover:text-white">PNR Status</Link>
               {user && <Link href="/account" className="hover:text-white">My Bookings</Link>}
             </nav>
             <div className="ml-auto flex items-center gap-3 text-sm">
@@ -53,7 +54,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           </div>
         </header>
         <main className="flex-1">{children}</main>
-        <footer className="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-500">
+        <footer className="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-500 print:hidden">
           {APP_NAME} is a student project, not affiliated with Indian Railways or IRCTC. Train data: datameet/railways (CC0).
           Fares and seat availability are simulated.
         </footer>

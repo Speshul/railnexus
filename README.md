@@ -21,6 +21,25 @@ Rebuild the train database (stop the dev server first on Windows, since it locks
 npm run data
 ```
 
+## Payments, tickets and cancellations (Phase 3)
+
+- **Razorpay test mode checkout** (real Razorpay popup, no real money): the server creates the order from the held seats,
+  then verifies the payment signature *and* re-checks amount and status with Razorpay before issuing tickets.
+  Test with UPI `success@razorpay` (or `failure@razorpay`) or card `4111 1111 1111 1111`.
+- On payment each passenger gets a queue position, which becomes a **confirmed berth** (`CNF/B3/34/LB`), **RAC** or
+  **waitlist** number. Berths keep groups together, honour preferences and give seniors a lower berth. Each train
+  gets a **10-digit PNR**.
+- **Connecting journeys in one checkout**: both trains, one payment, two PNRs.
+- **E-ticket** page (print / save as PDF) with a **signed QR code**; scanning it opens `/verify/<PNR>`, which says
+  whether the ticket is genuine and still valid. **PNR status** page (`/pnr`) for anyone with the PNR.
+- **My Bookings** with Upcoming / Completed / Awaiting payment / Cancelled tabs.
+- **Partial or full cancellation** with IRCTC-style charges (flat fee >48 h, 25% within 48 h, 50% within 12 h, nothing
+  after chart preparation; ₹60 clerkage for RAC/WL), refunded through Razorpay's refund API. Seats go back on sale.
+- If seats run out while someone is paying, the payment is **refunded automatically**.
+- Optional `MAKE_WEBHOOK_URL`: every issued ticket is POSTed there as JSON, so a Make.com scenario can email it.
+
+Keys (in `.env.local`): `RAZORPAY_KEY_ID` (must be `rzp_test_...`) and `RAZORPAY_KEY_SECRET`.
+
 ## Voice assistant (Phase 2)
 
 Tap the orange mic button (bottom right, every page) and speak in English, Hindi or Hinglish:
@@ -87,5 +106,5 @@ The source data dates from around 2016, so some newer trains (e.g. Vande Bharat)
 
 1. ~~Search, routes, booking up to checkout~~ (done)
 2. ~~Voice booking and navigation~~ (done)
-3. Razorpay test-mode payment, PNR generation, berth allocation, e-ticket, cancellation and refunds
+3. ~~Razorpay test-mode payment, PNR generation, berth allocation, e-ticket, cancellation and refunds~~ (done)
 4. Visual design pass

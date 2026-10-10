@@ -1,53 +1,111 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Trash2 } from "lucide-react";
+import { ArrowRight, Ticket, Trash2 } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { listBookings, savedPassengers } from "@/lib/booking";
+import { departureMs, listTrips, savedPassengers, type Trip } from "@/lib/booking";
 import { formatDate } from "@/lib/dates";
-import { inr } from "@/lib/format";
+import { inr, statusTone } from "@/lib/format";
 import { removeSavedPassenger } from "@/app/actions/booking";
 
-export const metadata: Metadata = { title: "My account" };
+export const metadata: Metadata = { title: "My bookings" };
 
-const STATUS: Record<string, string> = {
-  PENDING_PAYMENT: "bg-amber-100 text-warn",
-  CONFIRMED: "bg-green-100 text-ok",
-  EXPIRED: "bg-slate-100 text-slate-500",
-  CANCELLED: "bg-slate-100 text-slate-500",
-};
-const LABEL: Record<string, string> = { PENDING_PAYMENT: "Awaiting payment", CONFIRMED: "Booked", EXPIRED: "Hold expired", CANCELLED: "Released" };
+type Tab = "upcoming" | "past" | "pending" | "cancelled";
+const TABS: { key: Tab; label: string }[] = [
+  { key: "upcoming", label: "Upcoming" },
+  { key: "past", label: "Completed" },
+  { key: "pending", label: "Awaiting payment" },
+  { key: "cancelled", label: "Cancelled / expired" },
+];
 
-export default async function AccountPage() {
+function tabOf(t: Trip): Tab {
+  if (t.status === "PENDING_PAYMENT") return "pending";
+  if (t.status === "CONFIRMED") return departureMs(t.legs[t.legs.length - 1]) > Date.now() ? "upcoming" : "past";
+  return "cancelled";
+}
+
+function TripCard({ t }: { t: Trip }) {
+  const first = t.legs[0];
+  const last = t.legs[t.legs.length - 1];
+  const pax = first.passengers;
+  return (
+    <article className="card overflow-hidden">
+      <Link href={`/booking/${t.id}`} className="block p-4 hover:bg-slate-50">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <div className="flex flex-wrap items-center gap-1 font-semibold">
+              {first.fare.fromName} <ArrowRight className="size-4 text-slate-400" /> {last.fare.toName}
+              {t.legs.length > 1 && <span className="rounded bg-brand-light px-1.5 text-xs font-medium text-brand">1 change</span>}
+            </div>
+            <div className="text-sm text-slate-600">
+              {formatDate(first.journey_date, { weekday: "short", day: "numeric", month: "short", year: "numeric" })} · {first.fare.dep} ·{" "}
+              {t.legs.map((b) => `${b.train_number} (${b.class_code})`).join(" + ")} · {pax.length} {pax.length === 1 ? "passenger" : "passengers"}
+            </div>
+          </div>
+          <div className="text-right text-sm">
+            <div className="font-semibold">{inr(t.totalPaise / 100, true)}</div>
+            {t.refundPaise > 0 && <div className="text-xs text-ok">{inr(t.refundPaise / 100, true)} refunded</div>}
+          </div>
+        </div>
+        {t.status === "CONFIRMED" && (
+          <div className="mt-2 space-y-1">
+            {t.legs.map((b) => (
+              <div key={b.id} className="flex flex-wrap gap-x-3 text-xs">
+                <span className="font-mono text-slate-500">PNR {b.pnr}</span>
+                {b.passengers.filter((p) => p.age >= 5).map((p) => (
+                  <span key={p.idx} className={`font-mono font-semibold ${statusTone(p.cancelled ? "CAN" : p.status)}`}>{p.status === "CAN" ? `${p.name.split(" ")[0]}: cancelled` : p.status}</span>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+        {t.status === "PENDING_PAYMENT" && <p className="mt-2 text-xs font-medium text-warn">Seats held. Complete payment before the hold expires.</p>}
+      </Link>
+      {t.status === "CONFIRMED" && (
+        <div className="flex flex-wrap gap-2 border-t border-slate-100 px-4 py-2">
+          {t.legs.filter((b) => b.status === "CONFIRMED").map((b) => (
+            <Link key={b.id} href={`/ticket/${b.pnr}`} className="inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
+              <Ticket className="size-4" /> E-ticket {t.legs.length > 1 ? b.train_number : ""}
+            </Link>
+          ))}
+          <Link href={`/booking/${t.id}`} className="ml-auto text-sm text-slate-600 hover:underline">Manage / cancel</Link>
+        </div>
+      )}
+    </article>
+  );
+}
+
+export default async function AccountPage({ searchParams }: PageProps<"/account">) {
   const user = await requireUser("/account");
-  const bookings = listBookings(user.id);
+  const sp = await searchParams;
+  const trips = listTrips(user.id);
+  const grouped = Object.fromEntries(TABS.map((x) => [x.key, trips.filter((t) => tabOf(t) === x.key)])) as Record<Tab, Trip[]>;
+  const requested = typeof sp.tab === "string" && TABS.some((x) => x.key === sp.tab) ? (sp.tab as Tab) : null;
+  const tab: Tab = requested ?? (grouped.pending.length ? "pending" : "upcoming");
+  // upcoming: soonest first; everything else: most recent first
+  const list = tab === "upcoming" ? [...grouped.upcoming].sort((a, b) => departureMs(a.legs[0]) - departureMs(b.legs[0])) : grouped[tab];
   const passengers = savedPassengers(user.id);
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
-      <h1 className="text-2xl font-bold">{user.full_name}</h1>
-      <p className="mb-6 text-sm text-slate-600">@{user.username} · {user.email} · {user.phone}</p>
+      <h1 className="text-2xl font-bold">My bookings</h1>
+      <p className="mb-5 text-sm text-slate-600">{user.full_name} · @{user.username} · {user.email}</p>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
         <section>
-          <h2 className="mb-3 text-lg font-semibold">My bookings</h2>
-          {bookings.length === 0 ? (
-            <div className="card p-6 text-center text-sm text-slate-600">No bookings yet. <Link href="/" className="text-brand underline">Search trains</Link></div>
-          ) : (
-            <div className="space-y-2">
-              {bookings.map((b) => (
-                <Link key={b.id} href={`/booking/${b.id}`} className="card flex flex-wrap items-center justify-between gap-2 p-4 hover:border-brand">
-                  <div>
-                    <div className="font-semibold"><span className="font-mono">{b.train_number}</span> {b.fare.trainName}</div>
-                    <div className="text-sm text-slate-600">
-                      {b.fare.fromName} → {b.fare.toName} · {formatDate(b.journey_date)} · {b.class_code} · {b.passengers.length} pax
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS[b.status]}`}>{LABEL[b.status] ?? b.status}</span>
-                    <div className="mt-1 text-sm font-semibold">{inr(b.total_paise / 100, true)}</div>
-                  </div>
-                </Link>
-              ))}
+          <nav className="mb-3 flex flex-wrap gap-1 rounded-lg border border-slate-200 bg-white p-1 text-sm" aria-label="Booking filters">
+            {TABS.map((x) => (
+              <Link key={x.key} href={`/account?tab=${x.key}`} aria-current={tab === x.key ? "page" : undefined}
+                className={`rounded-md px-3 py-1.5 ${tab === x.key ? "bg-brand text-white" : "text-slate-600 hover:bg-slate-50"}`}>
+                {x.label} <span className="opacity-70">({grouped[x.key].length})</span>
+              </Link>
+            ))}
+          </nav>
+          {list.length === 0 ? (
+            <div className="card p-6 text-center text-sm text-slate-600">
+              Nothing here yet. <Link href="/" className="text-brand underline">Search trains</Link>
             </div>
+          ) : (
+            <div className="space-y-3">{list.map((t) => <TripCard key={t.id} t={t} />)}</div>
           )}
         </section>
 

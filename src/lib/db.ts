@@ -4,7 +4,8 @@ import path from "node:path";
 import fs from "node:fs";
 import { scryptSync, randomBytes } from "node:crypto";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+// DATA_DIR lets a deployment (or a test run) keep the databases elsewhere.
+const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(process.cwd(), "data");
 
 type Dbs = { rail: DatabaseSync; app: DatabaseSync };
 const g = globalThis as unknown as { __railnexusDb?: Dbs };
@@ -81,8 +82,76 @@ function openApp() {
       PRIMARY KEY (booking_id, idx)
     );
   `);
+  migrate(db);
   seedDemoUser(db);
   return db;
+}
+
+function addColumn(db: DatabaseSync, table: string, column: string, type: string) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+}
+
+// Phase 3: payments, tickets, berth allocation, cancellations. Safe to run on every start.
+function migrate(db: DatabaseSync) {
+  // A trip groups the bookings paid together (one per train; two for a connecting journey).
+  addColumn(db, "bookings", "trip_id", "TEXT");
+  db.exec("UPDATE bookings SET trip_id = id WHERE trip_id IS NULL");
+  addColumn(db, "bookings", "leg", "INTEGER NOT NULL DEFAULT 0");
+  addColumn(db, "bookings", "confirmed_at", "INTEGER");
+  addColumn(db, "bookings", "refund_paise", "INTEGER NOT NULL DEFAULT 0");
+  // Per passenger: status when booked and now (e.g. CNF/B3/34/LB, RAC 12, GNWL 40), seat, cancellation.
+  addColumn(db, "booking_passengers", "booking_status", "TEXT");
+  addColumn(db, "booking_passengers", "coach", "TEXT");
+  addColumn(db, "booking_passengers", "berth_no", "INTEGER");
+  addColumn(db, "booking_passengers", "berth_type", "TEXT");
+  addColumn(db, "booking_passengers", "cancelled", "INTEGER NOT NULL DEFAULT 0");
+  addColumn(db, "booking_passengers", "refund_paise", "INTEGER NOT NULL DEFAULT 0");
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS bookings_trip ON bookings(trip_id);
+    CREATE TABLE IF NOT EXISTS payments (
+      order_id TEXT PRIMARY KEY,          -- Razorpay order id
+      trip_id TEXT NOT NULL,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      amount_paise INTEGER NOT NULL,
+      status TEXT NOT NULL,               -- CREATED | PAID | FAILED
+      payment_id TEXT,
+      method TEXT,
+      created_at INTEGER NOT NULL,
+      paid_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS payments_trip ON payments(trip_id);
+    CREATE TABLE IF NOT EXISTS refunds (
+      id TEXT PRIMARY KEY,                -- Razorpay refund id
+      payment_id TEXT NOT NULL,
+      booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+      amount_paise INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      details TEXT NOT NULL,              -- JSON: per-passenger charges
+      created_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS berth_allocations (
+      train_number TEXT NOT NULL,
+      train_start_date TEXT NOT NULL,
+      class_code TEXT NOT NULL,
+      coach TEXT NOT NULL,
+      berth_no INTEGER NOT NULL,
+      booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+      idx INTEGER NOT NULL,
+      PRIMARY KEY (train_number, train_start_date, class_code, coach, berth_no)
+    );
+    CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+  `);
+}
+
+/** A per-installation secret (e.g. for signing ticket QR codes), created on first use. */
+export function appSecret(name: string): string {
+  const db = appDb();
+  const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(`secret:${name}`) as { value: string } | undefined;
+  if (row) return row.value;
+  const value = randomBytes(32).toString("hex");
+  db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)").run(`secret:${name}`, value);
+  return (db.prepare("SELECT value FROM settings WHERE key = ?").get(`secret:${name}`) as { value: string }).value;
 }
 
 export function hashPassword(password: string) {

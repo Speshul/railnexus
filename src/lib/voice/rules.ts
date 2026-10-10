@@ -76,6 +76,7 @@ export function ruleIntent(input: string, ctx: VoiceContext, today: string): Voi
 
   // navigation
   const nav: [RegExp, VoiceIntent["page"]][] = [
+    [/\bpnr\b/, "pnr"],
     [/\b(my bookings?|meri bookings?|bookings? dikhao|my tickets|mere ticket)\b/, "bookings"],
     [/\b(home|homepage|home page|main page)\b/, "home"], [/\b(go back|back|wapas|peeche)\b/, "back"],
     [/\b(login|log in|sign in)\b/, "login"], [/\b(register|sign up|signup|account banao)\b/, "register"],

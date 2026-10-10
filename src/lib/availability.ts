@@ -37,16 +37,40 @@ function pools(cls: ClassCode, coaches: number) {
   return { cap, GN: cap - tq - ld - ss, TQ: tq, LD: ld, SS: ss, rac: CLASSES[cls].rac ? coaches * 9 : 0 };
 }
 
-/** Seats held (unexpired) or confirmed in this app for a train run. */
-function appSeats(train: string, startDate: string, cls: ClassCode, quota: Quota) {
+/** Seats held (unexpired) or confirmed in this app for a train run, optionally excluding one booking. */
+function appSeats(train: string, startDate: string, cls: ClassCode, quota: Quota, excludeBooking = "") {
   const r = appDb()
     .prepare(
       `SELECT COALESCE(SUM(seats), 0) n FROM bookings
-       WHERE train_number = ? AND train_start_date = ? AND class_code = ? AND quota = ?
+       WHERE train_number = ? AND train_start_date = ? AND class_code = ? AND quota = ? AND id <> ?
          AND (status = 'CONFIRMED' OR (status = 'PENDING_PAYMENT' AND expires_at > ?))`
     )
-    .get(train, startDate, cls, quota, Date.now()) as { n: number };
+    .get(train, startDate, cls, quota, excludeBooking, Date.now()) as { n: number };
   return r.n;
+}
+
+export const coachCount = (seg: Segment, cls: ClassCode) => (seg.train.type === "Pass" && cls === "2S" ? 8 : COACHES[cls]);
+
+export type Inventory = { pool: number; racSlots: number; maxWl: number; sold: number; coaches: number };
+
+/**
+ * Quota size and seats already sold for a train run: simulated demand plus this app's own bookings.
+ * `excludeBooking` leaves one booking out, so its passengers can be placed in order when it is confirmed.
+ */
+export function inventory(seg: Segment, cls: ClassCode, quota: Quota, excludeBooking = ""): Inventory {
+  const coaches = coachCount(seg, cls);
+  const p = pools(cls, coaches);
+  const pool = p[quota];
+  const ahead = diffDays(seg.date, todayIST());
+  const h = hash(`${seg.train.number}|${seg.startDate}|${cls}|${quota}`);
+  const dow = weekday(seg.date);
+  const weekend = dow === 0 || dow === 5 || dow === 6 ? 1.12 : 1;
+  const nearness = ahead <= 2 ? 1.2 : ahead <= 7 ? 1.08 : ahead <= 21 ? 0.95 : ahead <= 40 ? 0.8 : 0.6;
+  const pop = POPULARITY[seg.train.type] ?? 1;
+  const premiumClass = cls === "1A" || cls === "EC" ? 0.75 : 1;
+  const frac = (0.3 + 0.95 * h) * weekend * nearness * pop * premiumClass;
+  const sold = Math.round(frac * pool) + appSeats(seg.train.number, seg.startDate, cls, quota, excludeBooking);
+  return { pool, racSlots: p.rac && quota === "GN" ? p.rac * 2 : 0, maxWl: Math.max(20, Math.round(pool * 0.4)), sold, coaches };
 }
 
 export function getAvailability(seg: Segment, cls: ClassCode, quota: Quota): Availability {
@@ -64,34 +88,22 @@ export function getAvailability(seg: Segment, cls: ClassCode, quota: Quota): Ava
     if (ahead > 1) return na("NOT_OPEN", "Opens later", `Tatkal opens on ${addDays(seg.date, -1)} (one day before the journey).`);
   }
 
-  const coaches = seg.train.type === "Pass" && cls === "2S" ? 8 : COACHES[cls];
-  const p = pools(cls, coaches);
-  const pool = p[quota];
+  const { pool, racSlots, maxWl, sold } = inventory(seg, cls, quota);
   if (pool === 0) return na("NA", "No quota", "This quota is not available in this class.");
-
-  const h = hash(`${seg.train.number}|${seg.startDate}|${cls}|${quota}`);
-  const dow = weekday(seg.date);
-  const weekend = dow === 0 || dow === 5 || dow === 6 ? 1.12 : 1;
-  const nearness = ahead <= 2 ? 1.2 : ahead <= 7 ? 1.08 : ahead <= 21 ? 0.95 : ahead <= 40 ? 0.8 : 0.6;
-  const pop = POPULARITY[seg.train.type] ?? 1;
-  const premiumClass = cls === "1A" || cls === "EC" ? 0.75 : 1;
-  const frac = (0.3 + 0.95 * h) * weekend * nearness * pop * premiumClass;
-  const sold = Math.round(frac * pool) + appSeats(seg.train.number, seg.startDate, cls, quota);
 
   if (sold < pool) {
     const left = pool - sold;
     return { status: "AVAILABLE", count: left, label: `AVL ${left}`, chance: 1, bookable: true };
   }
   let over = sold - pool;
-  if (p.rac && quota === "GN") {
-    if (over < p.rac * 2) {
+  if (racSlots) {
+    if (over < racSlots) {
       const n = over + 1;
       return { status: "RAC", count: n, label: `RAC ${n}`, chance: 0.95, bookable: true, note: "RAC: shared side-lower berth, likely to confirm." };
     }
-    over -= p.rac * 2;
+    over -= racSlots;
   }
   const wl = over + 1;
-  const maxWl = Math.max(20, Math.round(pool * 0.4));
   if (wl > maxWl) return na("REGRET", "Regret", "Waitlist is full for this date.");
   // Expected cancellations scale with quota size and time left before the chart is prepared.
   const expected = pool * (quota === "TQ" ? 0.04 : 0.1) * Math.min(1.2, 0.35 + ahead / 25);

@@ -35,3 +35,13 @@ export function runDaysLabel(mask: number) {
 }
 
 export const pct = (x: number) => `${Math.round(x * 100)}%`;
+
+/** Colour for a passenger status like "CNF/B3/34/LB", "RAC 12", "GNWL 40" or "CAN". */
+export function statusTone(s: string | null) {
+  if (!s) return "text-slate-500";
+  if (s.startsWith("CNF")) return "text-ok";
+  if (s.startsWith("RAC")) return "text-warn";
+  if (s === "CAN") return "text-slate-400 line-through";
+  if (s.includes("WL")) return "text-bad";
+  return "text-slate-600";
+}
