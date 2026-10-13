@@ -9,6 +9,8 @@ export function NavLinks({ loggedIn }: { loggedIn: boolean }) {
   const t = useT();
   const links = [
     { href: "/", label: t("nav.book"), match: (p: string) => p === "/" || p.startsWith("/search") || p.startsWith("/book") },
+    { href: "/explore", label: t("nav.explore"), match: (p: string) => p.startsWith("/explore") },
+    { href: "/plan", label: t("nav.plan"), match: (p: string) => p.startsWith("/plan") },
     { href: "/trains", label: t("nav.trains"), match: (p: string) => p.startsWith("/train") },
     { href: "/stations", label: t("nav.stations"), match: (p: string) => p.startsWith("/station") },
     { href: "/pnr", label: t("nav.pnr"), match: (p: string) => p.startsWith("/pnr") },

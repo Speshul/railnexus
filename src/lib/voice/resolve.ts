@@ -11,7 +11,7 @@ export function isHinglish(text: string) {
   return /[ऀ-ॿ]/.test(text) || /\b(se|ka|ki|ke|karo|kal|aaj|chahiye|dikhao|mujhe|hai|wali|jaana|liye|aage)\b/i.test(text);
 }
 
-function resolveStation(name: string | null | undefined): { station: Station; city: boolean } | null {
+export function resolveStation(name: string | null | undefined): { station: Station; city: boolean } | null {
   if (!name) return null;
   const q = name.trim();
   // Treat it as a station code only when it looks like one (e.g. "NDLS"), not a spoken word like "Goa".
@@ -164,6 +164,9 @@ export function resolveIntent(intent: VoiceIntent, ctx: VoiceContext, heard: str
       return { reply: reply(say("Taking you to the review page.", "Review page pe le ja rahe hain.")), actions: [{ type: "continue" }] };
 
     case "navigate": {
+      // The trip planner gets the whole sentence and runs straight away; the explorer starts from the current search.
+      if (intent.page === "plan") return { reply: say("Planning your trip.", "Aapki trip plan kar rahe hain."), actions: [{ type: "navigate", href: `/plan?q=${encodeURIComponent(heard)}&go=1` }] };
+      if (intent.page === "explore") return { reply: say("Here's everywhere you can go.", "Ye rahi saari jagahen jahan ja sakte hain."), actions: [{ type: "navigate", href: ctx.search?.from ? `/explore?from=${ctx.search.from}` : "/explore" }] };
       const simple: Record<string, string> = { home: "/", bookings: "/account", pnr: "/pnr", trains: "/trains", stations: "/stations", login: "/login", register: "/register", back: "back" };
       if (intent.page && intent.page in simple) {
         if (intent.page === "bookings" && !ctx.loggedIn) return { reply: say("Please sign in to see your bookings.", "Bookings dekhne ke liye pehle login karo."), actions: [{ type: "navigate", href: "/login?next=/account" }] };

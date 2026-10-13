@@ -1,16 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowLeftRight } from "lucide-react";
+import { ArrowLeftRight, Sun } from "lucide-react";
 import { getStops, getTrain } from "@/lib/rail";
 import { adultFare } from "@/lib/fare";
 import { CLASS_ORDER, QUOTAS, type Quota } from "@/lib/constants";
-import { formatDuration, todayIST, addDays, isValidDate } from "@/lib/dates";
+import { formatDate, formatDuration, todayIST, addDays, isValidDate } from "@/lib/dates";
 import { inr, runDaysLabel } from "@/lib/format";
 import { RunDays } from "@/components/RunDays";
 import { RouteMapLazy } from "@/components/RouteMapLazy";
 import { ScheduleTable } from "@/components/ScheduleTable";
 import { TrainJourneyPicker } from "@/components/TrainJourneyPicker";
+import { SunSide } from "@/components/SunSide";
+import { sunForJourney } from "@/lib/sunpath";
 import { getT } from "@/i18n/server";
 import type { MessageKey } from "@/i18n/core";
 
@@ -36,6 +38,11 @@ export default async function TrainPage({ params, searchParams }: PageProps<"/tr
   const segment = from && to ? { from: from.seq, to: to.seq } : null;
   const km = segment ? to!.dist - from!.dist : train.distance;
   const returnTrain = train.return_train ? getTrain(train.return_train) : null;
+  const date = typeof sp.date === "string" && isValidDate(sp.date) ? sp.date : addDays(todayIST(), 1);
+  // Sun advice for the chosen part of the route (or the whole route), departing on the chosen date.
+  const sunFrom = from ?? halts[0];
+  const sunTo = to ?? halts[halts.length - 1];
+  const sun = sunFrom && sunTo ? sunForJourney(train.number, sunFrom.code, sunTo.code, addDays(date, -(sunFrom.day - 1))) : null;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
@@ -95,7 +102,7 @@ export default async function TrainPage({ params, searchParams }: PageProps<"/tr
                 defaultFrom={from?.code}
                 defaultTo={to?.code}
                 today={todayIST()}
-                defaultDate={typeof sp.date === "string" && isValidDate(sp.date) ? sp.date : addDays(todayIST(), 1)}
+                defaultDate={date}
                 defaultQuota={typeof sp.quota === "string" && sp.quota in QUOTAS ? (sp.quota as Quota) : "GN"}
                 runsOn={train.run_days}
               />
@@ -121,6 +128,17 @@ export default async function TrainPage({ params, searchParams }: PageProps<"/tr
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          {sun && (
+            <div className="card p-4">
+              <h2 className="mb-1 flex items-center gap-2 font-semibold">
+                <Sun className="size-4 text-amber-600" aria-hidden /> {t("sun.title")}
+              </h2>
+              <SunSide report={sun} t={t} compact />
+              <p className="mt-2 text-xs text-slate-500">
+                {sunFrom.name} → {sunTo.name}. {t("sun.forDate", { date: formatDate(date, undefined, L) })} {t("sun.note")}
+              </p>
             </div>
           )}
         </aside>

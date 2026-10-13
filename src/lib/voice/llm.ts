@@ -29,7 +29,8 @@ Intents:
 - remove_passenger: passengers=[{name}].
 - set_option: insurance / auto_upgrade / confirm_only booleans.
 - continue: go to the review step ("aage badho", "review", "continue").
-- navigate: page = home|bookings (my tickets)|pnr (PNR status)|trains|stations|login|register|train_route|station|back. train_route needs train (number); station needs station (name).
+- navigate: page = home|explore|plan|bookings (my tickets)|pnr (PNR status)|trains|stations|login|register|train_route|station|back. train_route needs train (number); station needs station (name).
+  explore = "where can I go", ideas for places to visit. plan = the user describes a whole trip rather than one search: a return journey, a budget, a group, "plan a trip", "weekend trip", or somewhere vague ("hills", "beach").
 - help: user asks what they can say.
 - unknown: anything else, including payment requests. You can never pay or enter card/UPI details; say the user must press Pay themselves.
 
@@ -55,7 +56,7 @@ const GEMINI_SCHEMA = {
     cls: S("STRING", { enum: ["1A", "2A", "3A", "SL", "CC", "EC", "2S"] }),
     quota: S("STRING", { enum: ["GN", "TQ", "LD", "SS"] }),
     train: S("STRING"),
-    page: S("STRING", { enum: ["home", "bookings", "pnr", "trains", "stations", "login", "register", "train_route", "station", "back"] }),
+    page: S("STRING", { enum: ["home", "explore", "plan", "bookings", "pnr", "trains", "stations", "login", "register", "train_route", "station", "back"] }),
     station: S("STRING"),
     sort: S("STRING", { enum: ["departure", "arrival", "duration", "fare"] }),
     only_available: S("BOOLEAN"),

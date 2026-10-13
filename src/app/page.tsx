@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, MapPinned, Route, Ticket } from "lucide-react";
+import { ArrowRight, Compass, MapPinned, Route, Sparkles, Ticket } from "lucide-react";
 import { SearchForm } from "@/components/SearchForm";
 import { TrainLookup } from "@/components/TrainLookup";
 import { stats } from "@/lib/rail";
@@ -36,6 +36,23 @@ export default async function Home() {
         <div className="card p-5 md:p-6">
           <SearchForm today={today} />
         </div>
+
+        <section className="mt-6 grid gap-4 md:grid-cols-2">
+          <Link href="/plan" className="card group flex gap-4 p-5 hover:border-brand">
+            <Sparkles className="size-8 shrink-0 text-accent" aria-hidden />
+            <span>
+              <span className="block font-semibold group-hover:underline">{t("home.plan.title")}</span>
+              <span className="block text-sm text-slate-600">{t("home.plan.body")}</span>
+            </span>
+          </Link>
+          <Link href="/explore" className="card group flex gap-4 p-5 hover:border-brand">
+            <Compass className="size-8 shrink-0 text-accent" aria-hidden />
+            <span>
+              <span className="block font-semibold group-hover:underline">{t("home.explore.title")}</span>
+              <span className="block text-sm text-slate-600">{t("home.explore.body")}</span>
+            </span>
+          </Link>
+        </section>
 
         <section className="mt-10">
           <h2 className="mb-3 text-lg font-semibold">{t("home.popular")}</h2>

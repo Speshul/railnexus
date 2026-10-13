@@ -15,7 +15,7 @@ export type VoiceContext = {
 
 export const CLASS_CODES = ["1A", "2A", "3A", "SL", "CC", "EC", "2S"] as const;
 export const QUOTA_CODES = ["GN", "TQ", "LD", "SS"] as const;
-export const PAGES = ["home", "bookings", "pnr", "trains", "stations", "login", "register", "train_route", "station", "back"] as const;
+export const PAGES = ["home", "explore", "plan", "bookings", "pnr", "trains", "stations", "login", "register", "train_route", "station", "back"] as const;
 
 /** Structured intent the language model (or the rule parser) extracts from one utterance. */
 export const intentSchema = z.object({

@@ -21,6 +21,21 @@ Rebuild the train database (stop the dev server first on Windows, since it locks
 npm run data
 ```
 
+## Creative features
+
+- **Plan a trip in one sentence** (`/plan`): "Weekend in Goa from Pune for 2, under ₹4000, leave Friday evening" becomes
+  ready-to-book itineraries there and back, labelled best price / fastest / most likely confirmed. Vague wishes work too
+  ("somewhere in the hills from Delhi for 3 days"): the AI suggests destinations, and only those with real trains are shown.
+  The AI (Gemini, hedged with Groq) only reads the request. Trains, fares and availability come from the timetable and booking engine,
+  and the dates are calculated in code. A return trip books as one checkout ("Going" / "Coming back"). The voice assistant can launch it
+  ("Pune se Goa weekend trip plan karo").
+- **Where can I go?** (`/explore`): every place one direct train reaches from your station, on a map coloured by journey
+  time, filterable by hours, fare per person, station size and overnight trains, with a "Surprise me" button and a full
+  table for screen readers. Built entirely from the timetable (`src/lib/explore.ts`).
+- **Which side gets the sun?** (train page and booking review): for the chosen journey and date, the route is walked in
+  5-minute steps, comparing the train's heading with the sun's position (`src/lib/sun.ts`, standard solar formulas).
+  It says which side to sit on for shade, when sunrise or sunset happens and on which side, and draws a left/right timeline.
+
 ## Accessibility
 
 Targets WCAG 2.2 AA; every main page passes an automated axe-core audit with zero violations, including with all
@@ -120,6 +135,9 @@ src/lib/booking.ts       validation rules, seat holds, booking records
 src/lib/search.ts        search service shared by pages and the JSON API
 src/app/api/*            JSON endpoints: stations, trains, search, availability
 src/i18n/*               English/Hindi dictionaries and translation helpers
+src/lib/planner.ts       AI trip planner: request parsing (lib/ai.ts) + itinerary search
+src/lib/explore.ts       direct-train reachability from a station
+src/lib/sun.ts           sun position and which-side-gets-the-sun analysis
 ```
 
 Every page's state lives in the URL (`/search?from=NDLS&to=HWH&date=...`), and search is exposed as a JSON API. The Phase 2 voice assistant will drive the site through these.

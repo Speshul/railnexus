@@ -4,6 +4,9 @@ import type { Metadata } from "next";
 import { CheckCircle2, Clock, Ticket } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getTrip, quoteCancellation, refundsFor, type BookingRecord } from "@/lib/booking";
+import { sunForJourney } from "@/lib/sunpath";
+import { isRoundTrip } from "@/lib/rail";
+import { SunSide } from "@/components/SunSide";
 import { SLEEPER_BERTHS } from "@/lib/constants";
 import { formatDate, formatDuration } from "@/lib/dates";
 import { inr, pct, statusTone } from "@/lib/format";
@@ -22,16 +25,17 @@ export async function generateMetadata(): Promise<Metadata> {
 const fullDate = (d: string, t: T) => formatDate(d, { weekday: "short", day: "numeric", month: "short", year: "numeric" }, t.locale);
 const berthName = (code: string, t: T) => t(`${code in SLEEPER_BERTHS ? "berth" : "seat"}.${code}` as MessageKey);
 
-function LegCard({ b, index, multi, paid, tripId, t }: { b: BookingRecord; index: number; multi: boolean; paid: boolean; tripId: string; t: T }) {
+function LegCard({ b, index, multi, roundTrip, paid, tripId, t }: { b: BookingRecord; index: number; multi: boolean; roundTrip: boolean; paid: boolean; tripId: string; t: T }) {
   const f = b.fare;
   const cancellable = b.passengers.filter((p) => !p.cancelled && p.age >= 5).map((p) => p.idx);
   const quote = paid ? quoteCancellation(b, cancellable) : null;
   const refunds = paid ? refundsFor(b.id) : [];
+  const sun = b.status !== "CANCELLED" ? sunForJourney(b.train_number, b.from_code, b.to_code, b.train_start_date) : null;
   return (
     <section className="card overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 p-4">
         <div>
-          {multi && <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("book.trainN", { i: index + 1 })}</p>}
+          {multi && <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{roundTrip ? t(index === 0 ? "book.going" : "book.comingBack") : t("book.trainN", { i: index + 1 })}</p>}
           <h2 className="font-semibold"><span className="font-mono">{b.train_number}</span> {f.trainName}</h2>
           <p className="text-sm text-slate-600">{t("book.classQuota", { cls: t(`class.${b.class_code}` as MessageKey), code: b.class_code, quota: t(`quota.${b.quota}` as MessageKey) })}</p>
         </div>
@@ -63,6 +67,12 @@ function LegCard({ b, index, multi, paid, tripId, t }: { b: BookingRecord; index
           <div className="text-xs text-slate-500">{fullDate(f.arrivalDate, t)}</div>
         </div>
       </div>
+      {sun && (
+        <details className="border-t border-slate-100 px-4 py-2 text-sm">
+          <summary className="cursor-pointer py-1 font-medium text-brand">{t("sun.title")}</summary>
+          <div className="pb-2 pt-1"><SunSide report={sun} t={t} compact /></div>
+        </details>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
@@ -133,6 +143,7 @@ export default async function TripPage({ params, searchParams }: PageProps<"/boo
   const pending = trip.status === "PENDING_PAYMENT";
   const again = bookHref(trip.legs.map((b) => ({ train: b.train_number, from: b.from_code, to: b.to_code, date: b.journey_date, cls: b.class_code })), first.quota);
   const multi = trip.legs.length > 1;
+  const roundTrip = multi && trip.legs[0].train_number !== trip.legs[1].train_number && isRoundTrip(trip.legs[0].from_code, trip.legs[1].to_code);
   const convenience = trip.legs.reduce((s, b) => s + b.fare.convenienceFee, 0);
   const insurance = trip.legs.reduce((s, b) => s + b.fare.insurance, 0);
   const ticketFare = trip.legs.reduce((s, b) => s + b.fare.ticketFare, 0);
@@ -177,10 +188,12 @@ export default async function TripPage({ params, searchParams }: PageProps<"/boo
               {multi && i > 0 && (
                 <p className="flex items-center gap-1.5 px-1 pb-2 text-sm text-warn">
                   <Clock className="size-4" aria-hidden />
-                  {b.train_number === trip.legs[0].train_number ? t("trip.changeSeats", { station: b.fare.fromName }) : t("trip.changeTrains", { station: b.fare.fromName })}
+                  {b.train_number === trip.legs[0].train_number ? t("trip.changeSeats", { station: b.fare.fromName })
+                    : roundTrip ? t("book.returnFrom", { station: b.fare.fromName, date: formatDate(b.journey_date, undefined, t.locale) })
+                    : t("trip.changeTrains", { station: b.fare.fromName })}
                 </p>
               )}
-              <LegCard b={b} index={i} multi={multi} paid={paid} tripId={trip.id} t={t} />
+              <LegCard b={b} index={i} multi={multi} roundTrip={roundTrip} paid={paid} tripId={trip.id} t={t} />
             </div>
           ))}
           <section className="card grid gap-2 p-4 text-sm sm:grid-cols-2">

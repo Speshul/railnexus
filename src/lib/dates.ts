@@ -56,6 +56,13 @@ export function formatDuration(min: number, locale: "en" | "hi" = "en"): string 
   return h ? `${h}${hu} ${String(m).padStart(2, "0")}${mu}` : `${m}${mu}`;
 }
 
+/** Leaves in the late afternoon or evening and arrives the next morning: you sleep on board. Minutes as in the timetable. */
+export function isOvernightRide(depMin: number, duration: number) {
+  const dep = depMin % 1440;
+  const arr = (depMin + duration) % 1440;
+  return (dep >= 16 * 60 || dep < 60) && arr >= 4 * 60 && arr <= 11 * 60 && duration >= 6 * 60 && duration <= 18 * 60;
+}
+
 /** "HH:MM" for an absolute minute offset. */
 export function clock(min: number): string {
   const m = ((min % 1440) + 1440) % 1440;

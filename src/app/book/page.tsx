@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Clock } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getSegment } from "@/lib/rail";
+import { getSegment, isRoundTrip } from "@/lib/rail";
 import { getAvailability } from "@/lib/availability";
 import { savedPassengers } from "@/lib/booking";
 import { CLASSES, PREMIUM_TYPES, QUOTAS, type Quota } from "@/lib/constants";
@@ -49,6 +49,7 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
   const blocked = ok.find((l) => !l.avail.bookable);
   const multi = ok.length > 1;
   const sameTrain = multi && ok[0].seg.train.number === ok[1].seg.train.number;
+  const roundTrip = multi && !sameTrain && isRoundTrip(ok[0].seg.from.code, ok[1].seg.to.code);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
@@ -62,6 +63,8 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
         <p className="mb-3 rounded-lg border border-brand/30 bg-brand-light px-3 py-2 text-sm">
           {sameTrain ? (
             <>{t("book.split", { station: ok[1].seg.from.name })}</>
+          ) : roundTrip ? (
+            <>{t("book.return")}</>
           ) : (
             <>{t("book.connecting", { n: ok.length })}</>
           )}
@@ -73,13 +76,13 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
           <div key={i}>
             {multi && i > 0 && (
               <p className="flex items-center gap-1.5 px-1 py-1 text-sm text-warn">
-                <Clock className="size-4" aria-hidden /> {sameTrain ? t("book.changeSeats", { station: seg.from.name }) : t("book.changeAt", { station: seg.from.name })}
+                <Clock className="size-4" aria-hidden /> {sameTrain ? t("book.changeSeats", { station: seg.from.name }) : roundTrip ? t("book.returnFrom", { station: seg.from.name, date: formatDate(seg.date, undefined, L) }) : t("book.changeAt", { station: seg.from.name })}
               </p>
             )}
             <div className="card p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  {multi && <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{sameTrain ? t("book.ticketN", { i: i + 1 }) : t("book.trainN", { i: i + 1 })}</p>}
+                  {multi && <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{sameTrain ? t("book.ticketN", { i: i + 1 }) : roundTrip ? t(i === 0 ? "book.going" : "book.comingBack") : t("book.trainN", { i: i + 1 })}</p>}
                   <Link href={`/train/${seg.train.number}?from=${seg.from.code}&to=${seg.to.code}&date=${seg.date}`} className="font-semibold hover:underline">
                     <span className="font-mono">{seg.train.number}</span> {seg.train.name}
                   </Link>

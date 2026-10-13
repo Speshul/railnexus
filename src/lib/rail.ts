@@ -75,7 +75,7 @@ const ALIASES: Record<string, string[]> = {
   ksr: ["SBC"], kolkata: ["HWH", "SDAH", "KOAA"], calcutta: ["HWH", "SDAH"], howrah: ["HWH"],
   mumbai: ["CSTM", "BCT", "LTT", "DR", "BDTS"], bombay: ["CSTM", "BCT"], delhi: ["NDLS", "DLI", "NZM", "DEE", "ANVT"],
   nizamuddin: ["NZM"], chennai: ["MAS", "MS"], madras: ["MAS", "MS"], hyderabad: ["SC", "HYB", "KCG"],
-  trivandrum: ["TVC"], thiruvananthapuram: ["TVC"], kochi: ["ERS"], cochin: ["ERS"], goa: ["MAO"],
+  trivandrum: ["TVC"], thiruvananthapuram: ["TVC"], kochi: ["ERS"], cochin: ["ERS"], goa: ["MAO", "VSG", "KRMI", "THVM"],
   vizag: ["VSKP"], visakhapatnam: ["VSKP"], banaras: ["BSB"], kashi: ["BSB"], gurgaon: ["GGN"], gurugram: ["GGN"],
   katra: ["SVDK"], "vaishno devi": ["SVDK"], pune: ["PUNE"], poona: ["PUNE"],
 };
@@ -169,6 +169,11 @@ export function nearbyStations(code: string, radiusKm = 30): (Station & { km: nu
     .map((r) => ({ ...r, km: haversine(s.lat!, s.lng!, r.lat!, r.lng!) }))
     .filter((r) => r.km <= radiusKm)
     .sort((a, b) => a.km - b.km);
+}
+
+/** Two-train trips that end where they began (within 30 km): a return journey rather than a connection. */
+export function isRoundTrip(startCode: string, endCode: string) {
+  return startCode === endCode || nearbyStations(startCode, 30).some((s) => s.code === endCode);
 }
 
 export function runsOn(runDays: number, date: string) {
