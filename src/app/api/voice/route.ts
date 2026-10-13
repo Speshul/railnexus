@@ -6,6 +6,9 @@ import { resolveIntent } from "@/lib/voice/resolve";
 import { todayIST } from "@/lib/dates";
 import type { VoiceContext, VoiceIntent, VoiceResponse } from "@/lib/voice/types";
 
+// AI and payment providers can be slow; give the function time to finish on Vercel.
+export const maxDuration = 30;
+
 const bodySchema = z.object({
   text: z.string().trim().min(1).max(300),
   alternatives: z.array(z.string().max(300)).max(5).default([]),

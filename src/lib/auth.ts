@@ -19,7 +19,7 @@ export function verifyPassword(password: string, stored: string) {
 export async function createSession(userId: number) {
   const token = randomBytes(32).toString("hex");
   const expires = Date.now() + SESSION_DAYS * 86400000;
-  appDb().prepare("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)").run(token, userId, expires);
+  await (await appDb()).run("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)", token, userId, expires);
   (await cookies()).set(COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
@@ -32,19 +32,18 @@ export async function createSession(userId: number) {
 export async function destroySession() {
   const store = await cookies();
   const token = store.get(COOKIE)?.value;
-  if (token) appDb().prepare("DELETE FROM sessions WHERE token = ?").run(token);
+  if (token) await (await appDb()).run("DELETE FROM sessions WHERE token = ?", token);
   store.delete(COOKIE);
 }
 
 export async function getUser(): Promise<User | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
-  const row = appDb()
-    .prepare(
-      `SELECT u.id, u.username, u.email, u.full_name, u.phone FROM sessions s
-       JOIN users u ON u.id = s.user_id WHERE s.token = ? AND s.expires_at > ?`
-    )
-    .get(token, Date.now()) as User | undefined;
+  const row = await (await appDb()).get<User>(
+    `SELECT u.id, u.username, u.email, u.full_name, u.phone FROM sessions s
+     JOIN users u ON u.id = s.user_id WHERE s.token = ? AND s.expires_at > ?`,
+    token, Date.now()
+  );
   return row ?? null;
 }
 
@@ -55,23 +54,22 @@ export async function requireUser(next: string): Promise<User> {
   return user;
 }
 
-export function findUserForLogin(identifier: string) {
-  return appDb()
-    .prepare("SELECT id, password_hash FROM users WHERE username = ? OR email = ?")
-    .get(identifier, identifier) as { id: number; password_hash: string } | undefined;
+export async function findUserForLogin(identifier: string) {
+  return (await appDb()).get<{ id: number; password_hash: string }>("SELECT id, password_hash FROM users WHERE username = ? OR email = ?", identifier, identifier);
 }
 
-export function createUser(u: { username: string; email: string; full_name: string; phone: string; password: string }) {
-  const info = appDb()
-    .prepare("INSERT INTO users (username, email, full_name, phone, password_hash) VALUES (?, ?, ?, ?, ?)")
-    .run(u.username, u.email, u.full_name, u.phone, hashPassword(u.password));
-  return Number(info.lastInsertRowid);
+export async function createUser(u: { username: string; email: string; full_name: string; phone: string; password: string }) {
+  const info = await (await appDb()).run(
+    "INSERT INTO users (username, email, full_name, phone, password_hash) VALUES (?, ?, ?, ?, ?)",
+    u.username, u.email, u.full_name, u.phone, hashPassword(u.password)
+  );
+  return info.lastInsertRowid;
 }
 
-export function takenFields(username: string, email: string) {
-  const db = appDb();
+export async function takenFields(username: string, email: string) {
+  const db = await appDb();
   return {
-    username: !!db.prepare("SELECT 1 FROM users WHERE username = ?").get(username),
-    email: !!email && !!db.prepare("SELECT 1 FROM users WHERE email = ?").get(email),
+    username: !!(await db.get("SELECT 1 FROM users WHERE username = ?", username)),
+    email: !!email && !!(await db.get("SELECT 1 FROM users WHERE email = ?", email)),
   };
 }

@@ -26,10 +26,10 @@ export default async function TicketPage({ params }: PageProps<"/ticket/[pnr]">)
   const user = await requireUser(`/ticket/${pnr}`);
   const t = await getT();
   const L = t.locale;
-  const b = /^\d{10}$/.test(pnr) ? getBookingByPnr(pnr) : null;
+  const b = /^\d{10}$/.test(pnr) ? await getBookingByPnr(pnr) : null;
   if (!b || b.user_id !== user.id) notFound();
   const f = b.fare;
-  const verifyUrl = `${await siteOrigin()}/verify/${pnr}?s=${ticketSignature(pnr)}`;
+  const verifyUrl = `${await siteOrigin()}/verify/${pnr}?s=${await ticketSignature(pnr)}`;
   const qr = await QRCode.toString(verifyUrl, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#0b2a56", light: "#ffffff" } });
   const halts = getStops(b.train_number).filter((s) => s.halt);
   const from = halts.find((s) => s.code === b.from_code);

@@ -85,13 +85,13 @@ function TripCard({ t, tr }: { t: Trip; tr: T }) {
 export default async function AccountPage({ searchParams }: PageProps<"/account">) {
   const user = await requireUser("/account");
   const sp = await searchParams;
-  const trips = listTrips(user.id);
+  const trips = await listTrips(user.id);
   const grouped = Object.fromEntries(TABS.map((x) => [x.key, trips.filter((t) => tabOf(t) === x.key)])) as Record<Tab, Trip[]>;
   const requested = typeof sp.tab === "string" && TABS.some((x) => x.key === sp.tab) ? (sp.tab as Tab) : null;
   const tab: Tab = requested ?? (grouped.pending.length ? "pending" : "upcoming");
   // upcoming: soonest first; everything else: most recent first
   const list = tab === "upcoming" ? [...grouped.upcoming].sort((a, b) => departureMs(a.legs[0]) - departureMs(b.legs[0])) : grouped[tab];
-  const passengers = savedPassengers(user.id);
+  const passengers = await savedPassengers(user.id);
   const tr = await getT();
 
   return (

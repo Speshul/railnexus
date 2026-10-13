@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { SearchForm } from "@/components/SearchForm";
 import { ResultsView } from "@/components/ResultsView";
 import { alternativeRoutes, parseSearchParams, searchJourneys } from "@/lib/search";
+import { loadSales } from "@/lib/availability";
 import { addDays, diffDays, formatDate, todayIST } from "@/lib/dates";
 import { BOOKING_WINDOW_DAYS } from "@/lib/constants";
 import { getT } from "@/i18n/server";
@@ -29,6 +30,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
   }
   // Client components (form state, tabs, filters) must reset when the search changes via in-app links.
   const searchKey = JSON.stringify(params);
+  await loadSales();
   const data = searchJourneys(params);
   const { fromStation, toStation } = data;
   // Few or no direct trains between the exact stations: suggest nearby station pairs that have some.

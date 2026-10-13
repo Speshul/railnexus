@@ -4,6 +4,9 @@ import { planTrip } from "@/lib/planner";
 import { todayIST } from "@/lib/dates";
 import { hasLlm } from "@/lib/voice/llm";
 
+// AI and payment providers can be slow; give the function time to finish on Vercel.
+export const maxDuration = 30;
+
 const bodySchema = z.object({ text: z.string().trim().min(3).max(500) });
 
 // POST { text } -> trip plans built from real trains. The AI only reads the request; trains, fares and

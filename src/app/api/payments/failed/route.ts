@@ -8,9 +8,10 @@ export async function POST(req: Request) {
   if (!user) return Response.json({ ok: false }, { status: 401 });
   const { orderId, paymentId } = (await req.json().catch(() => ({}))) as { orderId?: string; paymentId?: string };
   if (orderId) {
-    appDb()
-      .prepare("UPDATE payments SET payment_id = COALESCE(?, payment_id), method = 'failed-attempt' WHERE order_id = ? AND user_id = ? AND status = 'CREATED'")
-      .run(paymentId ?? null, orderId, user.id);
+    await (await appDb()).run(
+      "UPDATE payments SET payment_id = COALESCE(?, payment_id), method = 'failed-attempt' WHERE order_id = ? AND user_id = ? AND status = 'CREATED'",
+      paymentId ?? null, orderId, user.id
+    );
   }
   return Response.json({ ok: true });
 }

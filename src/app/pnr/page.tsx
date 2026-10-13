@@ -17,7 +17,7 @@ export default async function PnrPage({ searchParams }: PageProps<"/pnr">) {
   const t = await getT();
   const L = t.locale;
   const n = typeof sp.n === "string" ? sp.n.replace(/\D/g, "") : "";
-  const b = n.length === 10 ? getBookingByPnr(n) : null;
+  const b = n.length === 10 ? await getBookingByPnr(n) : null;
   const chart = b ? chartStatus(b) : null;
 
   return (

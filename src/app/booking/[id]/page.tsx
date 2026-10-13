@@ -25,11 +25,11 @@ export async function generateMetadata(): Promise<Metadata> {
 const fullDate = (d: string, t: T) => formatDate(d, { weekday: "short", day: "numeric", month: "short", year: "numeric" }, t.locale);
 const berthName = (code: string, t: T) => t(`${code in SLEEPER_BERTHS ? "berth" : "seat"}.${code}` as MessageKey);
 
-function LegCard({ b, index, multi, roundTrip, paid, tripId, t }: { b: BookingRecord; index: number; multi: boolean; roundTrip: boolean; paid: boolean; tripId: string; t: T }) {
+async function LegCard({ b, index, multi, roundTrip, paid, tripId, t }: { b: BookingRecord; index: number; multi: boolean; roundTrip: boolean; paid: boolean; tripId: string; t: T }) {
   const f = b.fare;
   const cancellable = b.passengers.filter((p) => !p.cancelled && p.age >= 5).map((p) => p.idx);
   const quote = paid ? quoteCancellation(b, cancellable) : null;
-  const refunds = paid ? refundsFor(b.id) : [];
+  const refunds = paid ? await refundsFor(b.id) : [];
   const sun = b.status !== "CANCELLED" ? sunForJourney(b.train_number, b.from_code, b.to_code, b.train_start_date) : null;
   return (
     <section className="card overflow-hidden">
@@ -136,7 +136,7 @@ export default async function TripPage({ params, searchParams }: PageProps<"/boo
   const sp = await searchParams;
   const user = await requireUser(`/booking/${id}`);
   const t = await getT();
-  const trip = getTrip(id, user.id);
+  const trip = await getTrip(id, user.id);
   if (!trip) notFound();
   const first = trip.legs[0];
   const paid = trip.status === "CONFIRMED" || (trip.status === "CANCELLED" && !!trip.payment && trip.payment.status === "PAID");

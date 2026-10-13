@@ -14,7 +14,7 @@ export async function login(_: FormState, form: FormData): Promise<FormState> {
   const values = { identifier };
   const t = await getT();
   if (!identifier || !password) return { error: t("err.loginEmpty"), values };
-  const user = findUserForLogin(identifier);
+  const user = await findUserForLogin(identifier);
   if (!user || !verifyPassword(password, user.password_hash)) return { error: t("err.loginBad"), values };
   await createSession(user.id);
   redirect(safeNext(form.get("next")));
@@ -47,14 +47,14 @@ export async function register(_: FormState, form: FormData): Promise<FormState>
     return { fieldErrors, values };
   }
   const d = parsed.data;
-  const taken = takenFields(d.username, d.email);
+  const taken = await takenFields(d.username, d.email);
   if (taken.username || taken.email) {
     const fieldErrors: Record<string, string> = {};
     if (taken.username) fieldErrors.username = t("err.usernameTaken", { u: d.username });
     if (taken.email) fieldErrors.email = t("err.emailTaken");
     return { fieldErrors, values };
   }
-  const id = createUser(d);
+  const id = await createUser(d);
   await createSession(id);
   redirect(safeNext(form.get("next")));
 }

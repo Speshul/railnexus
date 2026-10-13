@@ -1,9 +1,9 @@
 import "server-only";
 import { createHmac, randomBytes, randomInt } from "node:crypto";
 import { z } from "zod";
-import { appDb, appSecret } from "./db";
+import { appDb, appSecret, transaction, type Db } from "./db";
 import { getSegment, getStops, type Segment } from "./rail";
-import { getAvailability, inventory, type Availability } from "./availability";
+import { getAvailability, inventory, loadSales, type Availability } from "./availability";
 import { bookingFare, type BookingFare } from "./fare";
 import {
   CLASSES, FOOD_PREFS, HOLD_MINUTES, MAX_PASSENGERS, PREMIUM_TYPES, QUOTAS, SEAT_PREFS, SLEEPER_BERTHS,
@@ -124,23 +124,22 @@ export function validateBooking(input: BookingInput): ValidationResult {
 const newId = () => randomBytes(6).toString("hex");
 
 /** Create the seat holds for a checkout. Returns the trip id used for review and payment. */
-export function createDraftTrip(user: User, input: BookingInput, v: Extract<ValidationResult, { ok: true }>) {
-  const db = appDb();
+export async function createDraftTrip(user: User, input: BookingInput, v: Extract<ValidationResult, { ok: true }>) {
   const tripId = newId();
   const now = Date.now();
-  db.exec("BEGIN");
-  try {
+  await transaction(async (db) => {
     for (const [legIdx, l] of v.legs.entries()) {
       const { segment, fare, availability } = l;
       const premium = PREMIUM_TYPES.has(segment.train.type);
       const prefs = berthPrefsFor(l.input.cls);
       // "Edit passengers" creates a fresh hold; release the old one so seats aren't held twice.
       // (Never this checkout's own holds: a split ticket books the same train twice.)
-      db.prepare(
+      await db.run(
         `UPDATE bookings SET status = 'CANCELLED'
          WHERE user_id = ? AND status = 'PENDING_PAYMENT' AND train_number = ? AND train_start_date = ? AND class_code = ? AND quota = ?
-           AND trip_id <> ?`
-      ).run(user.id, l.input.train, segment.startDate, l.input.cls, input.quota, tripId);
+           AND trip_id <> ?`,
+        user.id, l.input.train, segment.startDate, l.input.cls, input.quota, tripId
+      );
       const id = newId();
       const snapshot = {
         ...fare,
@@ -148,35 +147,32 @@ export function createDraftTrip(user: User, input: BookingInput, v: Extract<Vali
         dep: segment.from.dep, arr: segment.to.arr, arrivalDate: segment.arrivalDate, duration: segment.duration,
         distance: segment.distance, availabilityAtBooking: availability.label, chance: availability.chance,
       };
-      db.prepare(
+      await db.run(
         `INSERT INTO bookings (id, trip_id, leg, user_id, status, train_number, from_code, to_code, boarding_code, journey_date,
            train_start_date, class_code, quota, seats, contact_email, contact_phone, options, fare, total_paise, created_at, expires_at)
-         VALUES (?, ?, ?, ?, 'PENDING_PAYMENT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ).run(
+         VALUES (?, ?, ?, ?, 'PENDING_PAYMENT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         id, tripId, legIdx, user.id, l.input.train, l.input.from, l.input.to, l.input.from, l.input.date, segment.startDate,
         l.input.cls, input.quota, fare.seats, input.email, input.phone,
         JSON.stringify({ insurance: input.insurance, autoUpgrade: input.autoUpgrade, confirmOnly: input.confirmOnly }),
         JSON.stringify(snapshot), Math.round(fare.total * 100), now, now + HOLD_MINUTES * 60000
       );
-      const ins = db.prepare(
-        `INSERT INTO booking_passengers (booking_id, idx, name, age, gender, berth_pref, food_pref, no_berth) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-      );
-      input.passengers.forEach((p, i) =>
-        ins.run(id, i, p.name, p.age, p.gender, prefs.includes(p.berth) ? p.berth : null, premium && p.food ? p.food : null, p.noBerth ? 1 : 0)
-      );
-    }
-    if (input.savePassengers) {
-      const exists = db.prepare("SELECT 1 FROM saved_passengers WHERE user_id = ? AND name = ? COLLATE NOCASE AND age = ?");
-      const save = db.prepare("INSERT INTO saved_passengers (user_id, name, age, gender, berth_pref, food_pref) VALUES (?, ?, ?, ?, ?, ?)");
-      for (const p of input.passengers) {
-        if (!exists.get(user.id, p.name, p.age)) save.run(user.id, p.name, p.age, p.gender, p.berth || null, p.food || null);
+      for (const [i, p] of input.passengers.entries()) {
+        await db.run(
+          `INSERT INTO booking_passengers (booking_id, idx, name, age, gender, berth_pref, food_pref, no_berth) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          id, i, p.name, p.age, p.gender, prefs.includes(p.berth) ? p.berth : null, premium && p.food ? p.food : null, p.noBerth ? 1 : 0
+        );
       }
     }
-    db.exec("COMMIT");
-  } catch (e) {
-    db.exec("ROLLBACK");
-    throw e;
-  }
+    if (input.savePassengers) {
+      for (const p of input.passengers) {
+        const exists = await db.get("SELECT 1 FROM saved_passengers WHERE user_id = ? AND name = ? COLLATE NOCASE AND age = ?", user.id, p.name, p.age);
+        if (!exists) {
+          await db.run("INSERT INTO saved_passengers (user_id, name, age, gender, berth_pref, food_pref) VALUES (?, ?, ?, ?, ?, ?)",
+            user.id, p.name, p.age, p.gender, p.berth || null, p.food || null);
+        }
+      }
+    }
+  });
   return tripId;
 }
 
@@ -212,60 +208,84 @@ export type Trip = {
   payment: { order_id: string; payment_id: string | null; status: string; method: string | null; paid_at: number | null } | null;
 };
 
-function expireStale(db = appDb()) {
-  db.prepare("UPDATE bookings SET status = 'EXPIRED' WHERE status = 'PENDING_PAYMENT' AND expires_at < ?").run(Date.now());
+async function expireStale(db: Db) {
+  await db.run("UPDATE bookings SET status = 'EXPIRED' WHERE status = 'PENDING_PAYMENT' AND expires_at < ?", Date.now());
 }
 
-function hydrate(row: Record<string, unknown>): BookingRecord {
-  const passengers = appDb().prepare("SELECT * FROM booking_passengers WHERE booking_id = ? ORDER BY idx").all(row.id as string);
-  return {
-    ...(row as unknown as BookingRecord),
-    options: JSON.parse(row.options as string),
-    fare: JSON.parse(row.fare as string),
-    passengers: passengers as unknown as Passenger[],
-  };
+const ph = (n: number) => Array(n).fill("?").join(",");
+
+/** Bookings (with passengers) and payments for some trips, in three queries however many trips there are. */
+async function loadTrips(db: Db, rows: Record<string, unknown>[]): Promise<Trip[]> {
+  if (!rows.length) return [];
+  const ids = rows.map((r) => r.id as string);
+  const tripIds = [...new Set(rows.map((r) => r.trip_id as string))];
+  const pax = await db.all<Passenger & { booking_id: string }>(`SELECT * FROM booking_passengers WHERE booking_id IN (${ph(ids.length)}) ORDER BY idx`, ...ids);
+  const pays = await db.all<NonNullable<Trip["payment"]> & { trip_id: string; created_at: number }>(
+    `SELECT trip_id, order_id, payment_id, status, method, paid_at, created_at FROM payments WHERE trip_id IN (${ph(tripIds.length)})
+     ORDER BY (status = 'PAID') DESC, created_at DESC`,
+    ...tripIds
+  );
+  const legsOf = new Map<string, BookingRecord[]>();
+  for (const row of rows) {
+    const leg: BookingRecord = {
+      ...(row as unknown as BookingRecord),
+      options: JSON.parse(row.options as string),
+      fare: JSON.parse(row.fare as string),
+      passengers: pax.filter((p) => p.booking_id === row.id),
+    };
+    const list = legsOf.get(leg.trip_id) ?? [];
+    list.push(leg);
+    legsOf.set(leg.trip_id, list);
+  }
+  return tripIds.map((id) => {
+    const legs = legsOf.get(id)!.sort((a, b) => a.leg - b.leg);
+    const statuses = new Set(legs.map((l) => l.status));
+    const status = statuses.has("CONFIRMED") ? "CONFIRMED" : statuses.has("PENDING_PAYMENT") ? "PENDING_PAYMENT" : legs[0].status;
+    const pay = pays.find((x) => x.trip_id === id);
+    return {
+      id,
+      status,
+      legs,
+      totalPaise: legs.reduce((s, l) => s + l.total_paise, 0),
+      refundPaise: legs.reduce((s, l) => s + l.refund_paise, 0),
+      expiresAt: status === "PENDING_PAYMENT" ? Math.min(...legs.map((l) => l.expires_at ?? Infinity)) : null,
+      payment: pay ? { order_id: pay.order_id, payment_id: pay.payment_id, status: pay.status, method: pay.method, paid_at: pay.paid_at } : null,
+    };
+  });
 }
 
-export function getTrip(tripId: string, userId?: number): Trip | null {
-  const db = appDb();
-  expireStale(db);
-  const rows = db
-    .prepare(`SELECT * FROM bookings WHERE trip_id = ? ${userId !== undefined ? "AND user_id = ?" : ""} ORDER BY leg`)
-    .all(...(userId !== undefined ? [tripId, userId] : [tripId])) as Record<string, unknown>[];
-  if (!rows.length) return null;
-  const legs = rows.map(hydrate);
-  const statuses = new Set(legs.map((l) => l.status));
-  const status = statuses.has("CONFIRMED") ? "CONFIRMED" : statuses.has("PENDING_PAYMENT") ? "PENDING_PAYMENT" : legs[0].status;
-  const payment = db
-    .prepare("SELECT order_id, payment_id, status, method, paid_at FROM payments WHERE trip_id = ? ORDER BY (status = 'PAID') DESC, created_at DESC LIMIT 1")
-    .get(tripId) as Trip["payment"] | undefined;
-  return {
-    id: tripId,
-    status,
-    legs,
-    totalPaise: legs.reduce((s, l) => s + l.total_paise, 0),
-    refundPaise: legs.reduce((s, l) => s + l.refund_paise, 0),
-    expiresAt: status === "PENDING_PAYMENT" ? Math.min(...legs.map((l) => l.expires_at ?? Infinity)) : null,
-    payment: payment ?? null,
-  };
+export async function getTrip(tripId: string, userId?: number, conn?: Db): Promise<Trip | null> {
+  const db = conn ?? (await appDb());
+  await expireStale(db);
+  const rows = await db.all(
+    `SELECT * FROM bookings WHERE trip_id = ? ${userId !== undefined ? "AND user_id = ?" : ""} ORDER BY leg`,
+    ...(userId !== undefined ? [tripId, userId] : [tripId])
+  );
+  return (await loadTrips(db, rows))[0] ?? null;
 }
 
-export function listTrips(userId: number): Trip[] {
-  const db = appDb();
-  expireStale(db);
-  const ids = db
-    .prepare("SELECT trip_id, MAX(created_at) c FROM bookings WHERE user_id = ? GROUP BY trip_id ORDER BY c DESC LIMIT 100")
-    .all(userId) as { trip_id: string }[];
-  return ids.map((r) => getTrip(r.trip_id, userId)!).filter(Boolean);
+export async function listTrips(userId: number): Promise<Trip[]> {
+  const db = await appDb();
+  await expireStale(db);
+  const rows = await db.all(
+    `SELECT * FROM bookings WHERE trip_id IN (
+       SELECT trip_id FROM bookings WHERE user_id = ? GROUP BY trip_id ORDER BY MAX(created_at) DESC LIMIT 100
+     ) ORDER BY created_at DESC, leg`,
+    userId
+  );
+  return loadTrips(db, rows);
 }
 
-export function getBookingByPnr(pnr: string): BookingRecord | null {
-  const row = appDb().prepare("SELECT * FROM bookings WHERE pnr = ?").get(pnr) as Record<string, unknown> | undefined;
-  return row ? hydrate(row) : null;
+export async function getBookingByPnr(pnr: string): Promise<BookingRecord | null> {
+  const db = await appDb();
+  const row = await db.get("SELECT * FROM bookings WHERE pnr = ?", pnr);
+  if (!row) return null;
+  const trip = (await loadTrips(db, [row]))[0];
+  return trip?.legs[0] ?? null;
 }
 
-export function cancelDraft(tripId: string, userId: number) {
-  appDb().prepare("UPDATE bookings SET status = 'CANCELLED' WHERE trip_id = ? AND user_id = ? AND status = 'PENDING_PAYMENT'").run(tripId, userId);
+export async function cancelDraft(tripId: string, userId: number) {
+  await (await appDb()).run("UPDATE bookings SET status = 'CANCELLED' WHERE trip_id = ? AND user_id = ? AND status = 'PENDING_PAYMENT'", tripId, userId);
 }
 
 // ---------------------------------------------------------------- confirmation: PNR + berth allocation
@@ -295,11 +315,10 @@ function hash32(s: string) {
  * Pick coach + berth numbers for confirmed passengers: keep the group in one coach and close together,
  * honour berth preferences, and give seniors a lower berth when they have no preference.
  */
-function allocateBerths(
-  seg: Segment, cls: ClassCode, bookingId: string, coaches: number,
+async function allocateBerths(
+  db: Db, seg: Segment, cls: ClassCode, bookingId: string, coaches: number,
   people: { idx: number; age: number; gender: string; pref: string | null }[]
 ) {
-  const db = appDb();
   const cap = CLASSES[cls].coachCap;
   // A berth is only taken if its holder's journey overlaps ours: one used Delhi -> Kanpur is free from Kanpur on.
   const order = new Map<string, number>();
@@ -307,10 +326,11 @@ function allocateBerths(
   const myFrom = order.get(seg.from.code) ?? 0;
   const myTo = order.get(seg.to.code) ?? Infinity;
   const taken = new Set(
-    (db.prepare(
+    (await db.all<{ coach: string; berth_no: number; from_code: string; to_code: string }>(
       `SELECT a.coach, a.berth_no, b.from_code, b.to_code FROM berth_allocations a JOIN bookings b ON b.id = a.booking_id
-       WHERE a.train_number = ? AND a.train_start_date = ? AND a.class_code = ?`
-    ).all(seg.train.number, seg.startDate, cls) as { coach: string; berth_no: number; from_code: string; to_code: string }[])
+       WHERE a.train_number = ? AND a.train_start_date = ? AND a.class_code = ?`,
+      seg.train.number, seg.startDate, cls
+    ))
       .filter((r) => (order.get(r.from_code) ?? 0) < myTo && myFrom < (order.get(r.to_code) ?? Infinity))
       .map((r) => `${r.coach}/${r.berth_no}`)
   );
@@ -339,17 +359,16 @@ function allocateBerths(
     pool.splice(pool.indexOf(n), 1);
     anchorBay ??= bayOf(cls, n);
     out.set(p.idx, { coach, berth: n, type: berthTypeOf(cls, n) });
-    db.prepare("INSERT INTO berth_allocations (train_number, train_start_date, class_code, coach, berth_no, booking_id, idx) VALUES (?, ?, ?, ?, ?, ?, ?)")
-      .run(seg.train.number, seg.startDate, cls, coach, n, bookingId, p.idx);
+    await db.run("INSERT INTO berth_allocations (train_number, train_start_date, class_code, coach, berth_no, booking_id, idx) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      seg.train.number, seg.startDate, cls, coach, n, bookingId, p.idx);
   }
   return out;
 }
 
-function newPnr() {
-  const db = appDb();
+async function newPnr(db: Db) {
   for (;;) {
     const pnr = `${randomInt(2, 9)}${String(randomInt(0, 1e9)).padStart(9, "0")}`;
-    if (!db.prepare("SELECT 1 FROM bookings WHERE pnr = ?").get(pnr)) return pnr;
+    if (!(await db.get("SELECT 1 FROM bookings WHERE pnr = ?", pnr))) return pnr;
   }
 }
 
@@ -360,12 +379,12 @@ export class ConfirmationError extends Error {
 }
 
 /** After payment: give each passenger CNF/RAC/WL in queue order, allocate berths, issue PNRs. */
-export function confirmTrip(tripId: string) {
-  const db = appDb();
-  const trip = getTrip(tripId);
-  if (!trip) throw new ConfirmationError("err.notFound");
-  db.exec("BEGIN");
-  try {
+export async function confirmTrip(tripId: string): Promise<Trip> {
+  return transaction(async (db) => {
+    const trip = await getTrip(tripId, undefined, db);
+    if (!trip) throw new ConfirmationError("err.notFound");
+    // Seat counts read inside the transaction, so nobody else's booking can slip in between counting and confirming.
+    await loadSales(db);
     for (const b of trip.legs) {
       if (b.status === "CONFIRMED") continue;
       if (b.status !== "PENDING_PAYMENT" && b.status !== "EXPIRED") throw new ConfirmationError("err.wasCancelled");
@@ -388,11 +407,8 @@ export function confirmTrip(tripId: string) {
       });
       if (b.options.confirmOnly && cnf.length < seated.length)
         throw new ConfirmationError(msg("err.cnfRanOut", { train: b.train_number }));
-      const seats = allocateBerths(seg, b.class_code, b.id, inv.coaches, cnf.map((p) => ({ idx: p.idx, age: p.age, gender: p.gender, pref: p.berth_pref })));
+      const seats = await allocateBerths(db, seg, b.class_code, b.id, inv.coaches, cnf.map((p) => ({ idx: p.idx, age: p.age, gender: p.gender, pref: p.berth_pref })));
       const firstCoach = [...seats.values()][0]?.coach ?? null;
-      const upd = db.prepare(
-        "UPDATE booking_passengers SET booking_status = ?, status = ?, coach = ?, berth_no = ?, berth_type = ? WHERE booking_id = ? AND idx = ?"
-      );
       for (const p of b.passengers) {
         const s = seats.get(p.idx);
         let text: string;
@@ -400,16 +416,15 @@ export function confirmTrip(tripId: string) {
         else if (statuses.has(p.idx)) text = statuses.get(p.idx)!;
         else if (p.age < 5) text = "Infant (no ticket)";
         else text = firstCoach ? `CNF/${firstCoach}/No berth` : "No berth (child)";
-        upd.run(text, text, s?.coach ?? null, s?.berth ?? null, s?.type ?? null, b.id, p.idx);
+        await db.run(
+          "UPDATE booking_passengers SET booking_status = ?, status = ?, coach = ?, berth_no = ?, berth_type = ? WHERE booking_id = ? AND idx = ?",
+          text, text, s?.coach ?? null, s?.berth ?? null, s?.type ?? null, b.id, p.idx
+        );
       }
-      db.prepare("UPDATE bookings SET status = 'CONFIRMED', pnr = ?, confirmed_at = ?, expires_at = NULL WHERE id = ?").run(newPnr(), Date.now(), b.id);
+      await db.run("UPDATE bookings SET status = 'CONFIRMED', pnr = ?, confirmed_at = ?, expires_at = NULL WHERE id = ?", await newPnr(db), Date.now(), b.id);
     }
-    db.exec("COMMIT");
-  } catch (e) {
-    db.exec("ROLLBACK");
-    throw e;
-  }
-  return getTrip(tripId)!;
+    return (await getTrip(tripId, undefined, db))!;
+  });
 }
 
 // ---------------------------------------------------------------- cancellation & refunds
@@ -466,56 +481,48 @@ export function quoteCancellation(b: BookingRecord, idxs: number[], now = Date.n
 }
 
 /** Mark passengers cancelled, free their berths and record the refund (the Razorpay call is made by the caller). */
-export function applyCancellation(b: BookingRecord, quote: CancelQuote, refund: { id: string; status: string; paymentId: string } | null) {
-  const db = appDb();
-  db.exec("BEGIN");
-  try {
+export async function applyCancellation(b: BookingRecord, quote: CancelQuote, refund: { id: string; status: string; paymentId: string } | null) {
+  await transaction(async (db) => {
     let seatsFreed = 0;
     for (const r of quote.rows) {
       const p = b.passengers.find((x) => x.idx === r.idx)!;
-      db.prepare("UPDATE booking_passengers SET cancelled = 1, refund_paise = ?, status = 'CAN' WHERE booking_id = ? AND idx = ?")
-        .run(Math.round(r.refund * 100), b.id, r.idx);
-      db.prepare("DELETE FROM berth_allocations WHERE booking_id = ? AND idx = ?").run(b.id, r.idx);
+      await db.run("UPDATE booking_passengers SET cancelled = 1, refund_paise = ?, status = 'CAN' WHERE booking_id = ? AND idx = ?",
+        Math.round(r.refund * 100), b.id, r.idx);
+      await db.run("DELETE FROM berth_allocations WHERE booking_id = ? AND idx = ?", b.id, r.idx);
       if (p.age >= 5 && !p.no_berth) seatsFreed++;
     }
     const refundPaise = Math.round(quote.refund * 100);
     const remaining = b.passengers.filter((p) => !p.cancelled && p.age >= 5 && !quote.rows.some((r) => r.idx === p.idx));
-    db.prepare("UPDATE bookings SET seats = MAX(0, seats - ?), refund_paise = refund_paise + ?, status = ? WHERE id = ?")
-      .run(seatsFreed, refundPaise, remaining.length ? "CONFIRMED" : "CANCELLED", b.id);
+    await db.run("UPDATE bookings SET seats = MAX(0, seats - ?), refund_paise = refund_paise + ?, status = ? WHERE id = ?",
+      seatsFreed, refundPaise, remaining.length ? "CONFIRMED" : "CANCELLED", b.id);
     if (refund) {
-      db.prepare("INSERT INTO refunds (id, payment_id, booking_id, amount_paise, status, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
-        .run(refund.id, refund.paymentId, b.id, refundPaise, refund.status, JSON.stringify(quote.rows), Date.now());
+      await db.run("INSERT INTO refunds (id, payment_id, booking_id, amount_paise, status, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        refund.id, refund.paymentId, b.id, refundPaise, refund.status, JSON.stringify(quote.rows), Date.now());
     }
-    db.exec("COMMIT");
-  } catch (e) {
-    db.exec("ROLLBACK");
-    throw e;
-  }
+  });
 }
 
-export function refundsFor(bookingId: string) {
-  return appDb().prepare("SELECT id, amount_paise, status, details, created_at FROM refunds WHERE booking_id = ? ORDER BY created_at").all(bookingId) as {
-    id: string; amount_paise: number; status: string; details: string; created_at: number;
-  }[];
+export async function refundsFor(bookingId: string) {
+  return (await appDb()).all<{ id: string; amount_paise: number; status: string; details: string; created_at: number }>(
+    "SELECT id, amount_paise, status, details, created_at FROM refunds WHERE booking_id = ? ORDER BY created_at", bookingId
+  );
 }
 
 // ---------------------------------------------------------------- ticket QR signature
 
 /** Short signature printed in the ticket QR, so a scanned ticket can be checked as genuine. */
-export function ticketSignature(pnr: string) {
-  return createHmac("sha256", appSecret("ticket")).update(pnr).digest("base64url").slice(0, 16);
+export async function ticketSignature(pnr: string) {
+  return createHmac("sha256", await appSecret("ticket")).update(pnr).digest("base64url").slice(0, 16);
 }
 
 // ---------------------------------------------------------------- saved passengers
 
 export type SavedPassenger = { id: number; name: string; age: number; gender: string; berth_pref: string | null; food_pref: string | null };
 
-export function savedPassengers(userId: number): SavedPassenger[] {
-  return appDb()
-    .prepare("SELECT id, name, age, gender, berth_pref, food_pref FROM saved_passengers WHERE user_id = ? ORDER BY id")
-    .all(userId) as unknown as SavedPassenger[];
+export async function savedPassengers(userId: number): Promise<SavedPassenger[]> {
+  return (await appDb()).all<SavedPassenger>("SELECT id, name, age, gender, berth_pref, food_pref FROM saved_passengers WHERE user_id = ? ORDER BY id", userId);
 }
 
-export function deleteSavedPassenger(id: number, userId: number) {
-  appDb().prepare("DELETE FROM saved_passengers WHERE id = ? AND user_id = ?").run(id, userId);
+export async function deleteSavedPassenger(id: number, userId: number) {
+  await (await appDb()).run("DELETE FROM saved_passengers WHERE id = ? AND user_id = ?", id, userId);
 }

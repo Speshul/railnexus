@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Clock } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getSegment, isRoundTrip } from "@/lib/rail";
-import { getAvailability } from "@/lib/availability";
+import { getAvailability, loadSales } from "@/lib/availability";
 import { savedPassengers } from "@/lib/booking";
 import { CLASSES, PREMIUM_TYPES, QUOTAS, type Quota } from "@/lib/constants";
 import { formatDate, formatDuration, isValidDate } from "@/lib/dates";
@@ -29,6 +29,7 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
   const refs: LegRef[] = get("legs")
     ? decodeLegs(get("legs"))
     : [{ train: get("train"), from: get("from").toUpperCase(), to: get("to").toUpperCase(), date: get("date"), cls: get("cls") as LegRef["cls"] }];
+  await loadSales();
   const legs = refs.map((r) => {
     const seg = isValidDate(r.date) && r.cls in CLASSES ? getSegment(r.train, r.from, r.to, r.date) : null;
     return seg && seg.train.classes.includes(r.cls) ? { ref: r, seg, avail: getAvailability(seg, r.cls, quota) } : null;
@@ -127,7 +128,7 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
             km: seg.distance, trainType: seg.train.type, premium: PREMIUM_TYPES.has(seg.train.type), availStatus: avail.status,
           }))}
           user={{ email: user.email, phone: user.phone ?? "", name: user.full_name }}
-          saved={savedPassengers(user.id)}
+          saved={await savedPassengers(user.id)}
         />
       )}
     </div>

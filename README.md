@@ -123,6 +123,18 @@ GROQ_API_KEY=...     # optional backup + speech-to-text for Firefox/Safari, free
 - **Booking**: passenger details with IRCTC rules (quota limits, Ladies and Senior quota eligibility, child no-berth half fare, infants free, at least one passenger 12+), berth and meal preferences, insurance, auto-upgrade, "book only if confirmed".
 - **Review/checkout**: fare breakdown, 15-minute seat hold with countdown. Held seats reduce availability for everyone.
 
+## Deployment (Vercel + Turso)
+
+- `rail.db` (timetable, read-only) is rebuilt from the datameet data during `npm run build` and shipped with every
+  route (`outputFileTracingIncludes` in `next.config.ts`).
+- The app database (users, bookings, payments) lives in **Turso** when `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are
+  set; without them it falls back to a local `data/app.db` file. Tables and the demo account are created on first use.
+- Functions run in Mumbai (`bom1`, `vercel.json`), next to the Turso database, so each query takes a few milliseconds.
+- Seat availability loads this site's active bookings in one query per request (`loadSales`), then works out every
+  train and class in memory.
+- Environment variables on Vercel: `GEMINI_API_KEY`, `GROQ_API_KEY`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`,
+  `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `APP_URL` (the site's https address, used in ticket QR codes).
+
 ## Architecture
 
 ```

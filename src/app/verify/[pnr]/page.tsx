@@ -24,8 +24,8 @@ export default async function VerifyPage({ params, searchParams }: PageProps<"/v
   const t = await getT();
   const s = (await searchParams).s;
   const sig = typeof s === "string" ? s : "";
-  const b = /^\d{10}$/.test(pnr) ? getBookingByPnr(pnr) : null;
-  const expected = b ? ticketSignature(pnr) : "";
+  const b = /^\d{10}$/.test(pnr) ? await getBookingByPnr(pnr) : null;
+  const expected = b ? await ticketSignature(pnr) : "";
   const genuine = !!b && sig.length === expected.length && timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
   const active = genuine ? b!.passengers.filter((p) => !p.cancelled) : [];
   const valid = genuine && b!.status === "CONFIRMED" && active.length > 0;

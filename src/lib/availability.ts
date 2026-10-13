@@ -3,7 +3,7 @@ import "server-only";
 // (train run, class, quota) gets a deterministic "already sold" figure driven by
 // train popularity, weekday and how far away the journey is. Seats held or
 // booked inside this app are subtracted on top, so the demo reacts to bookings.
-import { appDb } from "./db";
+import { appDb, type Db } from "./db";
 import { CLASSES, BOOKING_WINDOW_DAYS, type ClassCode, type Quota } from "./constants";
 import { diffDays, todayIST, nowMinutesIST, weekday, addDays } from "./dates";
 import { getStops, type Segment, type Stop } from "./rail";
@@ -54,6 +54,37 @@ function haltsOf(train: string) {
   return h;
 }
 
+// ---------------------------------------------------------------- this app's own bookings
+
+type Sale = {
+  id: string; train_number: string; train_start_date: string; class_code: string; quota: string;
+  from_code: string; to_code: string; seats: number; status: string; expires_at: number | null;
+};
+// Seats held by bookings made on this site, by train run ("number|startDate"). Loaded in one query per request, so
+// availability for a whole results page doesn't make a database round trip per train and class.
+let sales: Map<string, Sale[]> | null = null;
+
+/**
+ * Load this site's seat-holding bookings for upcoming trains. Call once per request before getAvailability,
+ * inventory or findSplit (pass the transaction when confirming, so the count can't change underneath).
+ */
+export async function loadSales(db?: Db) {
+  const conn = db ?? (await appDb());
+  const rows = await conn.all<Sale>(
+    `SELECT id, train_number, train_start_date, class_code, quota, from_code, to_code, seats, status, expires_at FROM bookings
+     WHERE train_start_date >= ? AND (status = 'CONFIRMED' OR (status = 'PENDING_PAYMENT' AND expires_at > ?))`,
+    addDays(todayIST(), -3), Date.now()
+  );
+  const next = new Map<string, Sale[]>();
+  for (const r of rows) {
+    const key = `${r.train_number}|${r.train_start_date}`;
+    const list = next.get(key);
+    if (list) list.push(r);
+    else next.set(key, [r]);
+  }
+  sales = next;
+}
+
 type SectionLoad = {
   halts: Stop[];
   /** seats occupied on each section between consecutive halts */
@@ -93,13 +124,11 @@ function sectionLoad(seg: Segment, cls: ClassCode, quota: Quota, excludeBooking 
 
   const idx = new Map<string, number>();
   halts.forEach((h, i) => { if (!idx.has(h.code)) idx.set(h.code, i); });
-  const rows = appDb()
-    .prepare(
-      `SELECT from_code, to_code, seats FROM bookings
-       WHERE train_number = ? AND train_start_date = ? AND class_code = ? AND quota = ? AND id <> ?
-         AND (status = 'CONFIRMED' OR (status = 'PENDING_PAYMENT' AND expires_at > ?))`
-    )
-    .all(seg.train.number, seg.startDate, cls, quota, excludeBooking, Date.now()) as { from_code: string; to_code: string; seats: number }[];
+  if (!sales) throw new Error("loadSales() must run before seat availability is worked out");
+  const now = Date.now();
+  const rows = (sales.get(`${seg.train.number}|${seg.startDate}`) ?? []).filter(
+    (r) => r.class_code === cls && r.quota === quota && r.id !== excludeBooking && (r.status === "CONFIRMED" || (r.expires_at ?? 0) > now)
+  );
   for (const r of rows) {
     const i0 = idx.get(r.from_code);
     const i1 = idx.get(r.to_code);

@@ -3,6 +3,9 @@
 // Needs GROQ_API_KEY.
 import { clientKey, rateLimited } from "@/lib/ratelimit";
 
+// AI and payment providers can be slow; give the function time to finish on Vercel.
+export const maxDuration = 30;
+
 export function GET() {
   return Response.json({ available: !!process.env.GROQ_API_KEY });
 }

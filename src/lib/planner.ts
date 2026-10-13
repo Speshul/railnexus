@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { llmJson } from "./ai";
 import { cityCodes, findTrains, nearbyStations, type Segment } from "./rail";
-import { getAvailability } from "./availability";
+import { getAvailability, loadSales } from "./availability";
 import { bookingFare } from "./fare";
 import { addDays, diffDays, formatDate, isOvernightRide, isValidDate, weekday } from "./dates";
 import { BOOKING_WINDOW_DAYS, type ClassCode } from "./constants";
@@ -239,6 +239,7 @@ export async function planTrip(text: string, today: string): Promise<PlanResult>
   const targets = req.destination ? [req.destination] : (req.destination_ideas ?? []).slice(0, 3);
   if (!targets.length) return { ok: false, error: "plan.err.destination" };
 
+  await loadSales();
   const plans: Plan[] = [];
   for (const target of targets) {
     const dest = codesFor(target);

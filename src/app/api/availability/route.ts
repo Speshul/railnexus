@@ -1,11 +1,11 @@
 import { getSegment } from "@/lib/rail";
-import { availabilityCalendar } from "@/lib/availability";
+import { availabilityCalendar, loadSales } from "@/lib/availability";
 import { adultFare } from "@/lib/fare";
 import { CLASSES, QUOTAS, type ClassCode, type Quota } from "@/lib/constants";
 import { addDays, isValidDate } from "@/lib/dates";
 
 // GET /api/availability?train=12951&from=BCT&to=NDLS&date=2026-10-20&cls=3A&quota=GN&days=6
-export function GET(req: Request) {
+export async function GET(req: Request) {
   const sp = new URL(req.url).searchParams;
   const train = sp.get("train") ?? "";
   const from = sp.get("from") ?? "";
@@ -22,6 +22,7 @@ export function GET(req: Request) {
   const probe = seg ?? Array.from({ length: 7 }, (_, i) => getSegment(train, from, to, addDays(date, i))).find(Boolean);
   if (!probe) return Response.json({ error: "train does not serve this route" }, { status: 404 });
 
+  await loadSales();
   const calendar = availabilityCalendar({ ...probe, date }, cls, quota, days, (d) => getSegment(train, from, to, d));
   const fare = adultFare({ cls, km: probe.distance, trainType: probe.train.type, quota });
   return Response.json({ train, from, to, cls, quota, fare, calendar });

@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getUser } from "@/lib/auth";
+import { loadSales } from "@/lib/availability";
 import { appDb } from "@/lib/db";
 import {
   applyCancellation, bookingSchema, cancelDraft, createDraftTrip, deleteSavedPassenger, getTrip, quoteCancellation, validateBooking,
@@ -28,20 +29,21 @@ export async function createBooking(_: BookingFormState, form: FormData): Promis
     for (const issue of parsed.error.issues) fieldErrors[issue.path.join(".")] ??= t.maybe(issue.message);
     return { error: t("err.checkFields"), fieldErrors };
   }
+  await loadSales();
   const result = validateBooking(parsed.data);
   if (!result.ok) {
     const fieldErrors = result.fieldErrors && Object.fromEntries(Object.entries(result.fieldErrors).map(([k, v]) => [k, t(v)]));
     return { error: t.msg(result.error), fieldErrors };
   }
 
-  const tripId = createDraftTrip(user, parsed.data, result);
+  const tripId = await createDraftTrip(user, parsed.data, result);
   redirect(`/booking/${tripId}`);
 }
 
 export async function cancelHold(tripId: string) {
   const user = await getUser();
   if (!user) redirect("/login");
-  cancelDraft(tripId, user.id);
+  await cancelDraft(tripId, user.id);
   revalidatePath(`/booking/${tripId}`);
 }
 
@@ -57,15 +59,13 @@ export async function cancelPassengers(_: CancelState, form: FormData): Promise<
   const idxs = form.getAll("idx").map(Number).filter((n) => Number.isInteger(n));
   if (!idxs.length) return { error: t("err.selectCancel") };
 
-  const trip = getTrip(tripId, user.id);
+  const trip = await getTrip(tripId, user.id);
   const booking = trip?.legs.find((b) => b.id === bookingId);
   if (!trip || !booking) return { error: t("err.notFound") };
   const quote = quoteCancellation(booking, idxs);
   if (!quote.allowed) return { error: t.msg(quote.reason ?? "err.cantCancel") };
 
-  const payment = appDb().prepare("SELECT payment_id FROM payments WHERE trip_id = ? AND status = 'PAID'").get(tripId) as
-    | { payment_id: string }
-    | undefined;
+  const payment = await (await appDb()).get<{ payment_id: string }>("SELECT payment_id FROM payments WHERE trip_id = ? AND status = 'PAID'", tripId);
   let refund: { id: string; status: string; paymentId: string } | null = null;
   const amountPaise = Math.round(quote.refund * 100);
   if (amountPaise > 0) {
@@ -77,7 +77,7 @@ export async function cancelPassengers(_: CancelState, form: FormData): Promise<
       return { error: t("err.refundFailed", { msg: (e as Error).message }) };
     }
   }
-  applyCancellation(booking, quote, refund);
+  await applyCancellation(booking, quote, refund);
   revalidatePath(`/booking/${tripId}`);
   revalidatePath("/account");
   return { done: { refund: quote.refund, refundId: refund?.id ?? null } };
@@ -86,6 +86,6 @@ export async function cancelPassengers(_: CancelState, form: FormData): Promise<
 export async function removeSavedPassenger(id: number) {
   const user = await getUser();
   if (!user) return;
-  deleteSavedPassenger(id, user.id);
+  await deleteSavedPassenger(id, user.id);
   revalidatePath("/account");
 }
