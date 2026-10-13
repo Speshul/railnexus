@@ -29,6 +29,10 @@ Intents:
 - remove_passenger: passengers=[{name}].
 - set_option: insurance / auto_upgrade / confirm_only booleans.
 - continue: go to the review step ("aage badho", "review", "continue").
+- One sentence on the passenger page may ask for several steps ("fill in Demo Traveller, add insurance and make the payment"):
+  use intent add_passengers (or set_option when no passenger is named), fill passengers AND insurance/auto_upgrade/confirm_only
+  together, and set then_continue=true if they want to go on to review, then_pay=true if they also want to pay. Never pick
+  pay alone when there are passengers or options to set first.
 - navigate: page = home|explore|plan|bookings (my tickets)|pnr (PNR status)|trains|stations|login|register|train_route|station|back. train_route needs train (number); station needs station (name).
   explore = "where can I go", ideas for places to visit. plan = the user describes a whole trip rather than one search: a return journey, a budget, a group, "plan a trip", "weekend trip", or somewhere vague ("hills", "beach").
 - help: user asks what they can say.
@@ -73,6 +77,7 @@ const GEMINI_SCHEMA = {
       },
     }),
     insurance: S("BOOLEAN"), auto_upgrade: S("BOOLEAN"), confirm_only: S("BOOLEAN"),
+    then_continue: S("BOOLEAN"), then_pay: S("BOOLEAN"),
     reply: { type: "STRING" },
     speech: { type: "STRING" },
   },

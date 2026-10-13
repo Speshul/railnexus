@@ -63,6 +63,28 @@ function pickTrain(ref: string | null | undefined, trains: Listed[], cls?: strin
   return trains.find((t) => t.name.toLowerCase().includes(r)) ?? null;
 }
 
+/** Options and "then continue / then pay" asked for in the same sentence, as follow-up actions. */
+function chained(intent: VoiceIntent): VoiceAction[] {
+  const out: VoiceAction[] = [];
+  if (intent.insurance != null || intent.auto_upgrade != null || intent.confirm_only != null) {
+    const a: VoiceAction = { type: "set_options" };
+    if (intent.insurance != null) a.insurance = intent.insurance;
+    if (intent.auto_upgrade != null) a.autoUpgrade = intent.auto_upgrade;
+    if (intent.confirm_only != null) a.confirmOnly = intent.confirm_only;
+    out.push(a);
+  }
+  if (intent.then_pay || intent.then_continue) out.push({ type: "continue", thenPay: !!intent.then_pay });
+  return out;
+}
+
+function chainText(intent: VoiceIntent, lang: "en" | "hi") {
+  const parts: string[] = [];
+  if (intent.insurance != null) parts.push(lang === "en" ? (intent.insurance ? "adding insurance" : "skipping insurance") : (intent.insurance ? "insurance add kar rahe hain" : "insurance nahi le rahe"));
+  if (intent.then_pay) parts.push(lang === "en" ? "then taking you to review, where I'll ask you to confirm the payment" : "phir review page pe le ja ke payment confirm karne ko kahenge");
+  else if (intent.then_continue) parts.push(lang === "en" ? "then taking you to the review page" : "phir review page pe le ja rahe hain");
+  return parts.length ? `, ${parts.join(", ")}.` : ".";
+}
+
 export function resolveIntent(intent: VoiceIntent, ctx: VoiceContext, heard: string, today: string): Out {
   const hi = isHinglish(heard);
   const say = (en: string, hin: string) => (hi ? hin : en);
@@ -143,7 +165,12 @@ export function resolveIntent(intent: VoiceIntent, ctx: VoiceContext, heard: str
       if (!ctx.booking) return needBooking();
       const passengers = (intent.passengers ?? []).filter((p) => p.name.trim());
       if (!passengers.length) return { reply: say("Who should I add? Say a name, age and gender.", "Kisko add karun? Naam, umar aur gender boliye."), actions: [] };
-      return { reply: reply(say(`Adding ${passengers.map((p) => p.name).join(", ")}.`, `${passengers.map((p) => p.name).join(", ")} ko add kar rahe hain.`)), actions: [{ type: "add_passengers", passengers }] };
+      const names = passengers.map((p) => p.name).join(", ");
+      const chain = chained(intent);
+      return {
+        reply: chain.length ? say(`Adding ${names}${chainText(intent, "en")}`, `${names} ko add kar rahe hain${chainText(intent, "hi")}`) : reply(say(`Adding ${names}.`, `${names} ko add kar rahe hain.`)),
+        actions: [{ type: "add_passengers", passengers }, ...chain],
+      };
     }
     case "remove_passenger": {
       if (!ctx.booking) return needBooking();
@@ -157,15 +184,25 @@ export function resolveIntent(intent: VoiceIntent, ctx: VoiceContext, heard: str
       if (intent.insurance != null) a.insurance = intent.insurance;
       if (intent.auto_upgrade != null) a.autoUpgrade = intent.auto_upgrade;
       if (intent.confirm_only != null) a.confirmOnly = intent.confirm_only;
+      const chain = chained(intent).filter((x) => x.type !== "set_options");
+      if (chain.length) return { reply: say(`Updated${chainText(intent, "en")}`, `Update kar diya${chainText(intent, "hi")}`), actions: [a, ...chain] };
       return { reply: reply(say("Updated.", "Update kar diya.")), actions: [a] };
     }
     case "continue":
       if (!ctx.booking) return needBooking();
+      if (intent.then_pay) return { reply: say("Taking you to the review page. Then I'll ask you to confirm the payment.", "Review page pe le ja rahe hain. Phir payment confirm karne ko kahenge."), actions: [{ type: "continue", thenPay: true }] };
       return { reply: reply(say("Taking you to the review page.", "Review page pe le ja rahe hain.")), actions: [{ type: "continue" }] };
 
     case "pay": {
       // Only opens the confirmation card. The browser itself listens for "confirm payment" next.
       const r = ctx.review;
+      // Still on the passenger page: go to review first, then the card opens there.
+      if (!r && ctx.booking) {
+        return {
+          reply: say("Taking you to the review page. Then I'll ask you to confirm the payment.", "Review page pe le ja rahe hain. Phir payment confirm karne ko kahenge."),
+          actions: [...chained({ ...intent, then_pay: false, then_continue: false }), { type: "continue", thenPay: true }],
+        };
+      }
       if (!r) return { reply: say("Go to the review page of your booking first, then say \"pay\".", "Pehle booking ke review page pe jaiye, phir boliye \"pay karo\"."), actions: [] };
       if (!r.enough) {
         return {

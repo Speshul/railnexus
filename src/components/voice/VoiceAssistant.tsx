@@ -129,6 +129,8 @@ function runAfterNavigation(href: string, then: () => void) {
   }, 100);
 }
 
+// Rough "did they speak Hindi/Hinglish?" check, to ask the follow-up question in the same language.
+const HINDI_HINT = /[ऀ-ॿ]|(se|karo|kar do|kardo|mein|wala|wali|aur|chahiye|dikhao|hai)/i;
 const EXAMPLES = ["Kal Pune se Delhi sleeper", "Sabse sasti wali book karo 3A mein", "Agle din ke trains", "Meri bookings dikhao"];
 
 export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
@@ -168,6 +170,21 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
       synth.removeEventListener("voiceschanged", load);
     };
   }, []);
+  const payNext = useRef<{ at: number; hindi: boolean } | null>(null);
+  const heardRef = useRef("");
+  // After "...and pay" moved us to the review page, ask to pay there; that opens the confirmation card.
+  useEffect(() => {
+    const p = payNext.current;
+    if (!p || !pathname.startsWith("/booking/")) return;
+    payNext.current = null;
+    if (Date.now() - p.at > 90000) return;
+    const id = setTimeout(() => {
+      setOpen(true);
+      void send(p.hindi ? "wallet se pay karo" : "pay from wallet");
+    }, 1200);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
   const recRef = useRef<SpeechRec | null>(null);
   const stopRecordingRef = useRef<(() => void) | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -234,10 +251,13 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
     window.speechSynthesis.speak(u);
   }
 
-  function run(actions: VoiceAction[]): string | void {
+  async function run(actions: VoiceAction[]): Promise<string | void> {
     let override: string | void = undefined;
     for (let i = 0; i < actions.length; i++) {
       const a = actions[i];
+      // Several steps from one sentence: let the page re-render between them (e.g. a passenger is filled in
+      // before "continue" checks the form).
+      if (i > 0) await new Promise((r) => setTimeout(r, 150));
       if (a.type === "navigate") {
         if (a.href === "back") {
           router.back();
@@ -251,8 +271,13 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
         return override;
       }
       const [handled, msg] = bridge.dispatch(a);
-      if (msg) override = msg;
+      if (msg) {
+        override = msg;
+        break; // a step was refused (e.g. "choose insurance first"): don't carry on with the rest
+      }
       if (!handled && !override) override = "That isn't available on this page.";
+      // "...and pay": once the review page opens, ask to pay there (which shows the confirmation card).
+      if (handled && a.type === "continue" && a.thenPay) payNext.current = { at: Date.now(), hindi: HINDI_HINT.test(heardRef.current) };
     }
     return override;
   }
@@ -283,7 +308,8 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
       });
       const data = (await res.json()) as VoiceResponse & { error?: string };
       if (!res.ok) throw new Error(data.error || tr("voice.wrong"));
-      const override = run(data.actions);
+      heardRef.current = t;
+      const override = await run(data.actions);
       const say = override || data.reply;
       setReply(say);
       // When the reply asks a question (the payment confirmation), listen for the answer straight away.

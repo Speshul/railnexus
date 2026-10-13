@@ -43,6 +43,9 @@ export const intentSchema = z.object({
   insurance: z.boolean().nullish(),
   auto_upgrade: z.boolean().nullish(),
   confirm_only: z.boolean().nullish(),
+  /** chained steps in one sentence: go on to the review page / and then pay (which still asks for confirmation) */
+  then_continue: z.boolean().nullish(),
+  then_pay: z.boolean().nullish(),
   reply: z.string().default(""),
   /** reply for text-to-speech: Devanagari when Hindi, so a Hindi voice pronounces it properly */
   speech: z.string().nullish(),
@@ -64,7 +67,7 @@ export type VoiceAction =
   | { type: "add_passengers"; passengers: VoicePassenger[] }
   | { type: "remove_passenger"; name: string }
   | { type: "set_options"; insurance?: boolean; autoUpgrade?: boolean; confirmOnly?: boolean }
-  | { type: "continue" }
+  | { type: "continue"; thenPay?: boolean }
   | { type: "pay_wallet" }
   | { type: "confirm_payment"; yes: boolean };
 
