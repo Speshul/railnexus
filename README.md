@@ -36,6 +36,19 @@ npm run data
   5-minute steps, comparing the train's heading with the sun's position (`src/lib/sun.ts`, standard solar formulas).
   It says which side to sit on for shade, when sunrise or sunset happens and on which side, and draws a left/right timeline.
 
+## Wallet and voice payments
+
+- **RailNexus Wallet** (`/wallet`), like IRCTC's eWallet: a ₹2,000 welcome credit, top-ups through Razorpay (test
+  mode), one-tap payment for held seats, and instant refunds to the wallet when a wallet-paid ticket is cancelled.
+  Every change is written to a ledger in the same transaction as the balance, so the history always adds up.
+- **Book and pay entirely by voice:** search, pick a train, add passengers, continue, then "wallet se pay karo". The
+  agent opens a confirmation card (train, route, date, class, passengers, total, balance after), reads it out and
+  listens for the answer. Only a tap on Confirm or the phrase "confirm payment" pays. That phrase is matched by the
+  browser with fixed patterns, never by the AI, and anything containing "cancel", "no" or "nahi" cancels instead.
+  UPI and card payments still always need the user's own click.
+- **Safe cancellations:** passengers are claimed before any money moves, so a double tap or a second tab can't refund
+  twice.
+
 ## Accessibility
 
 Targets WCAG 2.2 AA; every main page passes an automated axe-core audit with zero violations, including with all

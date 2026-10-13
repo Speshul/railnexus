@@ -11,6 +11,8 @@ export type VoiceContext = {
   connections?: number;
   nearbyOptions?: number;
   booking?: { train: string; cls: string; saved: string[]; passengers: string[]; insuranceChosen: boolean };
+  /** the review page of a held booking: what paying from the wallet would mean */
+  review?: { summary: string; amount: string; balance: string; enough: boolean; awaitingConfirm: boolean };
 };
 
 export const CLASS_CODES = ["1A", "2A", "3A", "SL", "CC", "EC", "2S"] as const;
@@ -21,7 +23,7 @@ export const PAGES = ["home", "explore", "plan", "bookings", "pnr", "trains", "s
 export const intentSchema = z.object({
   intent: z.enum([
     "search", "book", "change_date", "sort", "filter", "show_tab", "select_option",
-    "add_passengers", "remove_passenger", "set_option", "continue", "navigate", "help", "unknown",
+    "add_passengers", "remove_passenger", "set_option", "continue", "pay", "navigate", "help", "unknown",
   ]).catch("unknown"),
   from: z.string().nullish(),
   to: z.string().nullish(),
@@ -49,7 +51,10 @@ export type VoiceIntent = z.infer<typeof intentSchema>;
 
 export type VoicePassenger = { name: string; age?: number | null; gender?: "M" | "F" | "T" | null };
 
-/** Actions the browser executes. Deliberately small: there is no action that can pay. */
+/**
+ * Actions the browser executes. Deliberately small. "pay_wallet" only opens the confirmation card; money moves only
+ * after the user taps Confirm or says the confirm phrase, which the browser matches itself (never the language model).
+ */
 export type VoiceAction =
   | { type: "navigate"; href: string }
   | { type: "sort"; by: "dep" | "arr" | "dur" | "fare" }
@@ -59,6 +64,9 @@ export type VoiceAction =
   | { type: "add_passengers"; passengers: VoicePassenger[] }
   | { type: "remove_passenger"; name: string }
   | { type: "set_options"; insurance?: boolean; autoUpgrade?: boolean; confirmOnly?: boolean }
-  | { type: "continue" };
+  | { type: "continue" }
+  | { type: "pay_wallet" }
+  | { type: "confirm_payment"; yes: boolean };
 
-export type VoiceResponse = { reply: string; speech?: string; actions: VoiceAction[]; source: "gemini" | "groq" | "rules"; heard?: string };
+/** `listen`: start listening again right after speaking (e.g. waiting for "confirm payment"). */
+export type VoiceResponse = { reply: string; speech?: string; actions: VoiceAction[]; source: "gemini" | "groq" | "rules"; heard?: string; listen?: boolean };

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Loader2, Mic, MicOff, Pencil, Send, Volume2, VolumeX, X } from "lucide-react";
 import { useVoiceBridge } from "./VoiceBridge";
+import { confirmVerdict } from "@/lib/voice/confirm";
 import { useT } from "@/i18n/client";
 import type { VoiceAction, VoiceContext, VoiceResponse } from "@/lib/voice/types";
 
@@ -209,8 +210,12 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
   );
 
   /** Speak `text` (shown on screen); `spoken` is the Devanagari version for a Hindi voice when the reply is Hindi. */
-  function speak(text: string, spoken?: string) {
-    if (muted || !text || typeof window === "undefined" || !window.speechSynthesis) return setPhase("idle");
+  function speak(text: string, spoken?: string, then?: () => void) {
+    if (muted || !text || typeof window === "undefined" || !window.speechSynthesis) {
+      setPhase("idle");
+      then?.();
+      return;
+    }
     window.speechSynthesis.cancel();
     const hindiVoice = pickVoice(voices, "hi", hindiVoiceName);
     // Devanagari needs a Hindi voice; without one, read the Roman-script reply with an Indian-English voice.
@@ -220,7 +225,10 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
     if (v) u.voice = v;
     u.lang = v?.lang ?? (useHindi ? "hi-IN" : "en-IN");
     u.rate = useHindi ? 1 : 1.05;
-    u.onend = () => setPhase("idle");
+    u.onend = () => {
+      setPhase("idle");
+      then?.();
+    };
     u.onerror = () => setPhase("idle");
     setPhase("speaking");
     window.speechSynthesis.speak(u);
@@ -258,6 +266,15 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
     setError("");
     setPhase("thinking");
     const context: VoiceContext = { path: pathname, loggedIn, ...bridge.context() };
+    // The payment confirmation card is open: only a clear "confirm" or "cancel" counts, matched right here.
+    if (context.review?.awaitingConfirm) {
+      const verdict = confirmVerdict(t);
+      const [, msg] = verdict ? bridge.dispatch({ type: "confirm_payment", yes: verdict === "yes" }) : [false, undefined];
+      const say = msg || (verdict === "no" ? tr("voice.payCancelled") : tr("voice.sayConfirm"));
+      setReply(say);
+      speak(say, undefined, verdict ? undefined : () => startListening());
+      return;
+    }
     try {
       const res = await fetch("/api/voice", {
         method: "POST",
@@ -269,7 +286,8 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
       const override = run(data.actions);
       const say = override || data.reply;
       setReply(say);
-      speak(say, override ? undefined : data.speech);
+      // When the reply asks a question (the payment confirmation), listen for the answer straight away.
+      speak(say, override ? undefined : data.speech, data.listen && !override ? () => startListening() : undefined);
     } catch (e) {
       setError((e as Error).message || tr("voice.unreachable"));
       setPhase("idle");

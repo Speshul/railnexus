@@ -265,6 +265,33 @@ async function migrate(db: Db) {
     `);
   }
   await db.exec("CREATE INDEX IF NOT EXISTS berth_run ON berth_allocations(train_number, train_start_date, class_code)");
+  // Wallet: a balance per user, a ledger of every change, and Razorpay top-up orders.
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS wallets (
+      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      balance_paise INTEGER NOT NULL DEFAULT 0 CHECK (balance_paise >= 0),
+      created_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS wallet_txns (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      amount_paise INTEGER NOT NULL,      -- + credit, - debit
+      kind TEXT NOT NULL,                 -- welcome | topup | booking | refund | reversal
+      ref TEXT,                           -- Razorpay order id, trip id or PNR
+      balance_after INTEGER NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS wallet_txns_user ON wallet_txns(user_id, created_at);
+    CREATE TABLE IF NOT EXISTS wallet_topups (
+      order_id TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      amount_paise INTEGER NOT NULL,
+      status TEXT NOT NULL,               -- CREATED | PAID | FAILED
+      payment_id TEXT,
+      created_at INTEGER NOT NULL,
+      paid_at INTEGER
+    );
+  `);
 }
 
 const secrets = new Map<string, string>();

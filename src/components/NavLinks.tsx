@@ -14,6 +14,7 @@ export function NavLinks({ loggedIn }: { loggedIn: boolean }) {
     { href: "/trains", label: t("nav.trains"), match: (p: string) => p.startsWith("/train") },
     { href: "/stations", label: t("nav.stations"), match: (p: string) => p.startsWith("/station") },
     { href: "/pnr", label: t("nav.pnr"), match: (p: string) => p.startsWith("/pnr") },
+    ...(loggedIn ? [{ href: "/wallet", label: t("nav.wallet"), match: (p: string) => p.startsWith("/wallet") }] : []),
     ...(loggedIn ? [{ href: "/account", label: t("nav.bookings"), match: (p: string) => p.startsWith("/account") || p.startsWith("/booking") || p.startsWith("/ticket") }] : []),
   ];
   return (

@@ -12,6 +12,7 @@ import {
 import { isValidDate } from "./dates";
 import type { User } from "./auth";
 import { msg, type MessageKey, type Msg } from "@/i18n/core";
+import { credit } from "./wallet";
 
 // ---------------------------------------------------------------- input
 
@@ -480,8 +481,13 @@ export function quoteCancellation(b: BookingRecord, idxs: number[], now = Date.n
   return { hoursLeft, rows, refund: rows.reduce((s, r) => s + r.refund, 0), allowed: rows.length > 0 };
 }
 
-/** Mark passengers cancelled, free their berths and record the refund (the Razorpay call is made by the caller). */
-export async function applyCancellation(b: BookingRecord, quote: CancelQuote, refund: { id: string; status: string; paymentId: string } | null) {
+/**
+ * Mark passengers cancelled, free their berths and record the refund. Razorpay refunds are made by the caller
+ * first; a wallet refund (`toWalletOf` = user id) is credited here, in the same transaction.
+ */
+export async function applyCancellation(
+  b: BookingRecord, quote: CancelQuote, refund: { id: string; status: string; paymentId: string } | null, toWalletOf?: number
+) {
   await transaction(async (db) => {
     let seatsFreed = 0;
     for (const r of quote.rows) {
@@ -495,6 +501,7 @@ export async function applyCancellation(b: BookingRecord, quote: CancelQuote, re
     const remaining = b.passengers.filter((p) => !p.cancelled && p.age >= 5 && !quote.rows.some((r) => r.idx === p.idx));
     await db.run("UPDATE bookings SET seats = MAX(0, seats - ?), refund_paise = refund_paise + ?, status = ? WHERE id = ?",
       seatsFreed, refundPaise, remaining.length ? "CONFIRMED" : "CANCELLED", b.id);
+    if (toWalletOf !== undefined && refundPaise > 0) await credit(db, toWalletOf, refundPaise, "refund", b.pnr);
     if (refund) {
       await db.run("INSERT INTO refunds (id, payment_id, booking_id, amount_paise, status, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
         refund.id, refund.paymentId, b.id, refundPaise, refund.status, JSON.stringify(quote.rows), Date.now());

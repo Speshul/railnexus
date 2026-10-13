@@ -4,7 +4,7 @@ import { isValidDate, formatDate, diffDays } from "../dates";
 import { BOOKING_WINDOW_DAYS, CLASSES } from "../constants";
 import type { VoiceAction, VoiceContext, VoiceIntent } from "./types";
 
-type Out = { reply: string; actions: VoiceAction[] };
+type Out = { reply: string; actions: VoiceAction[]; listen?: boolean };
 
 /** Roughly: did the user speak Hindi/Hinglish? Used for the wording of fallback replies. */
 export function isHinglish(text: string) {
@@ -162,6 +162,25 @@ export function resolveIntent(intent: VoiceIntent, ctx: VoiceContext, heard: str
     case "continue":
       if (!ctx.booking) return needBooking();
       return { reply: reply(say("Taking you to the review page.", "Review page pe le ja rahe hain.")), actions: [{ type: "continue" }] };
+
+    case "pay": {
+      // Only opens the confirmation card. The browser itself listens for "confirm payment" next.
+      const r = ctx.review;
+      if (!r) return { reply: say("Go to the review page of your booking first, then say \"pay\".", "Pehle booking ke review page pe jaiye, phir boliye \"pay karo\"."), actions: [] };
+      if (!r.enough) {
+        return {
+          reply: say(`Your wallet has ${r.balance}, not enough for ${r.amount}. Add money to your wallet, or pay with UPI or card.`,
+            `Wallet mein ${r.balance} hain, ${r.amount} ke liye kaafi nahi. Wallet mein paise daaliye, ya UPI/card se pay kijiye.`),
+          actions: [],
+        };
+      }
+      return {
+        reply: say(`Pay ${r.amount} from your wallet for ${r.summary}? Say "confirm payment" to pay, or "cancel".`,
+          `${r.summary} ke liye wallet se ${r.amount} pay karein? Pay karne ke liye boliye "confirm payment", ya "cancel".`),
+        actions: [{ type: "pay_wallet" }],
+        listen: true,
+      };
+    }
 
     case "navigate": {
       // The trip planner gets the whole sentence and runs straight away; the explorer starts from the current search.

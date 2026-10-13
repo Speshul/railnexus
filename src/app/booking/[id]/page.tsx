@@ -13,6 +13,8 @@ import { inr, pct, statusTone } from "@/lib/format";
 import { bookHref } from "@/lib/trip-url";
 import { HoldTimer } from "@/components/HoldTimer";
 import { PayButton } from "@/components/PayButton";
+import { WalletPay } from "@/components/WalletPay";
+import { walletBalance } from "@/lib/wallet";
 import { CancelPanel } from "@/components/CancelPanel";
 import { cancelHold } from "@/app/actions/booking";
 import { getT } from "@/i18n/server";
@@ -141,6 +143,8 @@ export default async function TripPage({ params, searchParams }: PageProps<"/boo
   const first = trip.legs[0];
   const paid = trip.status === "CONFIRMED" || (trip.status === "CANCELLED" && !!trip.payment && trip.payment.status === "PAID");
   const pending = trip.status === "PENDING_PAYMENT";
+  const balance = pending ? await walletBalance(user.id) : 0;
+  const paidByWallet = trip.payment?.method === "wallet";
   const again = bookHref(trip.legs.map((b) => ({ train: b.train_number, from: b.from_code, to: b.to_code, date: b.journey_date, cls: b.class_code })), first.quota);
   const multi = trip.legs.length > 1;
   const roundTrip = multi && trip.legs[0].train_number !== trip.legs[1].train_number && isRoundTrip(trip.legs[0].from_code, trip.legs[1].to_code);
@@ -163,7 +167,7 @@ export default async function TripPage({ params, searchParams }: PageProps<"/boo
           <div>
             <p className="font-semibold text-ok">{t.n("trip.paidTitle", trip.legs.length)}</p>
             <p className="text-sm text-slate-700">
-              {t("trip.paidBody", { pnrs: trip.legs.map((b) => b.pnr).join(" & "), amount: inr(trip.totalPaise / 100, true), method: trip.payment?.method ?? "test" })}{" "}
+              {t(paidByWallet ? "trip.paidBodyWallet" : "trip.paidBody", { pnrs: trip.legs.map((b) => b.pnr).join(" & "), amount: inr(trip.totalPaise / 100, true), method: trip.payment?.method ?? "test" })}{" "}
               <Link href="/account" className="underline">{t("trip.myBookings")}</Link>.
             </p>
           </div>
@@ -217,6 +221,19 @@ export default async function TripPage({ params, searchParams }: PageProps<"/boo
           </dl>
           {pending && (
             <>
+              <WalletPay
+                tripId={trip.id}
+                amountPaise={trip.totalPaise}
+                balancePaise={balance}
+                summary={{
+                  trains: trip.legs.map((b) => `${b.train_number} ${b.fare.trainName}`).join(" + "),
+                  route: `${trip.legs[0].fare.fromName} → ${trip.legs[trip.legs.length - 1].fare.toName}`,
+                  date: formatDate(trip.legs[0].journey_date, { weekday: "short", day: "numeric", month: "short" }, t.locale),
+                  cls: [...new Set(trip.legs.map((b) => b.class_code))].join(" + "),
+                  passengers: trip.legs[0].passengers.map((p) => p.name),
+                }}
+              />
+              <p className="text-center text-xs text-slate-500">{t("wallet.or")}</p>
               <PayButton tripId={trip.id} amountPaise={trip.totalPaise} />
               <form action={cancelHold.bind(null, trip.id)}>
                 <button className="btn-secondary w-full">{t("trip.release")}</button>
@@ -225,7 +242,7 @@ export default async function TripPage({ params, searchParams }: PageProps<"/boo
             </>
           )}
           {paid && trip.payment?.payment_id && (
-            <p className="text-xs text-slate-500">{t("trip.rzpPayment", { id: trip.payment.payment_id })}</p>
+            <p className="text-xs text-slate-500">{paidByWallet ? t("wallet.paidWith") : t("trip.rzpPayment", { id: trip.payment.payment_id })}</p>
           )}
           {!pending && !paid && <Link href={again} className="btn-primary w-full">{t("trip.bookAgain")}</Link>}
         </aside>

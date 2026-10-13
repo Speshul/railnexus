@@ -2,6 +2,7 @@
 // Less flexible than the language model, but keeps the demo working with no keys or no quota left.
 import type { VoiceContext, VoiceIntent } from "./types";
 import { addDays, weekday } from "../dates";
+import { isHinglish } from "./resolve";
 
 // A few common Devanagari words that speech recognition (hi-IN) produces, mapped to Roman Hinglish.
 const DEVANAGARI: Record<string, string> = {
@@ -70,8 +71,14 @@ export function ruleIntent(input: string, ctx: VoiceContext, today: string): Voi
   const quota = /\btatkal\b/.test(t) ? "TQ" : /\bladies\b/.test(t) ? "LD" : /\bsenior\b/.test(t) ? "SS" : null;
   const date = parseDate(t, today);
 
-  if (/\b(pay|payment|upi|card|bhugtan)\b/.test(t))
-    return { ...base, reply: "Payment aapko khud Pay button dabake karna hoga, ye hum nahi kar sakte." };
+  if (/\b(upi|card)\b/.test(t))
+    return {
+      ...base,
+      reply: isHinglish(input)
+        ? "UPI ya card payment aapko khud Pay button dabake karna hoga. Wallet se pay karna ho to boliye \"wallet se pay karo\"."
+        : "Please press the Pay button yourself for UPI or card. To pay from your wallet, say \"pay from wallet\".",
+    };
+  if (/\b(pay|payment|bhugtan)\b/.test(t)) return { ...base, intent: "pay" };
   if (/\b(help|madad|what can you do|kya kar sakte)\b/.test(t)) return { ...base, intent: "help" };
 
   // navigation
@@ -138,7 +145,7 @@ export function ruleIntent(input: string, ctx: VoiceContext, today: string): Voi
 }
 
 const FAST_INTENTS = new Set<VoiceIntent["intent"]>([
-  "navigate", "change_date", "continue", "set_option", "help", "sort", "filter", "show_tab", "select_option",
+  "navigate", "change_date", "continue", "pay", "set_option", "help", "sort", "filter", "show_tab", "select_option",
 ]);
 
 /**

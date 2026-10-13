@@ -22,7 +22,9 @@ export function CancelPanel({ tripId, bookingId, pnr, rows, blockedReason }: {
   if (state?.done) {
     return (
       <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-ok">
-        {t("cancel.done")} {state.done.refund > 0 ? t("cancel.refund", { amount: inr(state.done.refund), id: state.done.refundId ?? "" }) : t("cancel.noRefund")}
+        {t("cancel.done")} {state.done.refund > 0
+          ? state.done.toWallet ? t("cancel.refundWallet", { amount: inr(state.done.refund) }) : t("cancel.refund", { amount: inr(state.done.refund), id: state.done.refundId ?? "" })
+          : t("cancel.noRefund")}
       </p>
     );
   }

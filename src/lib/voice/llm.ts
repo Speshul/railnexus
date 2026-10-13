@@ -32,7 +32,10 @@ Intents:
 - navigate: page = home|explore|plan|bookings (my tickets)|pnr (PNR status)|trains|stations|login|register|train_route|station|back. train_route needs train (number); station needs station (name).
   explore = "where can I go", ideas for places to visit. plan = the user describes a whole trip rather than one search: a return journey, a budget, a group, "plan a trip", "weekend trip", or somewhere vague ("hills", "beach").
 - help: user asks what they can say.
-- unknown: anything else, including payment requests. You can never pay or enter card/UPI details; say the user must press Pay themselves.
+- pay: on the review page (context.review present), the user wants to pay for the held booking from their wallet ("pay",
+  "payment karo", "wallet se pay karo", "book kar do", "ticket confirm karo"). This only opens a confirmation card; the
+  user must still confirm. Without context.review, still use pay (the app explains they need the review page first).
+- unknown: anything else, including requests to pay by card or UPI or to type card details (you never handle those).
 
 "reply": one short sentence confirming what you are doing, in the user's language. If the utterance contains ANY Hindi words
 (se, kal, mein, karo, chahiye, dikhao, ...) or Devanagari, reply in Hinglish written in Roman script; only reply in English if the user spoke only English.

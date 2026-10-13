@@ -86,7 +86,7 @@ export function PayButton({ tripId, amountPaise }: { tripId: string; amountPaise
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" onReady={() => setReady(true)} />
       <button onClick={pay} disabled={busy || !ready} className="btn-primary w-full py-3">
         {busy ? <Loader2 className="size-4 animate-spin" /> : <CreditCard className="size-4" />}
-        {phase === "verifying" ? t("pay.confirming") : phase === "open" ? t("pay.inWindow") : t("pay.pay", { amount: inr(amountPaise / 100, true) })}
+        {phase === "verifying" ? t("pay.confirming") : phase === "open" ? t("pay.inWindow") : t("pay.payUpi", { amount: inr(amountPaise / 100, true) })}
       </button>
       {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-bad">{error}</p>}
       <div className="rounded-md border border-dashed border-slate-300 p-2 text-xs text-slate-600">
