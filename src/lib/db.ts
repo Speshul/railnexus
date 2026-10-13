@@ -78,8 +78,12 @@ function wrap(c: Client | Transaction): Db {
 }
 
 function connect() {
-  const url = process.env.TURSO_DATABASE_URL;
-  if (url) return createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
+  // Values pasted into a hosting dashboard sometimes keep quotes or a trailing space from the .env file.
+  const clean = (v?: string) => v?.trim().replace(/^["']|["']$/g, "") || undefined;
+  const url = clean(process.env.TURSO_DATABASE_URL);
+  if (url) return createClient({ url, authToken: clean(process.env.TURSO_AUTH_TOKEN) });
+  // Vercel's filesystem is read-only and temporary, so a local database file can't work there.
+  if (process.env.VERCEL) throw new Error("TURSO_DATABASE_URL is not set in this Vercel project's environment variables (then redeploy).");
   fs.mkdirSync(DATA_DIR, { recursive: true });
   return createClient({ url: `file:${path.join(DATA_DIR, "app.db").split(path.sep).join("/")}` });
 }
@@ -158,7 +162,11 @@ export function appDb(): Promise<Db> {
   if (!g.__railnexusApp) {
     g.__railnexusApp = openApp();
     // Don't keep a failure (e.g. Turso briefly unreachable): the next request tries again.
-    g.__railnexusApp.catch(() => (g.__railnexusApp = undefined));
+    g.__railnexusApp.catch((e) => {
+      console.error(`[db] could not open the app database: ${(e as Error).message}`);
+      g.__railnexusApp = undefined;
+      g.__railnexusClient = undefined;
+    });
   }
   return g.__railnexusApp;
 }
