@@ -15,17 +15,17 @@ export function CoachBoard({ number, name, from, to, size = "md", as: Tag = "div
   children?: ReactNode;
 }) {
   const s = {
-    sm: { pad: "px-3 py-1.5", num: "text-[1.5rem]", name: "text-[1.2rem]", route: "text-[1.05rem]" },
-    md: { pad: "px-5 py-2.5", num: "text-[2.2rem]", name: "text-[1.6rem]", route: "text-[1.3rem]" },
-    lg: { pad: "px-6 py-3.5", num: "text-[3rem]", name: "text-[2.2rem]", route: "text-[1.6rem]" },
+    sm: { pad: "px-4 py-2", num: "text-[1.2rem]", name: "text-[1.05rem]", route: "text-[1rem]" },
+    md: { pad: "px-5 py-3", num: "text-[1.55rem]", name: "text-[1.2rem]", route: "text-[1.05rem]" },
+    lg: { pad: "px-7 py-4", num: "text-[2.1rem]", name: "text-[1.6rem]", route: "text-[1.25rem]" },
   }[size];
   return (
     <div className={`flex items-center gap-x-4 gap-y-1 bg-accent text-ink ${s.pad}`}>
-      <Tag className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-4 gap-y-0.5 font-sign uppercase leading-none tracking-[0.03em]">
-        <span className={`${s.num} tracking-[0.05em]`}>{number}</span>
-        <span className={`${s.name} min-w-0`}>{name}</span>
+      <Tag className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-4 gap-y-0.5 font-sign leading-tight">
+        <span className={`${s.num} font-bold tracking-[0.02em]`}>{number}</span>
+        <span className={`${s.name} min-w-0 font-semibold`}>{name}</span>
         {from && to && (
-          <span className={`${s.route} whitespace-nowrap text-ink/80`}>
+          <span className={`${s.route} whitespace-nowrap font-medium text-ink/75`}>
             {from} <span aria-hidden>→</span> {to}
           </span>
         )}

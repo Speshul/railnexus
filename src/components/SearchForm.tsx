@@ -80,7 +80,7 @@ export function SearchForm({ defaults = {}, today, compact = false }: { defaults
           <input type="checkbox" checked={nearby} onChange={(e) => setNearby(e.target.checked)} className="size-4 accent-brand" />
           {t("search.nearby")}
         </label>
-        <button className={`btn-primary ${compact ? "h-[2.75rem]" : "px-10 py-3.5 font-sign text-[1.6rem] uppercase leading-none tracking-[0.05em]"}`}>
+        <button className={`btn-primary ${compact ? "h-[2.75rem]" : "px-10 py-3.5 font-sign text-[1.15rem] leading-tight"}`}>
           <Search className={compact ? "size-4" : "size-5"} aria-hidden /> {compact ? t("search.modify") : t("search.submit")}
         </button>
       </div>

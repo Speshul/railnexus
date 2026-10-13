@@ -36,7 +36,7 @@ async function LegCard({ b, index, multi, roundTrip, paid, tripId, t }: { b: Boo
   const sun = b.status !== "CANCELLED" ? sunForJourney(b.train_number, b.from_code, b.to_code, b.train_start_date) : null;
   return (
     <section className="card overflow-hidden">
-      {multi && <p className="bg-brand px-5 pb-1 pt-1.5 font-sign text-[1.2rem] uppercase leading-none tracking-[0.05em] text-accent">{roundTrip ? t(index === 0 ? "book.going" : "book.comingBack") : t("book.trainN", { i: index + 1 })}</p>}
+      {multi && <p className="bg-brand px-5 pb-1 pt-1.5 font-sign text-[0.95rem] leading-tight text-accent">{roundTrip ? t(index === 0 ? "book.going" : "book.comingBack") : t("book.trainN", { i: index + 1 })}</p>}
       <CoachBoard as="h2" number={b.train_number} name={f.trainName} from={f.fromName} to={f.toName} />
       <div className="flex items-stretch gap-4 border-b-2 border-ground px-5">
         <div className="flex-1 py-3">
@@ -59,13 +59,13 @@ async function LegCard({ b, index, multi, roundTrip, paid, tripId, t }: { b: Boo
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 p-4">
         <div>
-          <div className="font-sign text-[2.6rem] leading-none text-ink">{f.dep}</div>
+          <div className="font-sign text-[1.87rem] leading-tight text-ink">{f.dep}</div>
           <div className="text-sm">{f.fromName} ({b.from_code})</div>
           <div className="text-sm text-slate-500">{fullDate(b.journey_date, t)}</div>
         </div>
         <div className="text-center text-sm text-slate-500">{formatDuration(f.duration, t.locale)}<br />{t("unit.km", { n: f.distance })}</div>
         <div className="text-right">
-          <div className="font-sign text-[2.6rem] leading-none text-ink">{f.arr}</div>
+          <div className="font-sign text-[1.87rem] leading-tight text-ink">{f.arr}</div>
           <div className="text-sm">{f.toName} ({b.to_code})</div>
           <div className="text-sm text-slate-500">{fullDate(f.arrivalDate, t)}</div>
         </div>
@@ -163,7 +163,7 @@ export default async function TripPage({ params, searchParams }: PageProps<"/boo
       </ol>
 
       {paid && sp.paid === "1" && (
-        <div className="mb-4 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4">
+        <div className="mb-4 flex items-start gap-3 rounded-xl bg-brand-light p-4">
           <CheckCircle2 className="mt-0.5 size-6 shrink-0 text-ok" aria-hidden />
           <div>
             <p className="font-semibold text-ok">{t.n("trip.paidTitle", trip.legs.length)}</p>
@@ -212,7 +212,7 @@ export default async function TripPage({ params, searchParams }: PageProps<"/boo
         </div>
 
         <aside className="card h-fit space-y-3 p-4 lg:sticky lg:top-4">
-          <h2 className="font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{paid ? t("trip.payment") : t("trip.paymentSummary")}</h2>
+          <h2 className="font-sign text-[1.15rem] leading-tight text-brand">{paid ? t("trip.payment") : t("trip.paymentSummary")}</h2>
           <dl className="space-y-1.5 text-sm">
             <div className="flex justify-between"><dt className="text-slate-600">{multi ? t("trip.ticketFareN", { n: trip.legs.length }) : t("fare.ticket")}</dt><dd>{inr(ticketFare)}</dd></div>
             <div className="flex justify-between"><dt className="text-slate-600">{t("fare.convenience")}</dt><dd>{inr(convenience, true)}</dd></div>

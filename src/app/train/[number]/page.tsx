@@ -47,12 +47,12 @@ export default async function TrainPage({ params, searchParams }: PageProps<"/tr
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-6">
-      <div className="mb-1 overflow-hidden rounded-t-md">
+      <div className="mb-1 overflow-hidden rounded-t-xl">
         <CoachBoard as="h1" size="lg" number={train.number} name={train.name}>
-          <span className="rounded bg-brand px-2.5 pb-0.5 pt-1 font-sign text-[1.3rem] uppercase leading-none tracking-[0.05em] text-accent">{t("train.zone", { type: t(`ttype.${train.type}` as MessageKey), zone: train.zone ?? "IR" })}</span>
+          <span className="rounded bg-brand px-2.5 pb-0.5 pt-1 font-sign text-[0.95rem] leading-tight text-accent">{t("train.zone", { type: t(`ttype.${train.type}` as MessageKey), zone: train.zone ?? "IR" })}</span>
         </CoachBoard>
       </div>
-      <div className="mb-6 rounded-b-md bg-white p-5">
+      <div className="mb-6 rounded-b-xl bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-[1.1rem] text-slate-700">
@@ -97,7 +97,7 @@ export default async function TrainPage({ params, searchParams }: PageProps<"/tr
         <aside className="space-y-4">
           {train.reservable ? (
             <div className="card p-4">
-              <h2 className="mb-3 font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{t("train.bookThis")}</h2>
+              <h2 className="mb-3 font-sign text-[1.15rem] leading-tight text-brand">{t("train.bookThis")}</h2>
               <TrainJourneyPicker
                 key={`${train.number}-${from?.code ?? ""}-${to?.code ?? ""}`}
                 train={train.number}
@@ -116,7 +116,7 @@ export default async function TrainPage({ params, searchParams }: PageProps<"/tr
           )}
           {train.reservable && (
             <div className="card p-4">
-              <h2 className="font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{t("train.fares")}</h2>
+              <h2 className="font-sign text-[1.15rem] leading-tight text-brand">{t("train.fares")}</h2>
               <p className="mb-2 text-sm text-slate-500">
                 {segment ? `${from!.name} → ${to!.name}` : t("train.fullRoute")}, {t("unit.km", { n: km })}
               </p>
@@ -136,7 +136,7 @@ export default async function TrainPage({ params, searchParams }: PageProps<"/tr
           )}
           {sun && (
             <div className="card p-4">
-              <h2 className="mb-1 flex items-center gap-2 font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">
+              <h2 className="mb-1 flex items-center gap-2 font-sign text-[1.15rem] leading-tight text-brand">
                 <Sun className="size-4 text-amber-600" aria-hidden /> {t("sun.title")}
               </h2>
               <SunSide report={sun} t={t} compact />

@@ -15,14 +15,14 @@ export default async function StationsPage() {
     .all() as { code: string; name: string; state: string | null; train_count: number }[];
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
-      <h1 className="mb-1 font-sign text-[3rem] uppercase leading-[0.9] tracking-[0.03em] text-brand">{t("stns.title")}</h1>
+      <h1 className="mb-1 font-sign text-[2.16rem] leading-tight text-brand">{t("stns.title")}</h1>
       <p className="mb-4 text-sm text-slate-600">{t("stns.body")}</p>
       <div className="card mb-6 max-w-xl p-4"><StationFinder /></div>
-      <h2 className="mb-3 font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{t("stns.busiest")}</h2>
+      <h2 className="mb-3 font-sign text-[1.15rem] leading-tight text-brand">{t("stns.busiest")}</h2>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {busiest.map((s) => (
           <Link key={s.code} href={`/station/${s.code}`} className="card flex items-center justify-between p-3 text-sm hover:border-brand">
-            <span><b>{s.name}</b> <span className="font-sign text-[1.1rem] text-slate-500">{s.code}</span></span>
+            <span><b>{s.name}</b> <span className="font-sign text-[0.95rem] text-slate-500">{s.code}</span></span>
             <span className="text-sm text-slate-500">{t("stns.trains", { n: s.train_count })}</span>
           </Link>
         ))}

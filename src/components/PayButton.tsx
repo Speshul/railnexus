@@ -49,7 +49,7 @@ export function PayButton({ tripId, amountPaise }: { tripId: string; amountPaise
       order_id: order.orderId,
       prefill: order.prefill,
       notes: { trip: tripId },
-      theme: { color: "#1b2559" },
+      theme: { color: "#04056f" },
       modal: { ondismiss: () => setPhase((p) => (p === "open" ? "idle" : p)) },
       handler: async (r: RzpResponse) => {
         setPhase("verifying");
@@ -90,7 +90,7 @@ export function PayButton({ tripId, amountPaise }: { tripId: string; amountPaise
         {phase === "verifying" ? t("pay.confirming") : phase === "open" ? t("pay.inWindow") : t("pay.payUpi", { amount: inr(amountPaise / 100, true) })}
       </button>
       {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-bad">{error}</p>}
-      <div className="rounded-md border border-dashed border-slate-300 p-2 text-sm text-slate-600">
+      <div className="px-1 pt-1 text-sm text-slate-600">
         <p className="mb-1 flex items-center gap-1 font-semibold"><ShieldCheck className="size-3.5" aria-hidden /> {t("pay.testTitle")}</p>
         <p>{t("pay.testUpi", { ok: "success@razorpay", fail: "failure@razorpay" })}</p>
         <p>{t("pay.testCard", { card: "4100 2800 0000 1007" })}</p>

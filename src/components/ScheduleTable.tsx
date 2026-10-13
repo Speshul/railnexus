@@ -12,7 +12,7 @@ export function ScheduleTable({ stops, segment }: { stops: Stop[]; segment: { fr
   return (
     <div className="card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
-        <h2 className="font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{t("sched.title")}</h2>
+        <h2 className="font-sign text-[1.15rem] leading-tight text-brand">{t("sched.title")}</h2>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" className="size-4 accent-brand" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
           {t("sched.showAll", { n: stops.length - stops.filter((s) => s.halt).length })}
@@ -45,7 +45,7 @@ export function ScheduleTable({ stops, segment }: { stops: Stop[]; segment: { fr
                   <td className="px-3 py-1.5 tabular-nums">{s.halt ? haltNo : ""}</td>
                   <td className="px-3 py-1.5">
                     <Link href={`/station/${s.code}`} className="hover:underline">{s.name}</Link>{" "}
-                    <span className="font-sign text-[1.1rem] text-slate-500">{s.code}</span>
+                    <span className="font-sign text-[0.95rem] text-slate-500">{s.code}</span>
                     {!s.halt && <span className="ml-1 text-sm uppercase">{t("sched.passes")}</span>}
                   </td>
                   <td className="px-3 py-1.5 tabular-nums">{s.arr ?? t("sched.starts")}</td>

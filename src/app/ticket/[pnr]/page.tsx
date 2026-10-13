@@ -31,7 +31,7 @@ export default async function TicketPage({ params }: PageProps<"/ticket/[pnr]">)
   if (!b || b.user_id !== user.id) notFound();
   const f = b.fare;
   const verifyUrl = `${await siteOrigin()}/verify/${pnr}?s=${await ticketSignature(pnr)}`;
-  const qr = await QRCode.toString(verifyUrl, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#0b2a56", light: "#ffffff" } });
+  const qr = await QRCode.toString(verifyUrl, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#04056f", light: "#ffffff" } });
   const halts = getStops(b.train_number).filter((s) => s.halt);
   const from = halts.find((s) => s.code === b.from_code);
   const to = halts.find((s) => s.code === b.to_code);
@@ -45,18 +45,18 @@ export default async function TicketPage({ params }: PageProps<"/ticket/[pnr]">)
         <PrintButton />
       </div>
 
-      <article className="overflow-hidden rounded-md bg-white print:rounded-none print:border print:border-slate-400">
+      <article className="overflow-hidden rounded-xl bg-white print:rounded-none print:border print:border-slate-400">
         <header className="flex flex-wrap items-center justify-between gap-3 bg-brand px-6 py-4 text-white print:bg-white print:text-slate-900">
           <div className="flex items-center gap-2">
             <TrainFront className="size-7 text-accent" aria-hidden />
             <div>
-              <div className="font-sign text-[1.7rem] uppercase leading-none tracking-[0.04em] text-accent">{t("ticket.title", { app: APP_NAME })}</div>
+              <div className="font-sign text-[1.22rem] leading-tight text-accent">{t("ticket.title", { app: APP_NAME })}</div>
               <div className="text-sm opacity-90">{t("ticket.ers")}</div>
             </div>
           </div>
           <div className="text-right">
             <div className="text-sm opacity-90">{t("ticket.pnr")}</div>
-            <div className="font-sign text-[2.4rem] leading-none tracking-[0.08em]">{pnr}</div>
+            <div className="font-sign text-[1.73rem] leading-tight">{pnr}</div>
           </div>
         </header>
         <CoachBoard as="h1" number={b.train_number} name={f.trainName} from={f.fromName} to={f.toName} />
@@ -71,14 +71,14 @@ export default async function TicketPage({ params }: PageProps<"/ticket/[pnr]">)
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
               <div>
                 <div className="text-sm uppercase text-slate-500">{t("ticket.boarding")}</div>
-                <div className="font-sign text-[2.6rem] leading-none text-ink">{f.dep}</div>
+                <div className="font-sign text-[1.87rem] leading-tight text-ink">{f.dep}</div>
                 <div className="font-medium">{f.fromName} ({b.from_code})</div>
                 <div className="text-sm text-slate-600">{fullDate(b.journey_date, L)}</div>
               </div>
               <div className="text-center text-sm text-slate-500">{formatDuration(f.duration, L)}<div className="my-1 h-px w-16 bg-slate-300" /></div>
               <div className="text-right">
                 <div className="text-sm uppercase text-slate-500">{t("ticket.arrival")}</div>
-                <div className="font-sign text-[2.6rem] leading-none text-ink">{f.arr}</div>
+                <div className="font-sign text-[1.87rem] leading-tight text-ink">{f.arr}</div>
                 <div className="font-medium">{f.toName} ({b.to_code})</div>
                 <div className="text-sm text-slate-600">{fullDate(f.arrivalDate, L)}</div>
               </div>
@@ -102,8 +102,8 @@ export default async function TicketPage({ params }: PageProps<"/ticket/[pnr]">)
                   <td className="font-medium">{p.name}</td>
                   <td>{p.age}</td>
                   <td>{t(`gshort.${p.gender}` as MessageKey)}</td>
-                  <td className="font-sign text-[1.1rem]">{p.booking_status}</td>
-                  <td className={`font-sign text-[1.1rem] font-semibold ${statusTone(p.status)}`}>{p.cancelled ? t("ticket.cancelled") : p.status}</td>
+                  <td className="font-sign text-[0.95rem]">{p.booking_status}</td>
+                  <td className={`font-sign text-[0.95rem] font-semibold ${statusTone(p.status)}`}>{p.cancelled ? t("ticket.cancelled") : p.status}</td>
                   <td className="text-sm">{p.food_pref ? t(`food.${p.food_pref}` as MessageKey) : "—"}</td>
                 </tr>
               ))}

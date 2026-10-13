@@ -426,9 +426,9 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
   return (
     <>
       {open && (
-        <div role="dialog" aria-label={tr("voice.title")} className="print:hidden fixed bottom-28 right-8 z-50 w-[min(27rem,calc(100vw-2rem))] overflow-hidden rounded-md bg-white ring-4 ring-brand">
+        <div role="dialog" aria-label={tr("voice.title")} className="print:hidden fixed bottom-28 right-8 z-50 w-[min(27rem,calc(100vw-2rem))] overflow-hidden rounded-2xl bg-white ring-4 ring-brand">
           <div className="flex items-center gap-2 bg-brand px-4 py-2.5 text-white">
-            <span className="font-sign text-[1.45rem] uppercase tracking-[0.05em] text-accent">{tr("voice.title")}</span>
+            <span className="font-sign text-[1.04rem] text-accent">{tr("voice.title")}</span>
             <div className="ml-auto flex items-center gap-1">
               <div className="flex rounded-md p-0.5 text-sm ring-1 ring-inset ring-white/40" role="group" aria-label={tr("voice.speakLang")}>
                 {(["en-IN", "hi-IN"] as Lang[]).map((l) => (

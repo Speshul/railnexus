@@ -160,7 +160,7 @@ export function BookingForm({ journeys, quota, user, saved }: {
       <div className="space-y-4">
         <section className="card p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{t("bf.passengers")}</h2>
+            <h2 className="font-sign text-[1.15rem] leading-tight text-brand">{t("bf.passengers")}</h2>
             <span className="text-sm text-slate-500">{t("bf.max", { max, quota: t(`quota.${journey.quota}` as MessageKey) })}</span>
           </div>
 
@@ -242,7 +242,7 @@ export function BookingForm({ journeys, quota, user, saved }: {
         </section>
 
         <section className="card grid gap-3 p-4 sm:grid-cols-2">
-          <h2 className="sm:col-span-2 font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{t("bf.contact")}</h2>
+          <h2 className="sm:col-span-2 font-sign text-[1.15rem] leading-tight text-brand">{t("bf.contact")}</h2>
           <div>
             <label className="label" htmlFor="email">{t("bf.email")}</label>
             <input id="email" type="email" className={`input ${fe.email ? "border-bad" : ""}`} value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -257,7 +257,7 @@ export function BookingForm({ journeys, quota, user, saved }: {
         </section>
 
         <section className="card space-y-3 p-4 text-sm">
-          <h2 className="font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{t("bf.options")}</h2>
+          <h2 className="font-sign text-[1.15rem] leading-tight text-brand">{t("bf.options")}</h2>
           <fieldset>
             <legend className="mb-1 font-medium">{t("bf.insurance")}</legend>
             <label className="mr-4 inline-flex items-center gap-2"><input type="radio" name="ins" className="accent-brand" checked={insurance === true} onChange={() => setInsurance(true)} /> {t("bf.insYes")}</label>
@@ -279,7 +279,7 @@ export function BookingForm({ journeys, quota, user, saved }: {
       </div>
 
       <aside className="card h-fit space-y-3 p-4 lg:sticky lg:top-4">
-        <h2 className="font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{t("bf.fareSummary")}</h2>
+        <h2 className="font-sign text-[1.15rem] leading-tight text-brand">{t("bf.fareSummary")}</h2>
         <dl className="space-y-1.5 text-sm">
           {fare.perPassenger.map((p, i) => (
             <div key={i} className="flex justify-between">

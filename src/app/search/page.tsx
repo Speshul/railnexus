@@ -73,7 +73,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
           <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
             <div>
               {/* The route lettered like a destination board. */}
-              <h1 className="font-sign text-[3rem] uppercase leading-[0.9] tracking-[0.03em] text-brand">
+              <h1 className="font-sign text-[2.16rem] leading-tight text-brand">
                 {fromStation.name} <span className="text-slate-400">→</span> {toStation.name}
               </h1>
               <p className="mt-1 text-slate-600">

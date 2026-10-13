@@ -18,13 +18,13 @@ export function NavLinks({ loggedIn }: { loggedIn: boolean }) {
     ...(loggedIn ? [{ href: "/account", label: t("nav.bookings"), match: (p: string) => p.startsWith("/account") || p.startsWith("/booking") || p.startsWith("/ticket") }] : []),
   ];
   return (
-    <nav aria-label={t("nav.label")} className="flex items-center gap-x-6 font-sign text-[1.35rem] uppercase tracking-[0.05em] text-white/85">
+    <nav aria-label={t("nav.label")} className="flex items-center gap-x-5 font-sign text-[0.92rem] font-medium text-white/80">
       {links.map((l) => {
         const current = l.match(path);
         // The current section is lettered in yellow with a painted bar beneath, like a platform marking.
         return (
           <Link key={l.href} href={l.href} aria-current={current ? "page" : undefined}
-            className={`relative whitespace-nowrap pb-1 pt-1.5 hover:text-white ${current ? "text-accent after:absolute after:inset-x-0 after:-bottom-[3px] after:h-[4px] after:rounded-sm after:bg-accent" : ""}`}>
+            className={`relative whitespace-nowrap pb-1 pt-1.5 hover:text-white ${current ? "text-accent after:absolute after:inset-x-1 after:-bottom-1 after:h-[3px] after:rounded-full after:bg-accent" : ""}`}>
             {l.label}
           </Link>
         );

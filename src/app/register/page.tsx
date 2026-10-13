@@ -17,7 +17,7 @@ export default async function RegisterPage({ searchParams }: PageProps<"/registe
   return (
     <div className="mx-auto max-w-lg px-4 py-10">
       <div className="card p-6">
-        <h1 className="mb-5 font-sign text-[3rem] uppercase leading-[0.9] tracking-[0.03em] text-brand">{t("reg.title")}</h1>
+        <h1 className="mb-5 font-sign text-[2.16rem] leading-tight text-brand">{t("reg.title")}</h1>
         <RegisterForm next={next} />
       </div>
     </div>

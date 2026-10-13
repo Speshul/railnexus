@@ -22,7 +22,7 @@ export default async function PnrPage({ searchParams }: PageProps<"/pnr">) {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="mb-1 font-sign text-[3rem] uppercase leading-[0.9] tracking-[0.03em] text-brand">{t("pnr.title")}</h1>
+      <h1 className="mb-1 font-sign text-[2.16rem] leading-tight text-brand">{t("pnr.title")}</h1>
       <p className="mb-4 text-sm text-slate-600">{t("pnr.body")}</p>
       <form className="card mb-6 flex gap-2 p-3" action="/pnr">
         <input name="n" aria-label={t("pnr.label")} defaultValue={n} inputMode="numeric" maxLength={10} pattern="\d{10}" required placeholder={t("pnr.placeholder")} className="input font-sign tracking-widest" />
@@ -34,8 +34,8 @@ export default async function PnrPage({ searchParams }: PageProps<"/pnr">) {
         <div className="card overflow-hidden">
           <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 p-4">
             <div>
-              <div className="font-sign text-[1.2rem] text-slate-500">{t("pnr.pnr", { n: b.pnr ?? "" })}</div>
-              <h2 className="font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{b.train_number} {b.fare.trainName}</h2>
+              <div className="font-sign text-[0.95rem] text-slate-500">{t("pnr.pnr", { n: b.pnr ?? "" })}</div>
+              <h2 className="font-sign text-[1.15rem] leading-tight text-brand">{b.train_number} {b.fare.trainName}</h2>
               <p className="text-sm text-slate-600">{t("book.classQuota", { cls: t(`class.${b.class_code}` as MessageKey), code: b.class_code, quota: t(`quota.${b.quota}` as MessageKey) })}</p>
             </div>
             <span className={`rounded-full px-3 py-1 text-sm font-semibold ${chart === "chart.prepared" ? "bg-amber-100 text-warn" : "bg-slate-100 text-slate-600"}`}>{chart && t(chart)}</span>
@@ -61,8 +61,8 @@ export default async function PnrPage({ searchParams }: PageProps<"/pnr">) {
               {b.passengers.map((p, i) => (
                 <tr key={p.idx} className="border-t border-slate-100">
                   <td className="px-4 py-2">{t("pnr.passenger", { i: i + 1 })}</td>
-                  <td className="px-4 py-2 font-sign text-[1.1rem]">{b.status === "PENDING_PAYMENT" ? t("pnr.awaiting") : p.booking_status ?? "—"}</td>
-                  <td className={`px-4 py-2 font-sign text-[1.1rem] font-semibold ${statusTone(p.status)}`}>{p.cancelled ? t("ticket.cancelled") : p.status ?? "—"}</td>
+                  <td className="px-4 py-2 font-sign text-[0.95rem]">{b.status === "PENDING_PAYMENT" ? t("pnr.awaiting") : p.booking_status ?? "—"}</td>
+                  <td className={`px-4 py-2 font-sign text-[0.95rem] font-semibold ${statusTone(p.status)}`}>{p.cancelled ? t("ticket.cancelled") : p.status ?? "—"}</td>
                 </tr>
               ))}
             </tbody>

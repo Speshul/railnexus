@@ -40,7 +40,7 @@ export function WalletTopUp({ initial, min, max, returnTo }: { initial: number; 
       description: t("wallet.topupDesc"),
       order_id: order.orderId,
       prefill: order.prefill,
-      theme: { color: "#1b2559" },
+      theme: { color: "#04056f" },
       modal: { ondismiss: () => setBusy(false) },
       handler: async (r: RzpResponse) => {
         const v = await fetch("/api/wallet/topup/verify", {
@@ -82,7 +82,7 @@ export function WalletTopUp({ initial, min, max, returnTo }: { initial: number; 
         </button>
       </div>
       <p className="text-sm text-slate-500">{t("wallet.limits", { min: inr(min), max: inr(max) })} · {t("pay.testUpi", { ok: "success@razorpay", fail: "failure@razorpay" })}</p>
-      {msg && <p role="status" className={`rounded-md px-3 py-2 text-sm ${msg.ok ? "bg-green-50 text-ok" : "bg-red-50 text-bad"}`}>{msg.text}</p>}
+      {msg && <p role="status" className={`rounded-md px-3 py-2 text-sm ${msg.ok ? "bg-brand-light text-brand" : "bg-red-50 text-bad"}`}>{msg.text}</p>}
     </div>
   );
 }

@@ -45,7 +45,7 @@ export default async function VerifyPage({ params, searchParams }: PageProps<"/v
         {genuine && (
           <div className="space-y-3 p-5 text-sm">
             <div>
-              <div className="font-sign text-[1.1rem] text-slate-500">{t("pnr.pnr", { n: pnr })}</div>
+              <div className="font-sign text-[0.95rem] text-slate-500">{t("pnr.pnr", { n: pnr })}</div>
               <div className="font-semibold">{b!.train_number} {b!.fare.trainName}</div>
               <div className="text-slate-600">
                 {b!.from_code} → {b!.to_code} · {formatDate(b!.journey_date, undefined, t.locale)} · {b!.fare.dep} · {CLASSES[b!.class_code].short}
@@ -55,7 +55,7 @@ export default async function VerifyPage({ params, searchParams }: PageProps<"/v
               {b!.passengers.map((p) => (
                 <li key={p.idx} className="flex justify-between px-3 py-2">
                   <span>{mask(p.name)} · {p.age}{p.gender}</span>
-                  <span className={`font-sign text-[1.1rem] font-semibold ${statusTone(p.status)}`}>{p.cancelled ? t("ticket.cancelled") : p.status}</span>
+                  <span className={`font-sign text-[0.95rem] font-semibold ${statusTone(p.status)}`}>{p.cancelled ? t("ticket.cancelled") : p.status}</span>
                 </li>
               ))}
             </ul>

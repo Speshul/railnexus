@@ -24,7 +24,7 @@ export function TrainCard({ j, quota, initialClass, anchor = true }: { j: Journe
   return (
     <article id={anchor ? j.number : undefined} className="scroll-mt-4 bg-white">
       <CoachBoard as="h3" number={j.number} name={j.name} from={j.from.name} to={j.to.name}>
-        <span className="rounded bg-brand px-2 pb-0.5 pt-1 font-sign text-[1.15rem] uppercase leading-none tracking-[0.05em] text-accent">{t(`ttype.${j.type}` as MessageKey)}</span>
+        <span className="rounded bg-brand px-2 pb-0.5 pt-1 font-sign text-[0.95rem] leading-tight text-accent">{t(`ttype.${j.type}` as MessageKey)}</span>
         <Link href={routeHref} className="inline-flex items-center gap-1 font-semibold text-brand underline-offset-4 hover:underline">
           <MapPin className="size-5" aria-hidden /> {t("card.route")}
         </Link>
@@ -32,26 +32,26 @@ export function TrainCard({ j, quota, initialClass, anchor = true }: { j: Journe
 
       <div className="grid grid-cols-[1fr_minmax(12rem,22rem)_1fr] items-center gap-6 px-5 py-4">
         <div>
-          <div className="font-sign text-[3rem] leading-none tracking-[0.02em] text-ink">{j.from.time}</div>
-          <div className="mt-1 font-semibold">{j.from.name} <span className="font-sign text-[1.1rem] text-slate-500">{j.from.code}</span></div>
+          <div className="font-sign text-[2.16rem] leading-tight text-ink">{j.from.time}</div>
+          <div className="mt-1 font-semibold">{j.from.name} <span className="font-sign text-[0.95rem] text-slate-500">{j.from.code}</span></div>
           <div className="text-[0.95rem] text-slate-600">{formatDate(j.date, undefined, L)}</div>
         </div>
         {/* The journey as a painted track: an open dot where you board, a filled one where you arrive. */}
         <div className="flex flex-col items-center text-[0.95rem] text-slate-600">
-          <span className="font-sign text-[1.35rem] leading-none text-brand">{formatDuration(j.duration, L)}</span>
+          <span className="font-sign text-[0.97rem] leading-tight text-brand">{formatDuration(j.duration, L)}</span>
           <span className="relative my-2 h-[5px] w-full rounded-full bg-brand before:absolute before:-left-1 before:-top-[5px] before:size-[15px] before:rounded-full before:border-[3px] before:border-brand before:bg-white after:absolute after:-right-1 after:-top-[5px] after:size-[15px] after:rounded-full after:bg-brand" aria-hidden />
           <span>{t("unit.km", { n: j.distance })}</span>
         </div>
         <div className="text-right">
-          <div className="font-sign text-[3rem] leading-none tracking-[0.02em] text-ink">{j.to.time}</div>
-          <div className="mt-1 font-semibold">{j.to.name} <span className="font-sign text-[1.1rem] text-slate-500">{j.to.code}</span></div>
+          <div className="font-sign text-[2.16rem] leading-tight text-ink">{j.to.time}</div>
+          <div className="mt-1 font-semibold">{j.to.name} <span className="font-sign text-[0.95rem] text-slate-500">{j.to.code}</span></div>
           <div className="text-[0.95rem] text-slate-600">{formatDate(j.arrivalDate, undefined, L)}</div>
         </div>
       </div>
 
       {j.reservable ? (
         <div className="px-5 pb-4">
-          <p className="mb-2 font-sign text-[1.15rem] uppercase tracking-[0.05em] text-slate-600">{t("card.chooseClass")}</p>
+          <p className="mb-2 font-sign text-[0.95rem] text-slate-600">{t("card.chooseClass")}</p>
           <div className="grid grid-cols-4 divide-x-2 divide-ground border-y-2 border-ground">
             {j.classes.map((c) => (
               <div
@@ -60,10 +60,10 @@ export function TrainCard({ j, quota, initialClass, anchor = true }: { j: Journe
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5">
-                    <span className="rounded bg-brand px-1.5 pb-0.5 pt-1 font-sign text-[1.35rem] leading-none text-accent">{c.cls}</span>
+                    <span className="rounded bg-brand px-1.5 pb-0.5 pt-1 font-sign text-[0.97rem] leading-tight text-accent">{c.cls}</span>
                     <span className="text-[0.9rem] font-semibold leading-tight text-slate-700">{t(`class.${c.cls}` as MessageKey)}</span>
                   </div>
-                  <div className="font-sign text-[1.6rem] leading-none text-ink">{inr(c.fare)}</div>
+                  <div className="font-sign text-[1.15rem] leading-tight text-ink">{inr(c.fare)}</div>
                 </div>
                 {/* Availability is a painted mark plus words: never colour alone. */}
                 <div className={`mt-2 flex items-center gap-1.5 font-semibold ${availTone(c.avail.status)}`}>

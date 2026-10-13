@@ -25,23 +25,23 @@ export default async function WalletPage({ searchParams }: PageProps<"/wallet">)
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
-      <h1 className="mb-4 font-sign text-[3rem] uppercase leading-[0.9] tracking-[0.03em] text-brand">{t("wallet.title")}</h1>
+      <h1 className="mb-4 font-sign text-[2.16rem] leading-tight text-brand">{t("wallet.title")}</h1>
       <div className="grid grid-cols-[1fr_1.1fr] gap-6">
-        {/* The wallet is the one bottle-green enamel plate on the site: green always means money. */}
-        <section className="flex flex-col justify-between rounded-md bg-green p-7 text-white">
-          <p className="flex items-center gap-2 font-sign text-[1.5rem] uppercase tracking-[0.05em] text-accent"><Wallet className="size-5" aria-hidden /> {t("wallet.balance")}</p>
-          <p className="mt-2 font-sign text-[5.5rem] leading-[0.85] tracking-[0.01em]">{inr(balance / 100, true)}</p>
+        {/* The wallet balance: a royal-blue plate with the amount lettered in marigold. */}
+        <section className="flex flex-col justify-between rounded-2xl bg-brand p-8 text-white">
+          <p className="flex items-center gap-2 font-sign text-[1.08rem] text-accent"><Wallet className="size-5" aria-hidden /> {t("wallet.balance")}</p>
+          <p className="mt-2 font-sign text-[3.6rem] font-bold leading-tight text-accent">{inr(balance / 100, true)}</p>
           <p className="mt-4 max-w-[40ch] text-white/90">{t("wallet.why")}</p>
         </section>
         <section className="card p-7">
-          <h2 className="mb-3 font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{t("wallet.addMoney")}</h2>
+          <h2 className="mb-3 font-sign text-[1.15rem] leading-tight text-brand">{t("wallet.addMoney")}</h2>
           <WalletTopUp initial={sp.add ? add : 0} min={TOPUP_MIN} max={TOPUP_MAX} returnTo={returnTo} />
           {returnTo && <p className="mt-3 text-[0.9rem] text-slate-600">{t("wallet.returnNote")} <Link href={returnTo} className="text-brand underline">{t("wallet.backToBooking")}</Link></p>}
         </section>
       </div>
 
       <section className="card mt-6 overflow-hidden">
-        <h2 className="border-b-2 border-ground px-7 py-4 font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{t("wallet.history")}</h2>
+        <h2 className="border-b-2 border-ground px-7 py-4 font-sign text-[1.15rem] leading-tight text-brand">{t("wallet.history")}</h2>
         {history.length === 0 ? (
           <p className="px-7 py-5 text-slate-600">{t("wallet.empty")}</p>
         ) : (
@@ -49,11 +49,11 @@ export default async function WalletPage({ searchParams }: PageProps<"/wallet">)
             {history.map((x) => (
               <li key={x.id} className="flex items-center gap-4 px-7 py-3.5">
                 {x.amount_paise > 0
-                  ? <ArrowDownLeft className="size-7 shrink-0 rounded-full bg-green-light p-1 text-ok" aria-hidden />
+                  ? <ArrowDownLeft className="size-7 shrink-0 rounded-full bg-brand-light p-1 text-brand" aria-hidden />
                   : <ArrowUpRight className="size-5 shrink-0 rounded-full bg-slate-100 p-0.5 text-slate-600" aria-hidden />}
                 <span className="flex-1">
                   <span className="font-medium">{t(`wallet.kind.${x.kind}` as MessageKey)}</span>
-                  {x.ref && x.kind !== "topup" && <span className="ml-1 font-sign text-[1.1rem] text-slate-500">{x.ref}</span>}
+                  {x.ref && x.kind !== "topup" && <span className="ml-1 font-sign text-[0.95rem] text-slate-500">{x.ref}</span>}
                   <span className="block text-sm text-slate-500">{when(x.created_at)}</span>
                 </span>
                 <span className="text-right">

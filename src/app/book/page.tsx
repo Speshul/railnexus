@@ -40,7 +40,7 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10">
         <div className="card p-6 text-center">
-          <h1 className="mb-2 font-sign text-[3rem] uppercase leading-[0.9] tracking-[0.03em] text-brand">{t("book.unavailable")}</h1>
+          <h1 className="mb-2 font-sign text-[2.16rem] leading-tight text-brand">{t("book.unavailable")}</h1>
           <p className="mb-4 text-sm text-slate-600">{t("book.unavailableBody")}</p>
           <Link href="/" className="btn-primary">{t("book.searchAgain")}</Link>
         </div>
@@ -82,7 +82,7 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
               </p>
             )}
             <div className="card overflow-hidden">
-              {multi && <p className="bg-brand px-5 pb-1 pt-1.5 font-sign text-[1.2rem] uppercase leading-none tracking-[0.05em] text-accent">{sameTrain ? t("book.ticketN", { i: i + 1 }) : roundTrip ? t(i === 0 ? "book.going" : "book.comingBack") : t("book.trainN", { i: i + 1 })}</p>}
+              {multi && <p className="bg-brand px-5 pb-1 pt-1.5 font-sign text-[0.95rem] leading-tight text-accent">{sameTrain ? t("book.ticketN", { i: i + 1 }) : roundTrip ? t(i === 0 ? "book.going" : "book.comingBack") : t("book.trainN", { i: i + 1 })}</p>}
               <CoachBoard as="h2" number={seg.train.number} from={seg.from.name} to={seg.to.name}
                 name={<Link href={`/train/${seg.train.number}?from=${seg.from.code}&to=${seg.to.code}&date=${seg.date}`} className="underline-offset-4 hover:underline">{seg.train.name}</Link>} />
               <div className="flex items-stretch gap-4 px-5">
@@ -96,13 +96,13 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
               </div>
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-t-2 border-ground px-5 py-4">
                 <div>
-                  <div className="font-sign text-[2.6rem] leading-none text-ink">{seg.from.dep}</div>
+                  <div className="font-sign text-[1.87rem] leading-tight text-ink">{seg.from.dep}</div>
                   <div className="text-sm">{seg.from.name} ({seg.from.code})</div>
                   <div className="text-sm text-slate-500">{formatDate(seg.date, undefined, L)}</div>
                 </div>
                 <div className="text-center text-sm text-slate-500">{formatDuration(seg.duration, L)}<br />{t("unit.km", { n: seg.distance })}</div>
                 <div className="text-right">
-                  <div className="font-sign text-[2.6rem] leading-none text-ink">{seg.to.arr}</div>
+                  <div className="font-sign text-[1.87rem] leading-tight text-ink">{seg.to.arr}</div>
                   <div className="text-sm">{seg.to.name} ({seg.to.code})</div>
                   <div className="text-sm text-slate-500">{formatDate(seg.arrivalDate, undefined, L)}</div>
                 </div>

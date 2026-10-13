@@ -138,7 +138,7 @@ export function ExploreView({ data, initial, defaultDate, today }: {
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-sign text-[2rem] uppercase leading-none tracking-[0.03em] text-brand" aria-live="polite">
+            <p className="font-sign text-[1.44rem] leading-tight text-brand" aria-live="polite">
               {t.n("explore.count", list.length, { origin: data.origin.name })}
             </p>
             <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
@@ -158,7 +158,7 @@ export function ExploreView({ data, initial, defaultDate, today }: {
                 <div className="card p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h2 className="font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{sel.name} <span className="font-sign text-[1.2rem] text-slate-500">{sel.code}</span></h2>
+                      <h2 className="font-sign text-[1.15rem] leading-tight text-brand">{sel.name} <span className="font-sign text-[0.95rem] text-slate-500">{sel.code}</span></h2>
                       {sel.state && <p className="text-sm text-slate-500">{sel.state}</p>}
                     </div>
                     <button onClick={() => setSelected(null)} aria-label={t("explore.close")} className="rounded p-1 text-slate-500 hover:bg-slate-100"><X className="size-4" /></button>
@@ -193,7 +193,7 @@ export function ExploreView({ data, initial, defaultDate, today }: {
 
           <section className="card overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 p-3">
-              <h2 className="font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{t("explore.listTitle")}</h2>
+              <h2 className="font-sign text-[1.15rem] leading-tight text-brand">{t("explore.listTitle")}</h2>
               <label className="flex items-center gap-2 text-sm">{t("res.sortBy")}
                 <select className="input w-auto py-1" value={f.sort} onChange={(e) => set("sort", e.target.value as Sort)}>
                   <option value="popular">{t("explore.sort.popular")}</option>

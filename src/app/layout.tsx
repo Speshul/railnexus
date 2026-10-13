@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Atkinson_Hyperlegible, Geist_Mono, Mukta, Teko } from "next/font/google";
+import { Atkinson_Hyperlegible, Geist_Mono, Hind, Inter, Poppins } from "next/font/google";
 import Link from "next/link";
 import { getUser } from "@/lib/auth";
 import { logout } from "@/app/actions/auth";
@@ -15,9 +15,11 @@ import { getChosenLocale, getT } from "@/i18n/server";
 import "./globals.css";
 
 // Both faces by the Indian Type Foundry, drawn for Latin and Devanagari together, so Hindi is never a fallback.
-// Teko: condensed sign lettering for names, numbers, times and labels. Mukta: reading and interface text.
-const teko = Teko({ variable: "--font-teko", subsets: ["latin", "devanagari"], weight: ["400", "500", "600"] });
-const mukta = Mukta({ variable: "--font-mukta", subsets: ["latin", "devanagari"], weight: ["400", "500", "600", "700"] });
+// Poppins: geometric headings, drawn for Latin and Devanagari together. Inter: highly legible body text.
+// Hind (also Latin + Devanagari) supplies the Hindi letters Inter does not have, so Hindi is never a system fallback.
+const poppins = Poppins({ variable: "--font-poppins", subsets: ["latin", "devanagari"], weight: ["500", "600", "700"] });
+const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
+const hind = Hind({ variable: "--font-hind", subsets: ["latin", "devanagari"], weight: ["400", "500", "600"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 // Designed by the Braille Institute for low-vision readers; used by the "Easy to read" font setting.
 const readable = Atkinson_Hyperlegible({ variable: "--font-readable", subsets: ["latin"], weight: ["400", "700"] });
@@ -35,7 +37,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang={locale}
-      className={`${teko.variable} ${mukta.variable} ${geistMono.variable} ${readable.variable} h-full antialiased`}
+      className={`${poppins.variable} ${inter.variable} ${hind.variable} ${geistMono.variable} ${readable.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
@@ -52,16 +54,16 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <LocaleProvider locale={locale}>
         {!chosen && <LanguageChooser />}
         <VoiceBridgeProvider>
-          <header className="bg-brand-dark text-white print:hidden">
-            <div className="mx-auto flex max-w-7xl items-center gap-x-8 px-6 py-3">
-              {/* The wordmark, lettered like a station plate: English and Devanagari share the board. */}
+          {/* A deep night-blue bar with softly rounded lower corners; on pages that open with a blue board it melts into it. */}
+          <header className="relative z-20 rounded-b-[1.75rem] bg-gradient-to-b from-brand-dark to-[#03035a] text-white print:hidden">
+            <div className="mx-auto flex max-w-[86rem] items-center gap-x-8 px-8 py-5">
               <Link href="/" className="flex shrink-0 items-baseline gap-2.5 text-accent">
-                <span className="font-sign text-[2.1rem] uppercase leading-none tracking-[0.06em]">{APP_NAME}</span>
-                <span className="font-sign text-[1.5rem] leading-none" lang="hi">सफ़रनामा</span>
+                <span className="font-sign text-[1.55rem] font-bold leading-tight">{APP_NAME}</span>
+                <span className="font-sign text-[1.1rem] font-medium leading-tight text-accent/90" lang="hi">सफ़रनामा</span>
                 <span className="sr-only">{t("layout.home")}</span>
               </Link>
               <NavLinks loggedIn={!!user} />
-              <div className="ml-auto flex shrink-0 items-center gap-3 text-[0.9rem]">
+              <div className="ml-auto flex shrink-0 items-center gap-2.5 text-[0.85rem]">
                 <LanguageToggle />
                 <AccessibilityMenu />
                 {user ? (
@@ -81,9 +83,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             </div>
           </header>
           <main id="main" tabIndex={-1} className="flex-1 focus:outline-none">{children}</main>
-          <footer className="mt-12 bg-brand-dark py-6 text-white/80 print:hidden">
-            <div className="mx-auto flex max-w-7xl items-center gap-6 px-6 text-[0.95rem]">
-              <span className="font-sign text-[1.4rem] uppercase tracking-[0.06em] text-accent">{APP_NAME}</span>
+          <footer className="mt-16 rounded-t-[1.75rem] bg-brand-dark py-7 text-white/80 print:hidden">
+            <div className="mx-auto flex max-w-7xl items-center gap-6 px-8 text-[0.95rem]">
+              <span className="font-sign text-[1.2rem] font-bold text-accent">{APP_NAME}</span>
               <p className="flex-1">{t("layout.footer", { app: APP_NAME })}</p>
               <Link href="/accessibility" className="text-white underline underline-offset-4">{t("layout.a11y")}</Link>
             </div>

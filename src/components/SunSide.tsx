@@ -28,7 +28,7 @@ export function SunSide({ report, t, compact = false }: { report: SunReport; t: 
   return (
     <section className={compact ? "" : "card p-4"} aria-label={t("sun.title")}>
       {!compact && (
-        <h2 className="mb-1 flex items-center gap-2 font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">
+        <h2 className="mb-1 flex items-center gap-2 font-sign text-[1.15rem] leading-tight text-brand">
           <Sun className="size-4 text-amber-500" aria-hidden /> {t("sun.title")}
         </h2>
       )}

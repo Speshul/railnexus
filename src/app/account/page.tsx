@@ -96,7 +96,7 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-6">
-      <h1 className="font-sign text-[3rem] uppercase leading-[0.9] tracking-[0.03em] text-brand">{tr("acct.title")}</h1>
+      <h1 className="font-sign text-[2.16rem] leading-tight text-brand">{tr("acct.title")}</h1>
       <p className="mb-5 text-sm text-slate-600">{user.full_name} · @{user.username} · {user.email}</p>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
@@ -119,7 +119,7 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
         </section>
 
         <section>
-          <h2 className="mb-3 font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{tr("acct.saved")}</h2>
+          <h2 className="mb-3 font-sign text-[1.15rem] leading-tight text-brand">{tr("acct.saved")}</h2>
           <div className="card divide-y divide-slate-100">
             {passengers.length === 0 && <p className="p-4 text-sm text-slate-500">{tr("acct.savedEmpty")}</p>}
             {passengers.map((p) => (

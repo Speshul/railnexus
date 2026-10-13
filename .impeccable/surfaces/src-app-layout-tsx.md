@@ -9,16 +9,18 @@ Scope: the whole Safarnama web app (shared shell, home, search results, booking,
 
 Audience and job: Indian rail travellers booking trains, and an examiner watching a 10–15 minute demo. Demo path: home and results, voice booking with wallet confirmation, planner and Explore.
 
+User revisions (2026-10-14, binding): brand blue #04056F and yellow #FCB831; a deeper, taller header bar with rounded lower corners that blends into the page; a muted non-grey ground; no green behind wallet money; rounder, smoother, more premium overall; non-squarish fonts with a contrasting sans for headings (user suggested Montserrat; Poppins chosen because it also covers Devanagari).
+
 ## Direction contract
 
-THESIS: Indian Railways' own enamel signwriting, made into an interface: flat enamel plates with big bilingual lettering read from across a platform. It refuses the blue-header travel-app grid with rounded floating cards, and refuses truck-art ornament.
+THESIS: Indian Railways' enamel signs, refined into a premium interface: royal-blue and marigold plates with bilingual lettering, the coach destination board as the recurring signature. It refuses the generic blue-header travel-app grid and truck-art ornament.
 
-OWN-WORLD: Indigo enamel (#1B2559) and signal yellow (#F5B700) at full strength, white plates for tasks, concrete grey ground (#E8EBF1), ink #0F1115; bottle green (#0E6B47) owns the wallet; vermilion (#C4321D) only for alerts, waitlists and cancellations. Teko (condensed, Latin + Devanagari) letters every sign, number, time and label in capitals; Mukta carries reading text. Plates are flat with small enamel radius, no shadows, no borders as decoration; panels meet edge to edge. States are painted marks: tick for confirmed, struck bar for cancelled, thick outline for focus.
+OWN-WORLD: Royal blue #04056F and marigold #FCB831 at full strength; night blue #020240 for the header (gradient into royal blue) and footer; white plates with soft 12px corners on an "indigo mist" ground #EEF0FA; ink #10122B. Money and wallet in royal blue with marigold figures; green only as status text; vermilion #C4321D only for alerts, waitlists and cancellations. Poppins (600–700) for headings, numbers, boards and labels; Inter for reading text, Hind for Devanagari. Painted controls: indigo checkboxes with marigold ticks, drawn chevrons and calendar marks.
 
 STORY: The visitor sees a station-sign world that is unmistakably Indian rail and modern, finds a train in one search, reads availability in words, and trusts the confirmation plate before money moves.
 
-FIRST VIEWPORT: Full-width indigo enamel board under a slim header: SAFARNAMA lettered in yellow Teko at sign scale with सफ़रनामा beside it and a one-line promise; the search plate (white, stencilled labels, yellow Search button) spans the board's lower edge. Below, two plates side by side: yellow "Plan a trip in one sentence" and indigo "Where can I go?". Popular routes follow as coach destination boards.
+FIRST VIEWPORT: Rounded night-blue header melting into a full-width royal-blue board: "Safarnama" in marigold Poppins Bold with सफ़रनामा beside it and a one-line promise, a marigold meaning plate on the right; the white search plate hangs across the board's lower edge with a marigold Search button. Below, a marigold "Plan a trip in one sentence" plate beside a royal-blue "Where can I go?" plate with a real dot map; popular routes as coach destination boards.
 
-FORM: Railway Enamel Signs (user-steered from Painted Signboard, list position 7 roll; user pinned), seed key 908a41ed. Signature: coach destination boards (yellow plate, train number, FROM → TO in Teko) heading every train, ticket and plan; motion: plates settle in once with a short drop, never scattered.
+FORM: Railway Enamel Signs (user-steered from Painted Signboard, list position 7 roll; user pinned, then refined by the user's palette and type revisions), seed key 908a41ed. Signature: coach destination boards (marigold plate, train number, name, FROM → TO) heading every train, ticket, plan and payment; motion: plates settle in once with a short drop.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance

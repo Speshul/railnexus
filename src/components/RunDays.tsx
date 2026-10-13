@@ -8,7 +8,7 @@ export function RunDays({ mask }: { mask: number }) {
   const on = (i: number) => (mask & (1 << i)) !== 0;
   const running = DAY_NAMES.map((_, i) => i).filter(on).map((i) => t(`day.${i}` as MessageKey));
   return (
-    <span className="inline-flex gap-1 font-sign leading-none">
+    <span className="inline-flex gap-1 font-sign leading-tight">
       {/* Letters are visual only; screen readers get the running days spelled out. */}
       <span className="sr-only">{t("days.label")}: {running.length === 7 ? t("days.daily") : running.join(", ")}</span>
       {DAY_NAMES.map((d, i) => (

@@ -79,13 +79,13 @@ export function WalletPay({ tripId, amountPaise, balancePaise, summary }: {
   }, [open, busy]);
 
   return (
-    <div className="space-y-3 rounded-md bg-green p-4 text-white">
+    <div className="space-y-3 rounded-xl bg-brand p-5 text-white">
       <p className="flex items-center justify-between">
-        <span className="flex items-center gap-1.5 font-sign text-[1.3rem] uppercase tracking-[0.04em] text-accent"><Wallet className="size-5" aria-hidden /> {t("wallet.name")}</span>
+        <span className="flex items-center gap-1.5 font-sign text-[0.95rem] text-accent"><Wallet className="size-5" aria-hidden /> {t("wallet.name")}</span>
         <span className="text-[0.95rem] text-white/90">{t("wallet.balance")}: <b className="text-white">{inr(balancePaise / 100, true)}</b></span>
       </p>
       {enough ? (
-        <button onClick={() => setOpen(true)} className="btn w-full bg-accent py-3 font-sign text-[1.4rem] uppercase leading-none tracking-[0.04em] text-ink hover:bg-accent-dark">{t("wallet.payFrom", { amount })}</button>
+        <button onClick={() => setOpen(true)} className="btn w-full bg-accent py-3 font-sign text-[1.01rem] leading-tight text-ink hover:bg-accent-dark">{t("wallet.payFrom", { amount })}</button>
       ) : (
         <p className="text-[0.95rem] text-white">
           {t("wallet.short", { amount: inr((amountPaise - balancePaise) / 100, true) })}{" "}
@@ -99,28 +99,25 @@ export function WalletPay({ tripId, amountPaise, balancePaise, summary }: {
 
       {open && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-brand-dark/70 p-4 text-ink" onClick={() => !busy && setOpen(false)}>
-          <div role="dialog" aria-modal="true" aria-labelledby="wp-title" className="settle w-full max-w-2xl overflow-hidden rounded-md bg-white" onClick={(e) => e.stopPropagation()}>
-            {/* The confirmation plate: green band (money), then every fact the payment covers, then two plain buttons. */}
-            <div className="h-3 bg-green" aria-hidden />
+          <div role="dialog" aria-modal="true" aria-labelledby="wp-title" className="settle w-full max-w-2xl overflow-hidden rounded-2xl bg-white" onClick={(e) => e.stopPropagation()}>
+            {/* The confirmation plate: the coach board, then every fact the payment covers, then two plain buttons. */}
             {summary.boards.map((bd) => <CoachBoard key={bd.number + bd.from} size="sm" number={bd.number} name={bd.name} from={bd.from} to={bd.to} />)}
             <div className="p-7">
             <div className="mb-4 flex items-start justify-between">
-              <h2 id="wp-title" className="font-sign text-[2.4rem] uppercase leading-none tracking-[0.03em] text-brand">{t("wallet.confirmTitle")}</h2>
+              <h2 id="wp-title" className="font-sign text-[1.73rem] leading-tight text-brand">{t("wallet.confirmTitle")}</h2>
               <button onClick={() => setOpen(false)} disabled={busy} aria-label={t("explore.close")} className="rounded p-1 text-slate-500 hover:bg-slate-100"><X className="size-4" /></button>
             </div>
             <dl className="space-y-2 text-[1.05rem]">
-              <div className="flex justify-between gap-3"><dt className="text-slate-600">{t("wallet.c.train")}</dt><dd className="text-right font-medium">{summary.trains}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-slate-600">{t("wallet.c.route")}</dt><dd className="text-right">{summary.route}</dd></div>
               <div className="flex justify-between gap-3"><dt className="text-slate-600">{t("wallet.c.date")}</dt><dd className="text-right">{summary.date}</dd></div>
               <div className="flex justify-between gap-3"><dt className="text-slate-600">{t("wallet.c.class")}</dt><dd className="text-right">{summary.cls}</dd></div>
               <div className="flex justify-between gap-3"><dt className="text-slate-600">{t("wallet.c.passengers")}</dt><dd className="text-right">{summary.passengers.join(", ")}</dd></div>
-              <div className="flex items-baseline justify-between gap-3 border-t-2 border-ground pt-3"><dt className="font-sign text-[1.6rem] uppercase leading-none text-brand">{t("wallet.c.total")}</dt><dd className="font-sign text-[2.4rem] leading-none">{amount}</dd></div>
+              <div className="flex items-baseline justify-between gap-3 border-t-2 border-ground pt-3"><dt className="font-sign text-[1.15rem] leading-tight text-brand">{t("wallet.c.total")}</dt><dd className="font-sign text-[1.73rem] leading-tight">{amount}</dd></div>
               <div className="flex justify-between gap-3 text-slate-600"><dt>{t("wallet.c.after")}</dt><dd>{inr((balancePaise - amountPaise) / 100, true)}</dd></div>
             </dl>
             <p className="mt-4 flex items-center gap-2 rounded-md bg-brand-light px-3 py-2.5 text-[0.95rem] text-brand"><Mic className="size-5 shrink-0" aria-hidden /> {t("wallet.sayConfirm")}</p>
             <div className="mt-5 grid grid-cols-[1fr_1.6fr] gap-3">
               <button onClick={() => setOpen(false)} disabled={busy} className="btn-secondary py-3">{t("wallet.cancel")}</button>
-              <button ref={confirmRef} onClick={pay} disabled={busy} className="btn bg-green py-3 font-sign text-[1.4rem] uppercase leading-none tracking-[0.04em] text-white hover:bg-green-dark">
+              <button ref={confirmRef} onClick={pay} disabled={busy} className="btn-primary py-3.5 font-sign text-[1.1rem] leading-tight">
                 {busy && <Loader2 className="size-4 animate-spin" aria-hidden />} {t("wallet.confirmPay", { amount })}
               </button>
             </div>

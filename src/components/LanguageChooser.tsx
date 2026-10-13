@@ -22,15 +22,15 @@ export function LanguageChooser() {
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-brand-dark/75 p-4 print:hidden">
       {/* A bilingual station board: both languages lettered side by side, as on every Indian platform. */}
-      <div role="dialog" aria-modal="true" aria-labelledby="lang-title" className="settle w-full max-w-2xl overflow-hidden rounded-md bg-brand text-center text-white ring-4 ring-accent">
+      <div role="dialog" aria-modal="true" aria-labelledby="lang-title" className="settle w-full max-w-2xl overflow-hidden rounded-2xl bg-brand text-center text-white ring-4 ring-accent">
         <div className="px-10 pb-8 pt-9">
           <Languages className="mx-auto mb-3 size-10 text-accent" aria-hidden />
-          <h2 id="lang-title" className="font-sign text-[3rem] uppercase leading-[0.9] tracking-[0.03em]">
+          <h2 id="lang-title" className="font-sign text-[2.16rem] leading-tight">
             Choose your language <span lang="hi" className="mt-2 block text-[2.4rem] normal-case tracking-normal text-accent">अपनी भाषा चुनें</span>
           </h2>
           <div className="mt-8 grid grid-cols-2 gap-4">
-            <button ref={firstRef} onClick={() => choose("en")} disabled={pending} className="btn bg-accent py-5 font-sign text-[2.4rem] uppercase leading-none tracking-[0.05em] text-ink hover:bg-accent-dark">English</button>
-            <button onClick={() => choose("hi")} disabled={pending} lang="hi" className="btn bg-accent py-5 font-sign text-[2.4rem] leading-none text-ink hover:bg-accent-dark">हिंदी</button>
+            <button ref={firstRef} onClick={() => choose("en")} disabled={pending} className="btn bg-accent py-5 font-sign text-[1.73rem] leading-tight text-ink hover:bg-accent-dark">English</button>
+            <button onClick={() => choose("hi")} disabled={pending} lang="hi" className="btn bg-accent py-5 font-sign text-[1.73rem] leading-tight text-ink hover:bg-accent-dark">हिंदी</button>
           </div>
         </div>
         <p className="bg-brand-dark px-6 py-3 text-[0.9rem] text-white/85">

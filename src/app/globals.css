@@ -1,29 +1,31 @@
 @import "tailwindcss";
 
 /*
- * Safarnama: Indian Railways enamel signwriting as an interface.
- * Indigo enamel and signal yellow at full strength, white plates for tasks, a concrete-grey ground.
- * Teko letters every sign, number and label; Mukta carries reading text. Both cover Latin and Devanagari.
- * Vermilion only means "attention" (alerts, waitlists, cancellations); bottle green owns money and confirmed states.
+ * Safarnama: Indian Railways enamel signs as an interface.
+ * Deep royal blue (#04056F) and marigold yellow (#FCB831) at full strength, white plates for tasks.
+ * The page ground is an "indigo mist": a whisper of the brand blue on white, so the neutral belongs to the palette
+ * (analogous to the blue, and a calm complement that makes the yellow glow) instead of an industrial grey.
+ * Poppins sets headings and numbers; Inter sets reading text, with Hind supplying Devanagari.
+ * Vermilion only means "attention" (alerts, waitlists, cancellations). Green appears only as status text.
  */
 @theme inline {
-  --color-ink: #0f1115;
-  --color-ground: #e8ebf1;
+  --color-ink: #10122b;
+  --color-ground: #eef0fa;
   --color-plate: #ffffff;
-  --color-rule: #c5cbd8;
+  --color-rule: #cfd3ea;
 
-  /* indigo enamel (brand) */
-  --color-brand: #1b2559;
-  --color-brand-dark: #10173d;
-  --color-brand-light: #e3e7f4;
-  /* signal yellow: fills and lettering on indigo only (never text on white) */
-  --color-accent: #f5b700;
-  --color-accent-dark: #e0a500;
-  --color-accent-light: #fff1c2;
-  /* bottle green enamel: wallet, money, confirmed */
-  --color-green: #0e6b47;
-  --color-green-dark: #0a5236;
-  --color-green-light: #e1f1e9;
+  /* royal blue enamel (brand); the header uses the deeper night shade */
+  --color-brand: #04056f;
+  --color-brand-dark: #020240;
+  --color-brand-light: #e4e6f8;
+  /* marigold: fills and lettering on blue only (never text on white) */
+  --color-accent: #fcb831;
+  --color-accent-dark: #f2a713;
+  --color-accent-light: #fff1cf;
+  /* money and wallet use the brand blue (kept as aliases so older classes stay in the palette) */
+  --color-green: #04056f;
+  --color-green-dark: #020240;
+  --color-green-light: #e4e6f8;
 
   --color-ok: #0e6b47;
   --color-warn: #8a5300;
@@ -34,8 +36,8 @@
   --color-slate-500: #555f75;
   --color-slate-600: #434c60;
 
-  --font-sans: var(--font-mukta), system-ui, sans-serif;
-  --font-sign: var(--font-teko), var(--font-mukta), sans-serif;
+  --font-sans: var(--font-inter), var(--font-hind), system-ui, sans-serif;
+  --font-sign: var(--font-poppins), var(--font-hind), sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
@@ -49,49 +51,51 @@ body {
   background: var(--color-ground);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  line-height: 1.5;
+  line-height: 1.55;
   font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
 }
 ::selection {
   background: var(--color-accent);
   color: var(--color-ink);
 }
 html {
-  scrollbar-color: #8d95a8 var(--color-ground);
+  scrollbar-color: #9aa0c6 var(--color-ground);
 }
 /* body copy uses the readable font when chosen in the accessibility menu */
 :root[data-a11y-font="readable"] body {
-  font-family: var(--font-readable), var(--font-mukta), system-ui, sans-serif;
+  font-family: var(--font-readable), var(--font-hind), system-ui, sans-serif;
   letter-spacing: 0.01em;
 }
 :root[data-a11y-font="readable"] .font-sign {
-  font-family: var(--font-readable), var(--font-mukta), sans-serif;
-  letter-spacing: 0.02em;
+  font-family: var(--font-readable), var(--font-hind), sans-serif;
+  letter-spacing: 0.01em;
 }
 
 /* ---------------------------------------------------------------- enamel vocabulary */
 
-/* Sign lettering: condensed capitals, set a touch open so they read at a distance. Teko sits high, so lines get room. */
+/* Headings, numbers and sign lettering: Poppins, set slightly tight the way display type is. */
 @utility font-sign {
   font-family: var(--font-sign);
-  letter-spacing: 0.02em;
-  line-height: 0.95;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
 }
 
 /* A white enamel plate: flat, a small enamel radius, no shadow; it stands out from the concrete by colour alone. */
 @utility card {
-  @apply rounded-md bg-white;
+  @apply rounded-xl bg-white;
 }
 /* A plate in indigo or yellow enamel, for signs that carry the section. */
 @utility plate-indigo {
-  @apply rounded-md bg-brand text-white;
+  @apply rounded-xl bg-brand text-white;
 }
 @utility plate-yellow {
-  @apply rounded-md bg-accent text-ink;
+  @apply rounded-xl bg-accent text-ink;
 }
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-md px-5 py-2.5 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
   font-size: 0.95rem;
 }
 /* Primary action: signal yellow with ink lettering, like a painted platform sign. */
@@ -106,14 +110,14 @@ html {
   @apply btn bg-white text-brand ring-2 ring-inset ring-brand hover:bg-brand-light;
 }
 @utility input {
-  @apply w-full rounded-md border-2 border-rule bg-white px-3 py-2 text-ink outline-none transition-colors placeholder:text-slate-500 focus:border-brand;
+  @apply w-full rounded-lg border-2 border-rule bg-white px-3 py-2 text-ink outline-none transition-colors placeholder:text-slate-500 focus:border-brand;
   font-size: 1rem;
 }
 /* Stencilled field labels. */
 @utility label {
-  @apply mb-1 block font-sign uppercase text-brand;
-  font-size: 1.05rem;
-  letter-spacing: 0.06em;
+  @apply mb-1.5 block font-sign text-brand;
+  font-size: 0.85rem;
+  letter-spacing: 0.01em;
 }
 .leaflet-container {
   font-family: inherit;
@@ -141,7 +145,7 @@ input[type="radio"] {
 }
 input[type="checkbox"]:checked {
   background-color: var(--color-brand);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3.2 3.2L13 4.8' fill='none' stroke='%23f5b700' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3.2 3.2L13 4.8' fill='none' stroke='%23fcb831' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 input[type="radio"]:checked {
   background-color: var(--color-brand);
@@ -157,7 +161,7 @@ input[type="radio"]:disabled {
 select.input {
   appearance: none;
   padding-right: 2.4rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 6l4.5 4.5L12.5 6' fill='none' stroke='%231b2559' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 6l4.5 4.5L12.5 6' fill='none' stroke='%2304056f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.7rem center;
   background-size: 1rem;
@@ -168,7 +172,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   width: 1.1rem;
   height: 1.1rem;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2' y='3' width='12' height='11' rx='1.5' fill='none' stroke='%231b2559' stroke-width='2'/%3E%3Cpath d='M2 6.5h12M5.5 1.5v3M10.5 1.5v3' stroke='%231b2559' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2' y='3' width='12' height='11' rx='1.5' fill='none' stroke='%2304056f' stroke-width='2'/%3E%3Cpath d='M2 6.5h12M5.5 1.5v3M10.5 1.5v3' stroke='%2304056f' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 input[type="range"] {
   accent-color: var(--color-brand);

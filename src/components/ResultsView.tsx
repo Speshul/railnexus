@@ -139,9 +139,9 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
 
   return (
     <div className="grid grid-cols-[17rem_1fr] gap-1">
-      <aside className={`${showFilters ? "block" : "hidden"} h-fit space-y-5 rounded-l-md bg-white p-5 lg:sticky lg:top-4 lg:block`}>
+      <aside className={`${showFilters ? "block" : "hidden"} h-fit space-y-5 rounded-l-xl bg-white p-5 lg:sticky lg:top-4 lg:block`}>
         <div className="flex items-center justify-between">
-          <h2 className="font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{t("res.filters")}</h2>
+          <h2 className="font-sign text-[1.15rem] leading-tight text-brand">{t("res.filters")}</h2>
           {activeFilters > 0 && <button onClick={reset} className="text-sm text-brand hover:underline">{t("res.reset")}</button>}
         </div>
         <div>
@@ -179,7 +179,7 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
           <div>
             <h3 className="label">{t("res.boarding")}</h3>
             {fromStations.map(([c, n]) => (
-              <Check key={c} checked={fromStn.has(c)} onChange={() => setFromStn(toggle(fromStn, c))}>{n} <span className="font-sign text-[1.1rem] text-slate-500">{c}</span></Check>
+              <Check key={c} checked={fromStn.has(c)} onChange={() => setFromStn(toggle(fromStn, c))}>{n} <span className="font-sign text-[0.95rem] text-slate-500">{c}</span></Check>
             ))}
           </div>
         )}
@@ -187,7 +187,7 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
           <div>
             <h3 className="label">{t("res.destination")}</h3>
             {toStations.map(([c, n]) => (
-              <Check key={c} checked={toStn.has(c)} onChange={() => setToStn(toggle(toStn, c))}>{n} <span className="font-sign text-[1.1rem] text-slate-500">{c}</span></Check>
+              <Check key={c} checked={toStn.has(c)} onChange={() => setToStn(toggle(toStn, c))}>{n} <span className="font-sign text-[0.95rem] text-slate-500">{c}</span></Check>
             ))}
           </div>
         )}
@@ -195,7 +195,7 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
 
       <section>
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <div className="flex rounded-md bg-white p-1 font-sign text-[1.25rem] uppercase tracking-[0.04em]">
+          <div className="flex rounded-md bg-white p-1 font-sign text-[0.95rem]">
             <button onClick={() => setTab("direct")} aria-pressed={tab === "direct"} className={`rounded px-4 pb-1 pt-1.5 leading-none ${tab === "direct" ? "bg-brand text-accent" : "text-brand hover:bg-brand-light"}`}>
               {t("res.tabDirect", { n: results.length })}
             </button>
@@ -240,7 +240,7 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
                 </details>
               </div>
               {/* One continuous stack of boards: trains meet edge to edge, separated only by a strip of ground. */}
-              <div className="flex flex-col gap-1 overflow-hidden rounded-r-md">
+              <div className="flex flex-col gap-1 overflow-hidden rounded-r-xl">
                 {filtered.map((j) => (
                   <TrainCard key={j.number} j={j} quota={params.quota} initialClass={classes.size === 1 ? [...classes][0] : null} />
                 ))}
@@ -326,7 +326,7 @@ function Connections({ data, alternatives, nearbyHref }: { data: SearchResponse;
   return (
     <div className="space-y-3">
       <div className="card p-4">
-        <h2 className="font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">
+        <h2 className="font-sign text-[1.15rem] leading-tight text-brand">
           {noDirect ? t("conn.stillTravel", { from: fromStation?.name ?? "", to: toStation?.name ?? "" }) : t("conn.moreWays", { n: loaded.list!.length })}
         </h2>
         <p className="text-sm text-slate-600">

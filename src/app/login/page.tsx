@@ -17,7 +17,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <div className="mx-auto max-w-md px-4 py-10">
       <div className="card p-6">
-        <h1 className="mb-1 font-sign text-[3rem] uppercase leading-[0.9] tracking-[0.03em] text-brand">{t("login.title")}</h1>
+        <h1 className="mb-1 font-sign text-[2.16rem] leading-tight text-brand">{t("login.title")}</h1>
         <p className="mb-5 text-sm text-slate-600">
           {next.startsWith("/book") ? t("login.continue") : t("login.welcome")}
         </p>
