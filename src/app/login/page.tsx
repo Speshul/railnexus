@@ -17,13 +17,13 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <div className="mx-auto max-w-md px-4 py-10">
       <div className="card p-6">
-        <h1 className="mb-1 text-xl font-bold">{t("login.title")}</h1>
+        <h1 className="mb-1 font-sign text-[3rem] uppercase leading-[0.9] tracking-[0.03em] text-brand">{t("login.title")}</h1>
         <p className="mb-5 text-sm text-slate-600">
           {next.startsWith("/book") ? t("login.continue") : t("login.welcome")}
         </p>
         <LoginForm next={next} />
       </div>
-      <p className="mt-4 rounded-lg border border-dashed border-slate-300 bg-white p-3 text-center text-xs text-slate-600">
+      <p className="mt-4 rounded-lg border border-dashed border-slate-300 bg-white p-3 text-center text-sm text-slate-600">
         {t("login.demo")} <b>demo</b> / <b>demo1234</b>
       </p>
     </div>

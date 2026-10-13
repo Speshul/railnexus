@@ -23,7 +23,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
   const params = parseSearchParams(await searchParams);
   if (!params) {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-8">
         <div className="card p-5"><SearchForm today={today} /></div>
       </div>
     );
@@ -47,8 +47,8 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
-      <div className="card mb-4 p-4">
+    <div className="mx-auto max-w-7xl px-6 py-6">
+      <div className="card mb-6 p-5">
         <SearchForm
           key={searchKey}
           compact
@@ -70,25 +70,27 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
         <div className="card p-8 text-center text-slate-600">{t("searchPage.same")}</div>
       ) : (
         <>
-          <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <h1 className="text-xl font-bold">
-                {fromStation.name} <span className="text-slate-500">→</span> {toStation.name}
+              {/* The route lettered like a destination board. */}
+              <h1 className="font-sign text-[3rem] uppercase leading-[0.9] tracking-[0.03em] text-brand">
+                {fromStation.name} <span className="text-slate-400">→</span> {toStation.name}
               </h1>
-              <p className="text-sm text-slate-600">
+              <p className="mt-1 text-slate-600">
                 {formatDate(params.date, { weekday: "long", day: "numeric", month: "long", year: "numeric" }, L)} ·{" "}
                 {t("searchPage.quota", { quota: t(`quota.${params.quota}` as MessageKey) })}
                 {params.nearby && <> · {t("searchPage.nearby", { a: data.fromCodes.length - 1, b: data.toCodes.length - 1 })}</>}
               </p>
             </div>
-            <nav className="flex items-center gap-1 text-sm" aria-label={t("searchPage.changeDate")}>
+            <nav className="flex items-center gap-1" aria-label={t("searchPage.changeDate")}>
               <Link href={qs(addDays(params.date, -1))} aria-label={t("searchPage.prev")}
                 className={`rounded-md p-1.5 hover:bg-white ${diffDays(params.date, today) <= 0 ? "pointer-events-none opacity-30" : ""}`}>
                 <ChevronLeft className="size-4" />
               </Link>
               {strip.map((d) => (
                 <Link key={d} href={qs(d)}
-                  className={`rounded-md px-2.5 py-1.5 ${d === params.date ? "bg-brand font-semibold text-white" : "hover:bg-white"}`}>
+                  aria-current={d === params.date ? "date" : undefined}
+                  className={`rounded-md px-3 py-1.5 ${d === params.date ? "bg-brand font-semibold text-accent" : "text-slate-700 hover:bg-white"}`}>
                   {formatDate(d, { weekday: "short", day: "numeric" }, L)}
                 </Link>
               ))}

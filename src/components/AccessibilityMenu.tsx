@@ -67,7 +67,7 @@ export function AccessibilityMenu() {
           className="absolute right-0 z-50 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-slate-200 bg-white p-4 text-slate-900 shadow-xl"
         >
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-semibold">{t("a11y.title")}</h2>
+            <h2 className="font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{t("a11y.title")}</h2>
             <button onClick={() => { setOpen(false); buttonRef.current?.focus(); }} aria-label={t("a11y.close")} className="rounded p-1 hover:bg-slate-100">
               <X className="size-4" aria-hidden />
             </button>

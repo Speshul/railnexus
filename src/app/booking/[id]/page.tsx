@@ -7,6 +7,7 @@ import { getTrip, quoteCancellation, refundsFor, type BookingRecord } from "@/li
 import { sunForJourney } from "@/lib/sunpath";
 import { isRoundTrip } from "@/lib/rail";
 import { SunSide } from "@/components/SunSide";
+import { CoachBoard } from "@/components/CoachBoard";
 import { SLEEPER_BERTHS } from "@/lib/constants";
 import { formatDate, formatDuration } from "@/lib/dates";
 import { inr, pct, statusTone } from "@/lib/format";
@@ -35,38 +36,38 @@ async function LegCard({ b, index, multi, roundTrip, paid, tripId, t }: { b: Boo
   const sun = b.status !== "CANCELLED" ? sunForJourney(b.train_number, b.from_code, b.to_code, b.train_start_date) : null;
   return (
     <section className="card overflow-hidden">
-      <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 p-4">
-        <div>
-          {multi && <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{roundTrip ? t(index === 0 ? "book.going" : "book.comingBack") : t("book.trainN", { i: index + 1 })}</p>}
-          <h2 className="font-semibold"><span className="font-mono">{b.train_number}</span> {f.trainName}</h2>
-          <p className="text-sm text-slate-600">{t("book.classQuota", { cls: t(`class.${b.class_code}` as MessageKey), code: b.class_code, quota: t(`quota.${b.quota}` as MessageKey) })}</p>
+      {multi && <p className="bg-brand px-5 pb-1 pt-1.5 font-sign text-[1.2rem] uppercase leading-none tracking-[0.05em] text-accent">{roundTrip ? t(index === 0 ? "book.going" : "book.comingBack") : t("book.trainN", { i: index + 1 })}</p>}
+      <CoachBoard as="h2" number={b.train_number} name={f.trainName} from={f.fromName} to={f.toName} />
+      <div className="flex items-stretch gap-4 border-b-2 border-ground px-5">
+        <div className="flex-1 py-3">
+          <p className="text-slate-700">{t("book.classQuota", { cls: t(`class.${b.class_code}` as MessageKey), code: b.class_code, quota: t(`quota.${b.quota}` as MessageKey) })}</p>
         </div>
-        <div className="text-right text-sm">
+        <div className="self-center text-right">
           {b.pnr ? (
             <>
-              <div className="text-xs text-slate-500">{t("trip.pnr")}</div>
-              <div className="font-mono text-lg font-bold tracking-wider">{b.pnr}</div>
+              <div className="text-sm text-slate-500">{t("trip.pnr")}</div>
+              <div className="font-sign text-lg font-bold tracking-wider">{b.pnr}</div>
             </>
           ) : (
             <>
-              <div className="text-xs text-slate-500">{t("trip.statusNow")}</div>
+              <div className="text-sm text-slate-500">{t("trip.statusNow")}</div>
               <div className="font-semibold">{f.availabilityAtBooking}</div>
-              {f.availabilityAtBooking.includes("WL") && <div className="text-xs text-slate-500">{t("card.chance", { pct: pct(f.chance) })}</div>}
+              {f.availabilityAtBooking.includes("WL") && <div className="text-sm text-slate-500">{t("card.chance", { pct: pct(f.chance) })}</div>}
             </>
           )}
         </div>
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 p-4">
         <div>
-          <div className="text-xl font-bold">{f.dep}</div>
+          <div className="font-sign text-[2.6rem] leading-none text-ink">{f.dep}</div>
           <div className="text-sm">{f.fromName} ({b.from_code})</div>
-          <div className="text-xs text-slate-500">{fullDate(b.journey_date, t)}</div>
+          <div className="text-sm text-slate-500">{fullDate(b.journey_date, t)}</div>
         </div>
-        <div className="text-center text-xs text-slate-500">{formatDuration(f.duration, t.locale)}<br />{t("unit.km", { n: f.distance })}</div>
+        <div className="text-center text-sm text-slate-500">{formatDuration(f.duration, t.locale)}<br />{t("unit.km", { n: f.distance })}</div>
         <div className="text-right">
-          <div className="text-xl font-bold">{f.arr}</div>
+          <div className="font-sign text-[2.6rem] leading-none text-ink">{f.arr}</div>
           <div className="text-sm">{f.toName} ({b.to_code})</div>
-          <div className="text-xs text-slate-500">{fullDate(f.arrivalDate, t)}</div>
+          <div className="text-sm text-slate-500">{fullDate(f.arrivalDate, t)}</div>
         </div>
       </div>
       {sun && (
@@ -77,7 +78,7 @@ async function LegCard({ b, index, multi, roundTrip, paid, tripId, t }: { b: Boo
       )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <thead className="bg-slate-50 text-left text-sm uppercase text-slate-500">
             <tr>
               <th className="px-4 py-2">#</th><th className="px-4 py-2">{t("trip.th.name")}</th><th className="px-4 py-2">{t("trip.th.age")}</th><th className="px-4 py-2">{t("trip.th.gender")}</th>
               <th className="px-4 py-2">{paid ? t("trip.th.status") : t("trip.th.pref")}</th><th className="px-4 py-2 text-right">{t("trip.th.fare")}</th>
@@ -121,7 +122,7 @@ async function LegCard({ b, index, multi, roundTrip, paid, tripId, t }: { b: Boo
             <CancelPanel tripId={tripId} bookingId={b.id} pnr={b.pnr ?? ""} rows={quote?.rows ?? []} blockedReason={quote?.reason} />
           </div>
           {refunds.length > 0 && (
-            <div className="w-full text-xs text-slate-600">
+            <div className="w-full text-sm text-slate-600">
               {refunds.map((r) => (
                 <p key={r.id}>{t("trip.refundLine", { amount: inr(r.amount_paise / 100), status: r.status, id: r.id, when: new Date(r.created_at).toLocaleString(t.locale === "hi" ? "hi-IN" : "en-IN", { timeZone: "Asia/Kolkata" }) })}</p>
               ))}
@@ -153,8 +154,8 @@ export default async function TripPage({ params, searchParams }: PageProps<"/boo
   const ticketFare = trip.legs.reduce((s, b) => s + b.fare.ticketFare, 0);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6">
-      <ol className="mb-4 flex flex-wrap gap-2 text-xs font-medium text-slate-500">
+    <div className="mx-auto max-w-7xl px-6 py-6">
+      <ol className="mb-4 flex flex-wrap gap-2 text-sm font-medium text-slate-500">
         <li className="text-slate-500">{t("steps.search")}</li><li aria-hidden>›</li>
         <li className="text-slate-500">{t("steps.passengers")}</li><li aria-hidden>›</li>
         <li className={pending ? "text-brand" : "text-slate-500"} aria-current={pending ? "step" : undefined}>{t("steps.review")}</li><li aria-hidden>›</li>
@@ -185,7 +186,7 @@ export default async function TripPage({ params, searchParams }: PageProps<"/boo
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
+      <div className="grid grid-cols-[1fr_27rem] gap-6">
         <div className="space-y-3">
           {trip.legs.map((b, i) => (
             <div key={b.id}>
@@ -211,7 +212,7 @@ export default async function TripPage({ params, searchParams }: PageProps<"/boo
         </div>
 
         <aside className="card h-fit space-y-3 p-4 lg:sticky lg:top-4">
-          <h2 className="font-semibold">{paid ? t("trip.payment") : t("trip.paymentSummary")}</h2>
+          <h2 className="font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{paid ? t("trip.payment") : t("trip.paymentSummary")}</h2>
           <dl className="space-y-1.5 text-sm">
             <div className="flex justify-between"><dt className="text-slate-600">{multi ? t("trip.ticketFareN", { n: trip.legs.length }) : t("fare.ticket")}</dt><dd>{inr(ticketFare)}</dd></div>
             <div className="flex justify-between"><dt className="text-slate-600">{t("fare.convenience")}</dt><dd>{inr(convenience, true)}</dd></div>
@@ -231,18 +232,19 @@ export default async function TripPage({ params, searchParams }: PageProps<"/boo
                   date: formatDate(trip.legs[0].journey_date, { weekday: "short", day: "numeric", month: "short" }, t.locale),
                   cls: [...new Set(trip.legs.map((b) => b.class_code))].join(" + "),
                   passengers: trip.legs[0].passengers.map((p) => p.name),
+                  boards: trip.legs.map((b) => ({ number: b.train_number, name: b.fare.trainName, from: b.fare.fromName, to: b.fare.toName })),
                 }}
               />
-              <p className="text-center text-xs text-slate-500">{t("wallet.or")}</p>
+              <p className="text-center text-sm text-slate-500">{t("wallet.or")}</p>
               <PayButton tripId={trip.id} amountPaise={trip.totalPaise} />
               <form action={cancelHold.bind(null, trip.id)}>
                 <button className="btn-secondary w-full">{t("trip.release")}</button>
               </form>
-              <Link href={again} className="block text-center text-xs text-brand hover:underline">{t("trip.edit")}</Link>
+              <Link href={again} className="block text-center text-sm text-brand hover:underline">{t("trip.edit")}</Link>
             </>
           )}
           {paid && trip.payment?.payment_id && (
-            <p className="text-xs text-slate-500">{paidByWallet ? t("wallet.paidWith") : t("trip.rzpPayment", { id: trip.payment.payment_id })}</p>
+            <p className="text-sm text-slate-500">{paidByWallet ? t("wallet.paidWith") : t("trip.rzpPayment", { id: trip.payment.payment_id })}</p>
           )}
           {!pending && !paid && <Link href={again} className="btn-primary w-full">{t("trip.bookAgain")}</Link>}
         </aside>

@@ -20,17 +20,20 @@ export function LanguageChooser() {
       router.refresh();
     });
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 p-4 print:hidden">
-      <div role="dialog" aria-modal="true" aria-labelledby="lang-title" className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl">
-        <Languages className="mx-auto mb-2 size-10 text-brand" aria-hidden />
-        <h2 id="lang-title" className="text-lg font-bold">
-          Choose your language <span lang="hi" className="block text-base font-semibold">अपनी भाषा चुनें</span>
-        </h2>
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <button ref={firstRef} onClick={() => choose("en")} disabled={pending} className="btn-brand py-3 text-base">English</button>
-          <button onClick={() => choose("hi")} disabled={pending} lang="hi" className="btn-brand py-3 text-base">हिंदी</button>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-brand-dark/75 p-4 print:hidden">
+      {/* A bilingual station board: both languages lettered side by side, as on every Indian platform. */}
+      <div role="dialog" aria-modal="true" aria-labelledby="lang-title" className="settle w-full max-w-2xl overflow-hidden rounded-md bg-brand text-center text-white ring-4 ring-accent">
+        <div className="px-10 pb-8 pt-9">
+          <Languages className="mx-auto mb-3 size-10 text-accent" aria-hidden />
+          <h2 id="lang-title" className="font-sign text-[3rem] uppercase leading-[0.9] tracking-[0.03em]">
+            Choose your language <span lang="hi" className="mt-2 block text-[2.4rem] normal-case tracking-normal text-accent">अपनी भाषा चुनें</span>
+          </h2>
+          <div className="mt-8 grid grid-cols-2 gap-4">
+            <button ref={firstRef} onClick={() => choose("en")} disabled={pending} className="btn bg-accent py-5 font-sign text-[2.4rem] uppercase leading-none tracking-[0.05em] text-ink hover:bg-accent-dark">English</button>
+            <button onClick={() => choose("hi")} disabled={pending} lang="hi" className="btn bg-accent py-5 font-sign text-[2.4rem] leading-none text-ink hover:bg-accent-dark">हिंदी</button>
+          </div>
         </div>
-        <p className="mt-4 text-xs text-slate-500">
+        <p className="bg-brand-dark px-6 py-3 text-[0.9rem] text-white/85">
           You can change this any time from the header. <span lang="hi">आप इसे कभी भी ऊपर से बदल सकते हैं।</span>
         </p>
       </div>
@@ -50,7 +53,7 @@ export function LanguageToggle() {
       disabled={pending}
       lang={other}
       aria-label={other === "hi" ? "हिंदी में देखें (switch to Hindi)" : "View in English (अंग्रेज़ी में देखें)"}
-      className="rounded-md border border-white/30 px-2.5 py-1 hover:bg-white/10 disabled:opacity-60"
+      className="rounded-md px-3 py-1.5 font-semibold ring-2 ring-inset ring-accent/70 hover:bg-white/10 disabled:opacity-60"
     >
       {other === "hi" ? "हिंदी" : "English"}
     </button>

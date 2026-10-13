@@ -12,6 +12,7 @@ import { inr, statusTone } from "@/lib/format";
 import { siteOrigin } from "@/lib/origin";
 import { co2SavedVsFlight } from "@/lib/carbon";
 import { PrintButton } from "@/components/PrintButton";
+import { CoachBoard } from "@/components/CoachBoard";
 import { getT } from "@/i18n/server";
 import type { MessageKey } from "@/i18n/core";
 
@@ -44,40 +45,40 @@ export default async function TicketPage({ params }: PageProps<"/ticket/[pnr]">)
         <PrintButton />
       </div>
 
-      <article className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm print:rounded-none print:border-slate-400 print:shadow-none">
+      <article className="overflow-hidden rounded-md bg-white print:rounded-none print:border print:border-slate-400">
         <header className="flex flex-wrap items-center justify-between gap-3 bg-brand px-6 py-4 text-white print:bg-white print:text-slate-900">
           <div className="flex items-center gap-2">
             <TrainFront className="size-7 text-accent" aria-hidden />
             <div>
-              <div className="text-lg font-bold">{t("ticket.title", { app: APP_NAME })}</div>
-              <div className="text-xs opacity-90">{t("ticket.ers")}</div>
+              <div className="font-sign text-[1.7rem] uppercase leading-none tracking-[0.04em] text-accent">{t("ticket.title", { app: APP_NAME })}</div>
+              <div className="text-sm opacity-90">{t("ticket.ers")}</div>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-xs opacity-90">{t("ticket.pnr")}</div>
-            <div className="font-mono text-2xl font-bold tracking-widest">{pnr}</div>
+            <div className="text-sm opacity-90">{t("ticket.pnr")}</div>
+            <div className="font-sign text-[2.4rem] leading-none tracking-[0.08em]">{pnr}</div>
           </div>
         </header>
+        <CoachBoard as="h1" number={b.train_number} name={f.trainName} from={f.fromName} to={f.toName} />
 
         <div className="grid gap-6 p-6 sm:grid-cols-[1fr_auto]">
           <div className="space-y-4">
             <div>
-              <h1 className="text-xl font-bold">{b.train_number} {f.trainName}</h1>
-              <p className="text-sm text-slate-600">
+              <p className="text-slate-700">
                 {t("ticket.line", { cls: t(`class.${b.class_code}` as MessageKey), code: b.class_code, quota: t(`quota.${b.quota}` as MessageKey), km: f.distance, n: between })}
               </p>
             </div>
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
               <div>
-                <div className="text-xs uppercase text-slate-500">{t("ticket.boarding")}</div>
-                <div className="text-2xl font-bold">{f.dep}</div>
+                <div className="text-sm uppercase text-slate-500">{t("ticket.boarding")}</div>
+                <div className="font-sign text-[2.6rem] leading-none text-ink">{f.dep}</div>
                 <div className="font-medium">{f.fromName} ({b.from_code})</div>
                 <div className="text-sm text-slate-600">{fullDate(b.journey_date, L)}</div>
               </div>
-              <div className="text-center text-xs text-slate-500">{formatDuration(f.duration, L)}<div className="my-1 h-px w-16 bg-slate-300" /></div>
+              <div className="text-center text-sm text-slate-500">{formatDuration(f.duration, L)}<div className="my-1 h-px w-16 bg-slate-300" /></div>
               <div className="text-right">
-                <div className="text-xs uppercase text-slate-500">{t("ticket.arrival")}</div>
-                <div className="text-2xl font-bold">{f.arr}</div>
+                <div className="text-sm uppercase text-slate-500">{t("ticket.arrival")}</div>
+                <div className="font-sign text-[2.6rem] leading-none text-ink">{f.arr}</div>
                 <div className="font-medium">{f.toName} ({b.to_code})</div>
                 <div className="text-sm text-slate-600">{fullDate(f.arrivalDate, L)}</div>
               </div>
@@ -85,13 +86,13 @@ export default async function TicketPage({ params }: PageProps<"/ticket/[pnr]">)
           </div>
           <div className="flex flex-col items-center gap-1">
             <div className="size-36 [&>svg]:size-full" dangerouslySetInnerHTML={{ __html: qr }} aria-label={t("ticket.qr")} role="img" />
-            <span className="text-xs text-slate-500">{t("ticket.scan")}</span>
+            <span className="text-sm text-slate-500">{t("ticket.scan")}</span>
           </div>
         </div>
 
         <div className="overflow-x-auto px-6">
           <table className="w-full text-sm">
-            <thead className="border-y border-slate-200 text-left text-xs uppercase text-slate-500">
+            <thead className="border-y border-slate-200 text-left text-sm uppercase text-slate-500">
               <tr><th className="py-2">#</th><th>{t("ticket.th.passenger")}</th><th>{t("ticket.th.age")}</th><th>{t("ticket.th.gender")}</th><th>{t("ticket.th.booking")}</th><th>{t("ticket.th.current")}</th><th>{t("ticket.th.meal")}</th></tr>
             </thead>
             <tbody>
@@ -101,9 +102,9 @@ export default async function TicketPage({ params }: PageProps<"/ticket/[pnr]">)
                   <td className="font-medium">{p.name}</td>
                   <td>{p.age}</td>
                   <td>{t(`gshort.${p.gender}` as MessageKey)}</td>
-                  <td className="font-mono text-xs">{p.booking_status}</td>
-                  <td className={`font-mono text-xs font-semibold ${statusTone(p.status)}`}>{p.cancelled ? t("ticket.cancelled") : p.status}</td>
-                  <td className="text-xs">{p.food_pref ? t(`food.${p.food_pref}` as MessageKey) : "—"}</td>
+                  <td className="font-sign text-[1.1rem]">{p.booking_status}</td>
+                  <td className={`font-sign text-[1.1rem] font-semibold ${statusTone(p.status)}`}>{p.cancelled ? t("ticket.cancelled") : p.status}</td>
+                  <td className="text-sm">{p.food_pref ? t(`food.${p.food_pref}` as MessageKey) : "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -118,7 +119,7 @@ export default async function TicketPage({ params }: PageProps<"/ticket/[pnr]">)
             <div className="flex justify-between border-t border-slate-200 pt-1 font-bold"><dt>{t("ticket.totalPaid")}</dt><dd>{inr(b.total_paise / 100, true)}</dd></div>
             {b.refund_paise > 0 && <div className="flex justify-between text-ok"><dt>{t("trip.refunded")}</dt><dd>{inr(b.refund_paise / 100, true)}</dd></div>}
           </dl>
-          <div className="space-y-1 text-xs text-slate-600">
+          <div className="space-y-1 text-sm text-slate-600">
             <p><b>{t("ticket.booked")}</b> {b.confirmed_at ? new Date(b.confirmed_at).toLocaleString(L === "hi" ? "hi-IN" : "en-IN", { timeZone: "Asia/Kolkata" }) : "—"} · {t("ticket.active", { n: active.length, total: b.passengers.length })}</p>
             <p><b>{t("ticket.contact")}</b> {b.contact_email} · {b.contact_phone}</p>
             {co2SavedVsFlight(f.distance) > 0 && (

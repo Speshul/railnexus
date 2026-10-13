@@ -46,7 +46,7 @@ export function SearchForm({ defaults = {}, today, compact = false }: { defaults
         <button
           type="button"
           onClick={() => { setFrom(to); setTo(from); }}
-          className="mx-auto mb-0.5 flex size-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+          className="mx-auto mb-1 flex size-10 items-center justify-center rounded-full bg-brand text-accent hover:bg-brand-dark"
           aria-label={t("search.swap")}
         >
           <ArrowLeftRight className="size-4" />
@@ -80,12 +80,12 @@ export function SearchForm({ defaults = {}, today, compact = false }: { defaults
           <input type="checkbox" checked={nearby} onChange={(e) => setNearby(e.target.checked)} className="size-4 accent-brand" />
           {t("search.nearby")}
         </label>
-        <button className={`btn-primary ${compact ? "h-[38px]" : "px-8 py-3 text-base"}`}>
-          <Search className="size-4" /> {compact ? t("search.modify") : t("search.submit")}
+        <button className={`btn-primary ${compact ? "h-[2.75rem]" : "px-10 py-3.5 font-sign text-[1.6rem] uppercase leading-none tracking-[0.05em]"}`}>
+          <Search className={compact ? "size-4" : "size-5"} aria-hidden /> {compact ? t("search.modify") : t("search.submit")}
         </button>
       </div>
       {quota === "TQ" && !compact && (
-        <p className="text-xs text-warn">{t("quota.TQ.help")}</p>
+        <p className="text-sm text-warn">{t("quota.TQ.help")}</p>
       )}
       {error && <p className="text-sm text-bad md:col-span-full">{error}</p>}
     </form>

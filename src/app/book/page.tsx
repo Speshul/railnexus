@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Clock } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getSegment, isRoundTrip } from "@/lib/rail";
+import { CoachBoard } from "@/components/CoachBoard";
 import { getAvailability, loadSales } from "@/lib/availability";
 import { savedPassengers } from "@/lib/booking";
 import { CLASSES, PREMIUM_TYPES, QUOTAS, type Quota } from "@/lib/constants";
@@ -39,7 +40,7 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10">
         <div className="card p-6 text-center">
-          <h1 className="mb-2 text-lg font-semibold">{t("book.unavailable")}</h1>
+          <h1 className="mb-2 font-sign text-[3rem] uppercase leading-[0.9] tracking-[0.03em] text-brand">{t("book.unavailable")}</h1>
           <p className="mb-4 text-sm text-slate-600">{t("book.unavailableBody")}</p>
           <Link href="/" className="btn-primary">{t("book.searchAgain")}</Link>
         </div>
@@ -53,8 +54,8 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
   const roundTrip = multi && !sameTrain && isRoundTrip(ok[0].seg.from.code, ok[1].seg.to.code);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
-      <ol className="mb-4 flex flex-wrap gap-2 text-xs font-medium text-slate-500">
+    <div className="mx-auto max-w-7xl px-4 py-6">
+      <ol className="mb-4 flex flex-wrap gap-2 text-sm font-medium text-slate-500">
         <li className="text-slate-500">{t("steps.search")}</li><li aria-hidden>›</li>
         <li className="text-brand" aria-current="step">{t("steps.passengers")}</li><li aria-hidden>›</li>
         <li>{t("steps.review")}</li><li aria-hidden>›</li>
@@ -80,31 +81,30 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
                 <Clock className="size-4" aria-hidden /> {sameTrain ? t("book.changeSeats", { station: seg.from.name }) : roundTrip ? t("book.returnFrom", { station: seg.from.name, date: formatDate(seg.date, undefined, L) }) : t("book.changeAt", { station: seg.from.name })}
               </p>
             )}
-            <div className="card p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  {multi && <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{sameTrain ? t("book.ticketN", { i: i + 1 }) : roundTrip ? t(i === 0 ? "book.going" : "book.comingBack") : t("book.trainN", { i: i + 1 })}</p>}
-                  <Link href={`/train/${seg.train.number}?from=${seg.from.code}&to=${seg.to.code}&date=${seg.date}`} className="font-semibold hover:underline">
-                    <span className="font-mono">{seg.train.number}</span> {seg.train.name}
-                  </Link>
-                  <p className="text-sm text-slate-600">{t("book.classQuota", { cls: t(`class.${ref.cls}` as MessageKey), code: ref.cls, quota: t(`quota.${quota}` as MessageKey) })}</p>
+            <div className="card overflow-hidden">
+              {multi && <p className="bg-brand px-5 pb-1 pt-1.5 font-sign text-[1.2rem] uppercase leading-none tracking-[0.05em] text-accent">{sameTrain ? t("book.ticketN", { i: i + 1 }) : roundTrip ? t(i === 0 ? "book.going" : "book.comingBack") : t("book.trainN", { i: i + 1 })}</p>}
+              <CoachBoard as="h2" number={seg.train.number} from={seg.from.name} to={seg.to.name}
+                name={<Link href={`/train/${seg.train.number}?from=${seg.from.code}&to=${seg.to.code}&date=${seg.date}`} className="underline-offset-4 hover:underline">{seg.train.name}</Link>} />
+              <div className="flex items-stretch gap-4 px-5">
+                <div className="flex-1 py-3">
+                  <p className="text-slate-700">{t("book.classQuota", { cls: t(`class.${ref.cls}` as MessageKey), code: ref.cls, quota: t(`quota.${quota}` as MessageKey) })}</p>
                 </div>
-                <div className="text-right text-sm">
+                <div className="self-center text-right">
                   <span className={`font-semibold ${availTone(avail.status)}`}>{availText(avail, t)}</span>
-                  {avail.status === "WL" && <span className="block text-xs text-slate-500">{t("card.chance", { pct: pct(avail.chance) })}</span>}
+                  {avail.status === "WL" && <span className="block text-sm text-slate-500">{t("card.chance", { pct: pct(avail.chance) })}</span>}
                 </div>
               </div>
-              <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-t-2 border-ground px-5 py-4">
                 <div>
-                  <div className="text-xl font-bold">{seg.from.dep}</div>
+                  <div className="font-sign text-[2.6rem] leading-none text-ink">{seg.from.dep}</div>
                   <div className="text-sm">{seg.from.name} ({seg.from.code})</div>
-                  <div className="text-xs text-slate-500">{formatDate(seg.date, undefined, L)}</div>
+                  <div className="text-sm text-slate-500">{formatDate(seg.date, undefined, L)}</div>
                 </div>
-                <div className="text-center text-xs text-slate-500">{formatDuration(seg.duration, L)}<br />{t("unit.km", { n: seg.distance })}</div>
+                <div className="text-center text-sm text-slate-500">{formatDuration(seg.duration, L)}<br />{t("unit.km", { n: seg.distance })}</div>
                 <div className="text-right">
-                  <div className="text-xl font-bold">{seg.to.arr}</div>
+                  <div className="font-sign text-[2.6rem] leading-none text-ink">{seg.to.arr}</div>
                   <div className="text-sm">{seg.to.name} ({seg.to.code})</div>
-                  <div className="text-xs text-slate-500">{formatDate(seg.arrivalDate, undefined, L)}</div>
+                  <div className="text-sm text-slate-500">{formatDate(seg.arrivalDate, undefined, L)}</div>
                 </div>
               </div>
             </div>

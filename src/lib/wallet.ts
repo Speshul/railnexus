@@ -1,7 +1,7 @@
 import "server-only";
 import { appDb, type Db } from "./db";
 
-// The RailNexus wallet, like IRCTC's eWallet: pay for tickets in one tap (or by voice, after confirming), and get
+// The Safarnama wallet, like IRCTC's eWallet: pay for tickets in one tap (or by voice, after confirming), and get
 // refunds back instantly. Every change goes through credit()/debit(), which update the balance and write a ledger row
 // in the same transaction, so the history always adds up to the balance.
 

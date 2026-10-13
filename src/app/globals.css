@@ -1,75 +1,208 @@
 @import "tailwindcss";
 
-/* Functional base theme. Visual design pass comes in a later phase. */
+/*
+ * Safarnama: Indian Railways enamel signwriting as an interface.
+ * Indigo enamel and signal yellow at full strength, white plates for tasks, a concrete-grey ground.
+ * Teko letters every sign, number and label; Mukta carries reading text. Both cover Latin and Devanagari.
+ * Vermilion only means "attention" (alerts, waitlists, cancellations); bottle green owns money and confirmed states.
+ */
 @theme inline {
-  /* WCAG AA: Tailwind's slate-500 (#62748e) drops to 4.2:1 on the light-blue tints; this passes on every surface used. */
-  --color-slate-500: #5a6a82;
-  --color-brand: #0b3a75;
-  --color-brand-dark: #072a56;
-  --color-brand-light: #e8f0fb;
-  /* WCAG AA: white text on accent is 5.2:1 (the earlier #f26b1d was 3.0:1) */
-  --color-accent: #c2410c;
-  --color-accent-dark: #9a3412;
-  --color-ok: #15803d;
-  --color-warn: #b45309;
-  --color-bad: #b91c1c;
-  --font-sans: var(--font-geist-sans), var(--font-devanagari);
-  --font-mono: var(--font-geist-mono);
+  --color-ink: #0f1115;
+  --color-ground: #e8ebf1;
+  --color-plate: #ffffff;
+  --color-rule: #c5cbd8;
+
+  /* indigo enamel (brand) */
+  --color-brand: #1b2559;
+  --color-brand-dark: #10173d;
+  --color-brand-light: #e3e7f4;
+  /* signal yellow: fills and lettering on indigo only (never text on white) */
+  --color-accent: #f5b700;
+  --color-accent-dark: #e0a500;
+  --color-accent-light: #fff1c2;
+  /* bottle green enamel: wallet, money, confirmed */
+  --color-green: #0e6b47;
+  --color-green-dark: #0a5236;
+  --color-green-light: #e1f1e9;
+
+  --color-ok: #0e6b47;
+  --color-warn: #8a5300;
+  --color-bad: #c4321d;
+
+  /* WCAG AA on white and on the concrete ground */
+  --color-slate-400: #6b7489;
+  --color-slate-500: #555f75;
+  --color-slate-600: #434c60;
+
+  --font-sans: var(--font-mukta), system-ui, sans-serif;
+  --font-sign: var(--font-teko), var(--font-mukta), sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
+/* Designed for a 1920-wide display read from across a room: the base step is 19.2px, and the text-size setting scales it. */
+:root {
+  font-size: 120%;
+  color-scheme: light;
+  accent-color: var(--color-brand);
+}
 body {
-  background: #f8fafc;
-  color: #172033;
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+::selection {
+  background: var(--color-accent);
+  color: var(--color-ink);
+}
+html {
+  scrollbar-color: #8d95a8 var(--color-ground);
 }
 /* body copy uses the readable font when chosen in the accessibility menu */
 :root[data-a11y-font="readable"] body {
-  font-family: var(--font-readable), var(--font-devanagari), system-ui, sans-serif;
+  font-family: var(--font-readable), var(--font-mukta), system-ui, sans-serif;
   letter-spacing: 0.01em;
 }
+:root[data-a11y-font="readable"] .font-sign {
+  font-family: var(--font-readable), var(--font-mukta), sans-serif;
+  letter-spacing: 0.02em;
+}
 
+/* ---------------------------------------------------------------- enamel vocabulary */
+
+/* Sign lettering: condensed capitals, set a touch open so they read at a distance. Teko sits high, so lines get room. */
+@utility font-sign {
+  font-family: var(--font-sign);
+  letter-spacing: 0.02em;
+  line-height: 0.95;
+}
+
+/* A white enamel plate: flat, a small enamel radius, no shadow; it stands out from the concrete by colour alone. */
 @utility card {
-  @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+  @apply rounded-md bg-white;
 }
+/* A plate in indigo or yellow enamel, for signs that carry the section. */
+@utility plate-indigo {
+  @apply rounded-md bg-brand text-white;
+}
+@utility plate-yellow {
+  @apply rounded-md bg-accent text-ink;
+}
+
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 rounded-md px-5 py-2.5 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  font-size: 0.95rem;
 }
+/* Primary action: signal yellow with ink lettering, like a painted platform sign. */
 @utility btn-primary {
-  @apply btn bg-accent text-white hover:bg-accent-dark;
+  @apply btn bg-accent text-ink hover:bg-accent-dark;
+}
+/* Strong secondary: indigo enamel with yellow lettering. */
+@utility btn-brand {
+  @apply btn bg-brand text-accent hover:bg-brand-dark;
 }
 @utility btn-secondary {
-  @apply btn border border-slate-300 bg-white text-slate-800 hover:bg-slate-50;
-}
-@utility btn-brand {
-  @apply btn bg-brand text-white hover:bg-brand-dark;
+  @apply btn bg-white text-brand ring-2 ring-inset ring-brand hover:bg-brand-light;
 }
 @utility input {
-  @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20;
+  @apply w-full rounded-md border-2 border-rule bg-white px-3 py-2 text-ink outline-none transition-colors placeholder:text-slate-500 focus:border-brand;
+  font-size: 1rem;
 }
+/* Stencilled field labels. */
 @utility label {
-  @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500;
+  @apply mb-1 block font-sign uppercase text-brand;
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
 }
 .leaflet-container {
   font-family: inherit;
 }
 
+/* ---------------------------------------------------------------- painted controls */
+
+/* Checkboxes and radios as painted marks: an indigo square (or ring) that fills with a yellow tick (or dot). */
+input[type="checkbox"],
+input[type="radio"] {
+  appearance: none;
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  border: 2px solid var(--color-brand);
+  background: #ffffff center / 80% no-repeat;
+  cursor: pointer;
+}
+input[type="checkbox"] {
+  border-radius: 3px;
+}
+input[type="radio"] {
+  border-radius: 999px;
+}
+input[type="checkbox"]:checked {
+  background-color: var(--color-brand);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3.2 3.2L13 4.8' fill='none' stroke='%23f5b700' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+input[type="radio"]:checked {
+  background-color: var(--color-brand);
+  box-shadow: inset 0 0 0 3px #ffffff;
+}
+input[type="checkbox"]:disabled,
+input[type="radio"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Selects carry a drawn indigo chevron instead of the operating system's arrow. */
+select.input {
+  appearance: none;
+  padding-right: 2.4rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 6l4.5 4.5L12.5 6' fill='none' stroke='%231b2559' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 1rem;
+}
+
+/* The date field's picker button: an indigo calendar mark in place of the system glyph. */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  width: 1.1rem;
+  height: 1.1rem;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2' y='3' width='12' height='11' rx='1.5' fill='none' stroke='%231b2559' stroke-width='2'/%3E%3Cpath d='M2 6.5h12M5.5 1.5v3M10.5 1.5v3' stroke='%231b2559' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+input[type="range"] {
+  accent-color: var(--color-brand);
+}
+
+/* Plates settle into place once, with a short drop, the way a sign is hung. Content is visible by default. */
+@keyframes plate-settle {
+  from {
+    transform: translateY(-6px);
+    opacity: 0.4;
+  }
+}
+.settle {
+  animation: plate-settle 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* ---------------------------------------------------------------- accessibility */
 
-/* Clear keyboard focus everywhere (mouse clicks don't show it). */
+/* Clear keyboard focus everywhere (mouse clicks don't show it): a thick indigo outline, yellow on indigo plates. */
 :focus-visible {
-  outline: 3px solid #c2410c;
+  outline: 3px solid var(--color-brand);
   outline-offset: 2px;
   border-radius: 4px;
 }
-header :focus-visible {
-  outline-color: #fdba74;
+:is(header, .plate-indigo, .bg-brand, .bg-green) :focus-visible {
+  outline-color: var(--color-accent);
 }
 
 /* Text size: everything is sized in rem, so scaling the root scales the whole site. */
 :root[data-a11y-text="lg"] {
-  font-size: 112.5%;
+  font-size: 132.5%;
 }
 :root[data-a11y-text="xl"] {
-  font-size: 125%;
+  font-size: 145%;
 }
 
 /* Reduced motion: on request, or automatically when the device asks for it. */
@@ -92,7 +225,7 @@ header :focus-visible {
   }
 }
 
-/* High contrast: near-black text, strong borders, underlined links, no faint greys or shadows. */
+/* High contrast: near-black text, strong borders, underlined links, no faint greys. */
 :root[data-a11y-contrast="high"] body {
   background: #ffffff;
   color: #000000;
@@ -100,30 +233,29 @@ header :focus-visible {
 :root[data-a11y-contrast="high"] :is(.text-slate-400, .text-slate-500, .text-slate-600, .text-slate-700) {
   color: #111111 !important;
 }
-:root[data-a11y-contrast="high"] :is(.border-slate-100, .border-slate-200, .border-slate-300) {
+:root[data-a11y-contrast="high"] :is(.border-slate-100, .border-slate-200, .border-slate-300, .border-rule) {
   border-color: #333333 !important;
 }
 :root[data-a11y-contrast="high"] :is(.card, .input) {
-  border-width: 2px;
-  border-color: #222222 !important;
-  box-shadow: none;
+  outline: 2px solid #111111;
+  outline-offset: -2px;
 }
 :root[data-a11y-contrast="high"] main a:not(.btn, .btn-primary, .btn-secondary, .btn-brand, .card) {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 :root[data-a11y-contrast="high"] .text-ok {
-  color: #065f46 !important;
+  color: #064e33 !important;
 }
 :root[data-a11y-contrast="high"] .text-warn {
-  color: #7c2d12 !important;
+  color: #5c3700 !important;
 }
 :root[data-a11y-contrast="high"] .text-bad {
   color: #7f1d1d !important;
 }
-:root[data-a11y-contrast="high"] :is(.bg-slate-50, .bg-slate-100, .bg-brand-light) {
+:root[data-a11y-contrast="high"] :is(.bg-slate-50, .bg-slate-100, .bg-brand-light, .bg-ground) {
   background-color: #ffffff !important;
 }
-:root[data-a11y-contrast="high"] header {
-  background: #000000;
+:root[data-a11y-contrast="high"] :is(header, .plate-indigo, .bg-brand) {
+  background: #000000 !important;
 }

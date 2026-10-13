@@ -3,7 +3,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Dices, Moon, Sparkles, TrainFront, X } from "lucide-react";
+import { Dices, Moon, Route, TrainFront, X } from "lucide-react";
 import type { Destination, ExploreResult } from "@/lib/explore";
 import { CLASS_ORDER } from "@/lib/constants";
 import { formatDuration } from "@/lib/dates";
@@ -15,7 +15,7 @@ import { BUCKETS, BUDGETS, bucketOf, SIZES, type ExploreFilters, type Size, type
 
 const ExploreMap = dynamic(() => import("./ExploreMap"), {
   ssr: false,
-  loading: () => <div className="h-[460px] animate-pulse rounded-lg bg-slate-100 lg:h-[560px]" />,
+  loading: () => <div className="h-[640px] animate-pulse rounded-md bg-white" />,
 });
 
 
@@ -138,10 +138,10 @@ export function ExploreView({ data, initial, defaultDate, today }: {
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-semibold" aria-live="polite">
+            <p className="font-sign text-[2rem] uppercase leading-none tracking-[0.03em] text-brand" aria-live="polite">
               {t.n("explore.count", list.length, { origin: data.origin.name })}
             </p>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
               {BUCKETS.map((b) => (
                 <span key={b.key} className="flex items-center gap-1"><i className="size-3 rounded-full" style={{ background: b.color }} />{t(b.key as MessageKey)}</span>
               ))}
@@ -158,14 +158,14 @@ export function ExploreView({ data, initial, defaultDate, today }: {
                 <div className="card p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h2 className="text-lg font-bold">{sel.name} <span className="font-mono text-sm text-slate-500">{sel.code}</span></h2>
+                      <h2 className="font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{sel.name} <span className="font-sign text-[1.2rem] text-slate-500">{sel.code}</span></h2>
                       {sel.state && <p className="text-sm text-slate-500">{sel.state}</p>}
                     </div>
                     <button onClick={() => setSelected(null)} aria-label={t("explore.close")} className="rounded p-1 text-slate-500 hover:bg-slate-100"><X className="size-4" /></button>
                   </div>
                   <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                    <div><dt className="label">{t("explore.fastest")}</dt><dd className="font-semibold">{formatDuration(sel.fastest, L)}</dd><dd className="text-xs text-slate-500">{t("explore.by", { train: sel.fastestTrain })}</dd></div>
-                    <div><dt className="label">{t("explore.trains")}</dt><dd className="font-semibold">{sel.trains}</dd><dd className="text-xs text-slate-500">{t("explore.first", { time: sel.firstDep })}</dd></div>
+                    <div><dt className="label">{t("explore.fastest")}</dt><dd className="font-semibold">{formatDuration(sel.fastest, L)}</dd><dd className="text-sm text-slate-500">{t("explore.by", { train: sel.fastestTrain })}</dd></div>
+                    <div><dt className="label">{t("explore.trains")}</dt><dd className="font-semibold">{sel.trains}</dd><dd className="text-sm text-slate-500">{t("explore.first", { time: sel.firstDep })}</dd></div>
                   </dl>
                   {sel.overnight > 0 && (
                     <p className="mt-3 flex items-center gap-2 rounded-md bg-brand-light px-3 py-2 text-sm text-brand"><Moon className="size-4" aria-hidden /> {t.n("explore.nightTrains", sel.overnight)}</p>
@@ -175,25 +175,25 @@ export function ExploreView({ data, initial, defaultDate, today }: {
                       <caption className="label text-left">{t("explore.faresFrom")}</caption>
                       <tbody>
                         {CLASS_ORDER.filter((c) => sel.fares[c] !== undefined).map((c) => (
-                          <tr key={c} className="border-t border-slate-100"><td className="py-1"><b>{c}</b> <span className="text-xs text-slate-500">{t(`class.${c}` as MessageKey)}</span></td><td className="text-right">{inr(sel.fares[c]!)}</td></tr>
+                          <tr key={c} className="border-t border-slate-100"><td className="py-1"><b>{c}</b> <span className="text-sm text-slate-500">{t(`class.${c}` as MessageKey)}</span></td><td className="text-right">{inr(sel.fares[c]!)}</td></tr>
                         ))}
                       </tbody>
                     </table>
                   )}
                   <div className="mt-4 grid gap-2">
                     <Link href={`/search?from=${data.origin.code}&to=${sel.code}&date=${searchDate}&quota=GN`} className="btn-primary"><TrainFront className="size-4" aria-hidden /> {t("explore.seeTrains")}</Link>
-                    <Link href={`/plan?q=${encodeURIComponent(t("explore.planPrompt", { from: data.origin.name, to: sel.name }))}`} className="btn-secondary"><Sparkles className="size-4" aria-hidden /> {t("explore.plan")}</Link>
+                    <Link href={`/plan?q=${encodeURIComponent(t("explore.planPrompt", { from: data.origin.name, to: sel.name }))}`} className="btn-secondary"><Route className="size-4" aria-hidden /> {t("explore.plan")}</Link>
                   </div>
                 </div>
               ) : (
-                <div className="card p-4 text-sm text-slate-600">{t("explore.pick")}</div>
+                <div className="plate-indigo p-6 text-[1.05rem] leading-snug">{t("explore.pick")}</div>
               )}
             </aside>
           </div>
 
           <section className="card overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 p-3">
-              <h2 className="font-semibold">{t("explore.listTitle")}</h2>
+              <h2 className="font-sign text-[1.6rem] uppercase leading-none tracking-[0.03em] text-brand">{t("explore.listTitle")}</h2>
               <label className="flex items-center gap-2 text-sm">{t("res.sortBy")}
                 <select className="input w-auto py-1" value={f.sort} onChange={(e) => set("sort", e.target.value as Sort)}>
                   <option value="popular">{t("explore.sort.popular")}</option>
@@ -207,7 +207,7 @@ export function ExploreView({ data, initial, defaultDate, today }: {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+                  <thead className="bg-slate-50 text-left text-sm uppercase text-slate-500">
                     <tr><th className="px-3 py-2">{t("explore.th.place")}</th><th className="px-3 py-2">{t("explore.fastest")}</th><th className="px-3 py-2">{t("explore.trains")}</th><th className="px-3 py-2">{t("explore.th.from")}</th><th className="px-3 py-2"><span className="sr-only">{t("explore.th.actions")}</span></th></tr>
                   </thead>
                   <tbody>
@@ -215,7 +215,7 @@ export function ExploreView({ data, initial, defaultDate, today }: {
                       <tr key={d.code} className={`border-t border-slate-100 ${d.code === selected ? "bg-brand-light" : ""}`}>
                         <td className="px-3 py-2">
                           <button onClick={() => setSelected(d.code)} className="text-left font-medium hover:underline">{d.name}</button>
-                          <span className="block text-xs text-slate-500">{d.state}{d.overnight > 0 && <> · <Moon className="inline size-3" aria-hidden /> {t("explore.overnightShort")}</>}</span>
+                          <span className="block text-sm text-slate-500">{d.state}{d.overnight > 0 && <> · <Moon className="inline size-3" aria-hidden /> {t("explore.overnightShort")}</>}</span>
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap"><i className="mr-1.5 inline-block size-2.5 rounded-full" style={{ background: BUCKETS[bucketOf(d.fastest)].color }} aria-hidden />{formatDuration(d.fastest, L)}</td>
                         <td className="px-3 py-2">{d.trains}</td>

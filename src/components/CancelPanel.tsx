@@ -28,7 +28,7 @@ export function CancelPanel({ tripId, bookingId, pnr, rows, blockedReason }: {
       </p>
     );
   }
-  if (!rows.length) return blockedReason ? <p className="text-xs text-slate-500">{t.msg(blockedReason)}</p> : null;
+  if (!rows.length) return blockedReason ? <p className="text-sm text-slate-500">{t.msg(blockedReason)}</p> : null;
   if (!open) {
     return (
       <button onClick={() => setOpen(true)} className="btn-secondary py-1.5 text-sm">
@@ -52,15 +52,15 @@ export function CancelPanel({ tripId, bookingId, pnr, rows, blockedReason }: {
           <input type="checkbox" name="idx" value={r.idx} className="mt-1 accent-brand" checked={picked.has(r.idx)}
             onChange={(e) => setPicked((s) => { const n = new Set(s); if (e.target.checked) n.add(r.idx); else n.delete(r.idx); return n; })} />
           <span className="flex-1">
-            <b>{r.name}</b> <span className="text-xs text-slate-500">{r.status}</span>
-            <span className="block text-xs text-slate-500">{t.msg(r.rule)}</span>
+            <b>{r.name}</b> <span className="text-sm text-slate-500">{r.status}</span>
+            <span className="block text-sm text-slate-500">{t.msg(r.rule)}</span>
           </span>
-          <span className="text-right text-xs">
+          <span className="text-right text-sm">
             {t("cancel.fare", { amount: inr(r.fare) })}<br />{t("cancel.charge", { amount: inr(r.charge) })}<br /><b className="text-ok">{t("cancel.refundLine", { amount: inr(r.refund) })}</b>
           </span>
         </label>
       ))}
-      <p className="text-xs text-slate-500">{t("cancel.nonRefundable")}</p>
+      <p className="text-sm text-slate-500">{t("cancel.nonRefundable")}</p>
       {state?.error && <p className="rounded-md bg-red-50 px-3 py-2 text-bad">{state.error}</p>}
       <div className="flex flex-wrap items-center gap-2">
         <button className="btn bg-bad text-white hover:bg-red-800" disabled={pending || !chosen.length}>

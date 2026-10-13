@@ -39,7 +39,7 @@ export default function ExploreMap({ origin, destinations, selected, onSelect }:
   const sel = destinations.find((d) => d.code === selected);
 
   return (
-    <div className="h-[460px] overflow-hidden rounded-lg border border-slate-200 lg:h-[560px]" role="region"
+    <div className="h-[640px] overflow-hidden rounded-md" role="region"
       aria-label={t("explore.mapLabel", { n: destinations.length, origin: origin.name })}>
       <MapContainer bounds={bounds ?? undefined} boundsOptions={{ padding: [30, 30], maxZoom: 8 }} preferCanvas scrollWheelZoom style={{ height: "100%", width: "100%" }}>
         <TileLayer
@@ -64,7 +64,7 @@ export default function ExploreMap({ origin, destinations, selected, onSelect }:
             </CircleMarker>
           );
         })}
-        <CircleMarker center={[origin.lat, origin.lng]} radius={10} pathOptions={{ color: "#ffffff", weight: 3, fillColor: "#0b3a75", fillOpacity: 1 }}>
+        <CircleMarker center={[origin.lat, origin.lng]} radius={10} pathOptions={{ color: "#ffffff", weight: 3, fillColor: "#1b2559", fillOpacity: 1 }}>
           <Tooltip permanent direction="top" offset={[0, -10]}><b>{origin.name}</b></Tooltip>
         </CircleMarker>
       </MapContainer>

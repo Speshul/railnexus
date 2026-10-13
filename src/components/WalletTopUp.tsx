@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { Loader2, Plus } from "lucide-react";
 import { inr } from "@/lib/format";
+import { APP_NAME } from "@/lib/constants";
 import { useT } from "@/i18n/client";
 
 const AMOUNTS = [500, 1000, 2000, 5000];
@@ -35,11 +36,11 @@ export function WalletTopUp({ initial, min, max, returnTo }: { initial: number; 
       key: order.keyId,
       amount: order.amount,
       currency: "INR",
-      name: "RailNexus",
+      name: APP_NAME,
       description: t("wallet.topupDesc"),
       order_id: order.orderId,
       prefill: order.prefill,
-      theme: { color: "#0b3a75" },
+      theme: { color: "#1b2559" },
       modal: { ondismiss: () => setBusy(false) },
       handler: async (r: RzpResponse) => {
         const v = await fetch("/api/wallet/topup/verify", {
@@ -80,7 +81,7 @@ export function WalletTopUp({ initial, min, max, returnTo }: { initial: number; 
           {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Plus className="size-4" aria-hidden />} {t("wallet.addMoney")}
         </button>
       </div>
-      <p className="text-xs text-slate-500">{t("wallet.limits", { min: inr(min), max: inr(max) })} · {t("pay.testUpi", { ok: "success@razorpay", fail: "failure@razorpay" })}</p>
+      <p className="text-sm text-slate-500">{t("wallet.limits", { min: inr(min), max: inr(max) })} · {t("pay.testUpi", { ok: "success@razorpay", fail: "failure@razorpay" })}</p>
       {msg && <p role="status" className={`rounded-md px-3 py-2 text-sm ${msg.ok ? "bg-green-50 text-ok" : "bg-red-50 text-bad"}`}>{msg.text}</p>}
     </div>
   );

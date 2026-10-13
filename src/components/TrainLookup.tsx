@@ -54,8 +54,8 @@ export function TrainLookup({ autoFocus }: { autoFocus?: boolean }) {
                 onMouseDown={(e) => { e.preventDefault(); router.push(`/train/${t.number}`); }}
                 className="block w-full px-3 py-2 text-left text-sm hover:bg-brand-light"
               >
-                <span className="font-mono font-semibold">{t.number}</span> <span className="font-medium">{t.name}</span>
-                <span className="block text-xs text-slate-500">{t.from} → {t.to} · {t.type}</span>
+                <span className="font-sign font-semibold">{t.number}</span> <span className="font-medium">{t.name}</span>
+                <span className="block text-sm text-slate-500">{t.from} → {t.to} · {t.type}</span>
               </button>
             </li>
           ))}
