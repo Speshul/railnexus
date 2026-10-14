@@ -18,7 +18,7 @@ export function NavLinks({ loggedIn }: { loggedIn: boolean }) {
     ...(loggedIn ? [{ href: "/account", label: t("nav.bookings"), match: (p: string) => p.startsWith("/account") || p.startsWith("/booking") || p.startsWith("/ticket") }] : []),
   ];
   return (
-    <nav aria-label={t("nav.label")} className="flex items-center gap-x-5 font-sign text-[0.92rem] font-medium text-white/80">
+    <nav aria-label={t("nav.label")} className="flex min-w-0 items-center gap-x-[clamp(0.6rem,1.2vw,1.25rem)] font-sign text-[clamp(0.72rem,0.95vw,0.92rem)] font-medium text-white/80">
       {links.map((l) => {
         const current = l.match(path);
         // The current section is lettered in yellow with a painted bar beneath, like a platform marking.

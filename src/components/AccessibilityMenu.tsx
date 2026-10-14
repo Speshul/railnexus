@@ -55,8 +55,9 @@ export function AccessibilityMenu() {
         className="flex items-center gap-1.5 rounded-md border border-white/30 px-2.5 py-1 hover:bg-white/10"
       >
         <Accessibility className="size-4" aria-hidden />
-        <span className="hidden sm:inline">{t("a11y.button")}</span>
-        <span className="sr-only sm:hidden">{t("a11y.buttonSr")}</span>
+        {/* On narrower windows the button shrinks to its icon; screen readers always get the full label. */}
+        <span className="max-[1440px]:hidden">{t("a11y.button")}</span>
+        <span className="sr-only min-[1441px]:hidden">{t("a11y.buttonSr")}</span>
       </button>
       {open && (
         <div

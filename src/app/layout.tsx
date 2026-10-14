@@ -56,19 +56,20 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <VoiceBridgeProvider>
           {/* A deep night-blue bar with softly rounded lower corners; on pages that open with a blue board it melts into it. */}
           <header className="relative z-20 rounded-b-[1.75rem] bg-gradient-to-b from-brand-dark to-[#03035a] text-white print:hidden">
-            <div className="mx-auto flex max-w-[86rem] items-center gap-x-8 px-8 py-5">
+            {/* Sizes scale with the window (clamp), so the bar fits on one line from a 1280px laptop to a 1920px board. */}
+            <div className="mx-auto flex max-w-[86rem] items-center gap-x-[clamp(0.75rem,1.6vw,2rem)] px-[clamp(1rem,2vw,2rem)] py-5">
               <Link href="/" className="flex shrink-0 items-baseline gap-2.5 text-accent">
-                <span className="font-sign text-[1.55rem] font-bold leading-tight">{APP_NAME}</span>
-                <span className="font-sign text-[1.1rem] font-medium leading-tight text-accent/90" lang="hi">सफ़रनामा</span>
+                <span className="font-sign text-[clamp(1.15rem,1.45vw,1.55rem)] font-bold leading-tight">{APP_NAME}</span>
+                <span className="font-sign text-[clamp(0.85rem,1.05vw,1.1rem)] font-medium leading-tight text-accent/90" lang="hi">सफ़रनामा</span>
                 <span className="sr-only">{t("layout.home")}</span>
               </Link>
               <NavLinks loggedIn={!!user} />
-              <div className="ml-auto flex shrink-0 items-center gap-2.5 text-[0.85rem]">
+              <div className="ml-auto flex shrink-0 items-center gap-2 text-[clamp(0.7rem,0.85vw,0.85rem)]">
                 <LanguageToggle />
                 <AccessibilityMenu />
                 {user ? (
                   <>
-                    <span className="text-white/85">{t("layout.hi", { name: user.full_name.split(" ")[0] })}</span>
+                    <span className="text-white/85 max-[1440px]:hidden">{t("layout.hi", { name: user.full_name.split(" ")[0] })}</span>
                     <form action={logout}>
                       <button className="rounded-md px-3 py-1.5 ring-2 ring-inset ring-white/40 hover:bg-white/10">{t("layout.logout")}</button>
                     </form>
