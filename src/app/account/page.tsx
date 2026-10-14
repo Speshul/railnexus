@@ -39,7 +39,7 @@ function TripCard({ t, tr }: { t: Trip; tr: T }) {
             <div className="flex flex-wrap items-center gap-1 font-semibold">
               {first.fare.fromName} <ArrowRight className="size-4 text-slate-400" aria-hidden /> {last.fare.toName}
               {t.legs.length > 1 && (
-                <span className="rounded bg-brand-light px-1.5 text-xs font-medium text-brand">
+                <span className="rounded bg-brand-light px-1.5 text-sm font-medium text-brand">
                   {t.legs[0].train_number === t.legs[1].train_number ? tr("acct.split") : tr("acct.oneChange")}
                 </span>
               )}
@@ -51,22 +51,22 @@ function TripCard({ t, tr }: { t: Trip; tr: T }) {
           </div>
           <div className="text-right text-sm">
             <div className="font-semibold">{inr(t.totalPaise / 100, true)}</div>
-            {t.refundPaise > 0 && <div className="text-xs text-ok">{tr("acct.refunded", { amount: inr(t.refundPaise / 100, true) })}</div>}
+            {t.refundPaise > 0 && <div className="text-sm text-ok">{tr("acct.refunded", { amount: inr(t.refundPaise / 100, true) })}</div>}
           </div>
         </div>
         {t.status === "CONFIRMED" && (
           <div className="mt-2 space-y-1">
             {t.legs.map((b) => (
-              <div key={b.id} className="flex flex-wrap gap-x-3 text-xs">
-                <span className="font-mono text-slate-500">{tr("pnr.pnr", { n: b.pnr ?? "" })}</span>
+              <div key={b.id} className="flex flex-wrap gap-x-3 text-sm">
+                <span className="font-sign text-slate-500">{tr("pnr.pnr", { n: b.pnr ?? "" })}</span>
                 {b.passengers.filter((p) => p.age >= 5).map((p) => (
-                  <span key={p.idx} className={`font-mono font-semibold ${statusTone(p.cancelled ? "CAN" : p.status)}`}>{p.status === "CAN" ? tr("acct.paxCancelled", { name: p.name.split(" ")[0] }) : p.status}</span>
+                  <span key={p.idx} className={`font-sign font-semibold ${statusTone(p.cancelled ? "CAN" : p.status)}`}>{p.status === "CAN" ? tr("acct.paxCancelled", { name: p.name.split(" ")[0] }) : p.status}</span>
                 ))}
               </div>
             ))}
           </div>
         )}
-        {t.status === "PENDING_PAYMENT" && <p className="mt-2 text-xs font-medium text-warn">{tr("acct.held")}</p>}
+        {t.status === "PENDING_PAYMENT" && <p className="mt-2 text-sm font-medium text-warn">{tr("acct.held")}</p>}
       </Link>
       {t.status === "CONFIRMED" && (
         <div className="flex flex-wrap gap-2 border-t border-slate-100 px-4 py-2">
@@ -95,8 +95,8 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
   const tr = await getT();
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6">
-      <h1 className="text-2xl font-bold">{tr("acct.title")}</h1>
+    <div className="mx-auto max-w-7xl px-6 py-6">
+      <h1 className="font-sign text-[2.16rem] leading-tight text-brand">{tr("acct.title")}</h1>
       <p className="mb-5 text-sm text-slate-600">{user.full_name} · @{user.username} · {user.email}</p>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
@@ -119,7 +119,7 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
         </section>
 
         <section>
-          <h2 className="mb-3 text-lg font-semibold">{tr("acct.saved")}</h2>
+          <h2 className="mb-3 font-sign text-[1.15rem] leading-tight text-brand">{tr("acct.saved")}</h2>
           <div className="card divide-y divide-slate-100">
             {passengers.length === 0 && <p className="p-4 text-sm text-slate-500">{tr("acct.savedEmpty")}</p>}
             {passengers.map((p) => (

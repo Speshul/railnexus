@@ -42,7 +42,7 @@ export function StationBoard({ code, trains, date, today }: { code: string; trai
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <thead className="bg-slate-50 text-left text-sm uppercase text-slate-500">
             <tr>
               <th className="px-3 py-2">{t("board.train")}</th>
               <th className="px-3 py-2">{t("board.route")}</th>
@@ -56,13 +56,13 @@ export function StationBoard({ code, trains, date, today }: { code: string; trai
               <tr key={r.number} className="border-t border-slate-100">
                 <td className="px-3 py-2">
                   <Link href={`/train/${r.number}`} className="font-medium hover:underline">
-                    <span className="font-mono">{r.number}</span> {r.name}
+                    <span className="font-sign">{r.number}</span> {r.name}
                   </Link>
-                  <div className="text-xs text-slate-500">{t(`ttype.${r.type}` as MessageKey)}{!r.reservable && ` · ${t("board.unreserved")}`}</div>
+                  <div className="text-sm text-slate-500">{t(`ttype.${r.type}` as MessageKey)}{!r.reservable && ` · ${t("board.unreserved")}`}</div>
                 </td>
-                <td className="px-3 py-2 text-xs text-slate-600">{r.from} → {r.to}</td>
+                <td className="px-3 py-2 text-sm text-slate-600">{r.from} → {r.to}</td>
                 <td className="px-3 py-2 tabular-nums">{r.arr ?? t("sched.starts")}</td>
-                <td className="px-3 py-2 tabular-nums">{r.dep ?? t("sched.ends")}{r.day > 1 && <span className="ml-1 text-xs text-slate-500">{t("board.day", { n: r.day })}</span>}</td>
+                <td className="px-3 py-2 tabular-nums">{r.dep ?? t("sched.ends")}{r.day > 1 && <span className="ml-1 text-sm text-slate-500">{t("board.day", { n: r.day })}</span>}</td>
                 <td className="px-3 py-2"><RunDays mask={r.runDays} /></td>
               </tr>
             ))}

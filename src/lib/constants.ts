@@ -1,6 +1,6 @@
 // Client-safe constants shared by server and UI.
 
-export const APP_NAME = "RailNexus";
+export const APP_NAME = "Safarnama";
 
 export type ClassCode = "1A" | "2A" | "3A" | "SL" | "CC" | "EC" | "2S" | "UR";
 

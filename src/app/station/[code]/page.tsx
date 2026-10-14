@@ -24,10 +24,10 @@ export default async function StationPage({ params, searchParams }: PageProps<"/
   const nearby = nearbyStations(station.code, 30).filter((s) => s.code !== station.code).slice(0, 8);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="mx-auto max-w-7xl px-4 py-6">
       <div className="card mb-4 p-5">
         <p className="text-sm text-slate-500">{[station.state, station.zone && t("stn.zone", { zone: station.zone })].filter(Boolean).join(" · ") || t("stn.station")}</p>
-        <h1 className="text-2xl font-bold">{station.name} <span className="font-mono text-lg text-slate-500">{station.code}</span></h1>
+        <h1 className="font-sign text-[2.16rem] leading-tight text-brand">{station.name} <span className="font-sign text-lg text-slate-500">{station.code}</span></h1>
         {station.address && <p className="text-sm text-slate-600">{station.address}</p>}
         <p className="mt-2 text-sm">
           {t("stn.count", { n: station.train_count })}{date && <> · {t("stn.showing", { n: trains.length, date: formatDate(date, undefined, t.locale) })}</>}
@@ -65,11 +65,11 @@ export default async function StationPage({ params, searchParams }: PageProps<"/
           />
           {nearby.length > 0 && (
             <div className="card p-4">
-              <h2 className="mb-2 font-semibold">{t("stn.nearby")}</h2>
+              <h2 className="mb-2 font-sign text-[1.15rem] leading-tight text-brand">{t("stn.nearby")}</h2>
               <ul className="space-y-1 text-sm">
                 {nearby.map((n) => (
                   <li key={n.code} className="flex justify-between gap-2">
-                    <Link href={`/station/${n.code}`} className="hover:underline">{n.name} <span className="font-mono text-xs text-slate-500">{n.code}</span></Link>
+                    <Link href={`/station/${n.code}`} className="hover:underline">{n.name} <span className="font-sign text-[0.95rem] text-slate-500">{n.code}</span></Link>
                     <span className="text-slate-500">{t("stn.km", { km: n.km.toFixed(1) })}</span>
                   </li>
                 ))}

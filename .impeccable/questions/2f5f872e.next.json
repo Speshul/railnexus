@@ -1,0 +1,73 @@
+{
+  "title": "Choose Safarnama's visual world",
+  "question": "Your steer leads: Painted Signboard, disciplined into official railway signwriting. Keep it, take an alternate, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Railway Enamel Signs",
+      "kicker": "YOUR STEER",
+      "lineage": "Indian Railways' own signwriting: enamel station plaques, painted platform numbers, stencilled coach lettering",
+      "thesis": "Signboard boldness with railway discipline: big bilingual lettering on flat enamel panels, two colours doing all the work, nothing decorative.",
+      "palette": ["#1b2559", "#f5b700", "#ffffff", "#0f1115", "#c4321d"],
+      "materials": ["vitreous enamel plates", "stencilled numerals", "painted panel edges, no ornament"],
+      "viewport": "Home: an indigo enamel panel with SAFARNAMA / सफ़रनामा lettered in yellow at sign scale, the search form below as a white plate with stencilled labels; Plan-a-trip and Explore as two smaller plates.",
+      "risk": "Two colours at full strength can feel heavy over many screens; the white plates must carry the long tasks.",
+      "raised": [
+        { "from": "Steer: not truck-art", "raise": "No borders, flourishes, rainbows or painted ornament: colour only as flat panels, the way railway signs are made." },
+        { "from": "Variable font specimen", "raise": "Type does the work: scale contrast between sign-size lettering and quiet UI text replaces every decorative device." },
+        { "from": "Acetate manual tab board", "raise": "Each section gets one panel colour at full strength (search indigo, wallet green, planner yellow) so you always know where you are." },
+        { "from": "Orienteering map", "raise": "One reserved colour per meaning: vermilion only for alerts and waitlists, never for decoration." }
+      ]
+    },
+    {
+      "id": "challenger-ticket-wallet",
+      "label": "Ticket Wallet",
+      "verdict": "competitive",
+      "lineage": "printed travel ticket wallets with tear-off coupons",
+      "thesis": "Every journey is a wallet of coupons: one leg per sheet, stamped confirmed, used or cancelled.",
+      "palette": ["#ffffff", "#1f2f6b", "#c8261d", "#5b3a8c"],
+      "materials": ["coupon stock", "carbon-copy numerals", "rubber stamps"],
+      "viewport": "Home as an open ticket wallet with the search as the first coupon; results as a stack of tear-off legs.",
+      "case": "Very clear for bookings, tickets and refunds (stamped states); weaker as an Indian identity, it reads as vintage airline.",
+      "risk": "Charming on tickets, but forced on search, maps and the planner."
+    },
+    {
+      "id": "challenger-annual",
+      "label": "Design Annual Plates",
+      "verdict": "declined",
+      "lineage": "design annual plate sections",
+      "palette": ["#f5f4f6", "#16181a", "#dcddf3"],
+      "materials": ["uncoated stock", "registration crosshairs"],
+      "thesis": "A gallery of printed plates with registration marks.",
+      "viewport": "A near-white sheet of framed plates.",
+      "case": "Fuses poorly: a gallery, not a booking tool, and nothing Indian.",
+      "risk": "Pale and quiet on a big classroom screen.",
+      "kept": "Hairline precision on rules and dividers."
+    },
+    {
+      "id": "challenger-feed",
+      "label": "Vertical Media Feed",
+      "verdict": "declined",
+      "lineage": "full-screen video feeds",
+      "palette": ["#000000", "#ffffff"],
+      "materials": ["full-bleed media", "action rail"],
+      "thesis": "One item fills the screen; flick to the next.",
+      "viewport": "A destination fills the screen with actions down the side.",
+      "case": "Fuses poorly: booking needs comparison, not one item at a time.",
+      "risk": "Wrong for comparing trains.",
+      "kept": "One clear focus per screen."
+    }
+  ],
+  "reroll": { "registers": ["safer", "bolder"] },
+  "buildPath": { "value": "code" },
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "What Indian travel booking apps ship (ixigo, MakeMyTrip style), executed impeccably.",
+    "palette": ["#ffffff", "#0b2a5b", "#2f6fed", "#ff7a00"],
+    "materials": ["clean white grid", "blue headers", "rounded cards"],
+    "viewport": "A blue header band with the search box, then cards of offers and popular routes.",
+    "risk": "Indistinguishable from the competition by design."
+  },
+  "steer": true
+}

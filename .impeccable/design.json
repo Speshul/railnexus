@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-14T00:00:00Z",
+  "title": "Design System: Safarnama",
+  "extensions": {
+    "colorMeta": {
+      "brand": { "role": "primary", "displayName": "Royal Enamel", "canonical": "oklch(25.2% 0.165 265.7)", "tonalRamp": ["#010035", "#040972", "#163295", "#3054b9", "#5179e1", "#7ba1fc", "#b0caff", "#e4efff"] },
+      "brand-dark": { "role": "primary", "displayName": "Night Enamel", "canonical": "oklch(17.4% 0.112 266.5)", "tonalRamp": ["#020039", "#0b1c59", "#243a7a", "#405a9c", "#617dc3", "#84a2eb", "#b2caff", "#e5efff"] },
+      "brand-light": { "role": "primary", "displayName": "Indigo Wash", "canonical": "oklch(92.9% 0.024 280.9)", "tonalRamp": ["#090a15", "#222330", "#3d3e4d", "#5b5c6b", "#7d7f8f", "#a1a3b4", "#c7c9db", "#ebedff"] },
+      "accent": { "role": "secondary", "displayName": "Marigold", "canonical": "oklch(82.5% 0.158 79.2)", "tonalRamp": ["#150800", "#332000", "#573900", "#7b5606", "#aa7400", "#d99600", "#ffbd38", "#ffeaba"] },
+      "accent-dark": { "role": "secondary", "displayName": "Marigold Deep", "canonical": "oklch(78.2% 0.161 75.8)", "tonalRamp": ["#150800", "#341f00", "#593800", "#7d5405", "#ae7200", "#dd9300", "#ffba36", "#ffe9b9"] },
+      "accent-light": { "role": "secondary", "displayName": "Marigold Cream", "canonical": "oklch(96.1% 0.047 88.3)", "tonalRamp": ["#120a00", "#2d2205", "#4a3e22", "#695c3f", "#8c7f60", "#b1a484", "#d7c9a8", "#fbedcc"] },
+      "ground": { "role": "neutral", "displayName": "Indigo Mist", "canonical": "oklch(95.7% 0.014 277.1)", "tonalRamp": ["#0a0b11", "#22242b", "#3e3f47", "#5b5d65", "#7e8088", "#a2a4ad", "#c8cad4", "#eceef8"] },
+      "plate": { "role": "neutral", "displayName": "White Plate", "canonical": "#ffffff", "tonalRamp": ["#262626", "#3b3b3b", "#525252", "#6b6b6b", "#8a8a8a", "#ababab", "#d1d1d1", "#ffffff"] },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "oklch(19.6% 0.050 277.3)", "tonalRamp": ["#07081f", "#1e213c", "#393d5a", "#565b7a", "#787e9e", "#9ca2c4", "#c2c8eb", "#e9edff"] },
+      "rule": { "role": "neutral", "displayName": "Rule", "canonical": "oklch(87.1% 0.032 277.9)", "tonalRamp": ["#080918", "#202333", "#3b3e51", "#595c70", "#7b7f94", "#9fa3b9", "#c5c9e0", "#e9edff"] },
+      "slate-600": { "role": "neutral", "displayName": "Slate 600", "canonical": "#434c60" },
+      "slate-500": { "role": "neutral", "displayName": "Slate 500", "canonical": "oklch(48.5% 0.038 265.8)", "tonalRamp": ["#050a1b", "#1b2436", "#363f54", "#545d73", "#768097", "#99a5bd", "#bfcbe4", "#e4efff"] },
+      "slate-400": { "role": "neutral", "displayName": "Slate 400", "canonical": "#6b7489" },
+      "ok": { "role": "tertiary", "displayName": "Status Green", "canonical": "oklch(46.8% 0.100 160.6)", "tonalRamp": ["#001005", "#002e18", "#004d30", "#146e4a", "#41936c", "#67b890", "#8edfb5", "#bcffdc"] },
+      "warn": { "role": "tertiary", "displayName": "Status Amber", "canonical": "oklch(49.4% 0.109 66.9)", "tonalRamp": ["#180600", "#391c00", "#5f3400", "#864f00", "#ab722f", "#d29755", "#fbbd7b", "#ffe8c7"] },
+      "bad": { "role": "tertiary", "displayName": "Vermilion", "canonical": "oklch(54.2% 0.186 31.4)", "tonalRamp": ["#210000", "#4e0000", "#7f0000", "#ae1700", "#d94731", "#ff6f57", "#ffb3a4", "#ffe6e0"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "The home station board only: the wordmark in marigold with its Devanagari beside it." },
+      "headline": { "displayName": "Headline", "purpose": "Page titles and the departure and arrival times on train cards." },
+      "section": { "displayName": "Section", "purpose": "Section headings in royal blue; home plate titles run up to 1.87rem." },
+      "title": { "displayName": "Title", "purpose": "Card and plate titles, totals, coach-board names." },
+      "body": { "displayName": "Body", "purpose": "Reading text in Inter, tabular numerals, line height 1.55." },
+      "body-small": { "displayName": "Body Small", "purpose": "Secondary lines, metadata and button labels." },
+      "label": { "displayName": "Label", "purpose": "Field labels in royal-blue Poppins, sentence case." },
+      "readable": { "displayName": "Readable", "purpose": "Replaces body and sign faces when the Easy to read setting is on." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "plate-settle", "value": "420ms cubic-bezier(0.16, 1, 0.3, 1); from translateY(-6px), opacity 0.4", "purpose": "Plates and dialogs settle into place once when they appear. Content is visible by default." },
+      { "name": "color-shift", "value": "Tailwind transition-colors (150ms)", "purpose": "Hover state on buttons, plates and links: colour only, nothing lifts." },
+      { "name": "reduced-motion", "value": "animation and transition durations 0.01ms", "purpose": "Applied on the menu setting or prefers-reduced-motion." }
+    ],
+    "breakpoints": [
+      { "name": "root", "value": "font-size 120% (1rem = 19.2px); 132.5% and 145% in the larger text settings" },
+      { "name": "container", "value": "80rem content, 86rem header row; desktop only, composed for 1920x1080" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Marigold with ink lettering: the main action on every screen.",
+      "html": "<button class=\"ds-btn-primary\">Search trains</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--color-accent, #fcb831); color: var(--color-ink, #10122b); font-family: Inter, sans-serif; font-weight: 600; font-size: 0.95rem; padding: 0.625rem 1.25rem; border: none; border-radius: 0.5rem; cursor: pointer; transition: background-color 150ms; } .ds-btn-primary:hover { background: var(--color-accent-dark, #f2a713); } .ds-btn-primary:focus-visible { outline: 3px solid var(--color-brand, #04056f); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Brand Button",
+      "kind": "button",
+      "refersTo": "button-brand",
+      "description": "Royal-blue enamel with marigold lettering: the strong secondary action.",
+      "html": "<button class=\"ds-btn-brand\">Plan my trip</button>",
+      "css": ".ds-btn-brand { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--color-brand, #04056f); color: var(--color-accent, #fcb831); font-family: Poppins, sans-serif; font-weight: 600; font-size: 0.95rem; padding: 0.625rem 1.25rem; border: none; border-radius: 0.5rem; cursor: pointer; transition: background-color 150ms; } .ds-btn-brand:hover { background: var(--color-brand-dark, #020240); } .ds-btn-brand:focus-visible { outline: 3px solid var(--color-brand, #04056f); outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "White with royal-blue lettering and a 2px inset royal-blue ring.",
+      "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; background: #ffffff; color: var(--color-brand, #04056f); font-family: Inter, sans-serif; font-weight: 600; font-size: 0.95rem; padding: 0.625rem 1.25rem; border: none; border-radius: 0.5rem; box-shadow: inset 0 0 0 2px var(--color-brand, #04056f); cursor: pointer; transition: background-color 150ms; } .ds-btn-secondary:hover { background: var(--color-brand-light, #e4e6f8); } .ds-btn-secondary:focus-visible { outline: 3px solid var(--color-brand, #04056f); outline-offset: 2px; }"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "White field with a 2px rule border that turns royal blue on focus; royal-blue Poppins label above.",
+      "html": "<label class=\"ds-label\" for=\"ds-from\">From station</label><input id=\"ds-from\" class=\"ds-input\" placeholder=\"New Delhi (NDLS)\">",
+      "css": ".ds-label { display: block; margin-bottom: 0.375rem; font-family: Poppins, sans-serif; font-weight: 600; font-size: 0.85rem; letter-spacing: 0.01em; line-height: 1.15; color: var(--color-brand, #04056f); } .ds-input { width: 100%; background: #ffffff; color: var(--color-ink, #10122b); font-family: Inter, sans-serif; font-size: 1rem; padding: 0.5rem 0.75rem; border: 2px solid var(--color-rule, #cfd3ea); border-radius: 0.5rem; outline: none; transition: border-color 150ms; } .ds-input::placeholder { color: #555f75; } .ds-input:focus { border-color: var(--color-brand, #04056f); }"
+    },
+    {
+      "name": "Header Navigation",
+      "kind": "nav",
+      "refersTo": "header-bar",
+      "description": "Night-blue bar with 1.75rem lower corners; marigold wordmark; current link lettered marigold with a painted bar beneath.",
+      "html": "<header class=\"ds-header\"><span class=\"ds-mark\">Safarnama <small lang=\"hi\">सफ़रनामा</small></span><nav class=\"ds-nav\"><a href=\"#\" aria-current=\"page\">Book</a><a href=\"#\">Explore</a><a href=\"#\">Plan</a><a href=\"#\">Trains</a></nav></header>",
+      "css": ".ds-header { display: flex; align-items: center; gap: 2rem; padding: 1.25rem 2rem; background: linear-gradient(to bottom, #020240, #03035a); color: #ffffff; border-radius: 0 0 1.75rem 1.75rem; } .ds-mark { font-family: Poppins, sans-serif; font-weight: 700; font-size: 1.55rem; line-height: 1.15; color: #fcb831; } .ds-mark small { font-size: 1.1rem; font-weight: 500; margin-left: 0.5rem; } .ds-nav { display: flex; gap: 1.25rem; font-family: Poppins, sans-serif; font-weight: 500; font-size: 0.92rem; } .ds-nav a { position: relative; color: rgba(255,255,255,0.8); text-decoration: none; padding: 0.375rem 0 0.25rem; } .ds-nav a:hover { color: #ffffff; } .ds-nav a[aria-current=page] { color: #fcb831; } .ds-nav a[aria-current=page]::after { content: ''; position: absolute; left: 0.25rem; right: 0.25rem; bottom: -0.25rem; height: 3px; border-radius: 9999px; background: #fcb831; } .ds-nav a:focus-visible { outline: 3px solid #fcb831; outline-offset: 2px; border-radius: 4px; }"
+    },
+    {
+      "name": "Class Chip",
+      "kind": "chip",
+      "refersTo": "class-chip",
+      "description": "Royal-blue chip with marigold Poppins lettering for class codes and train types.",
+      "html": "<span class=\"ds-chip\">3A</span> <span class=\"ds-chip\">Rajdhani</span>",
+      "css": ".ds-chip { display: inline-block; background: var(--color-brand, #04056f); color: var(--color-accent, #fcb831); font-family: Poppins, sans-serif; font-weight: 600; font-size: 0.95rem; line-height: 1.15; padding: 0.25rem 0.375rem 0.125rem; border-radius: 0.25rem; }"
+    },
+    {
+      "name": "Plate",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Flat white plate with 0.75rem corners on the indigo-mist ground; no shadow, segments cut by 2px ground-colour dividers.",
+      "html": "<div class=\"ds-ground\"><section class=\"ds-card\"><div><h3>Find a train</h3><p>By number or name.</p></div><div><h3>Stations</h3><p>Every stop, with its trains.</p></div></section></div>",
+      "css": ".ds-ground { background: var(--color-ground, #eef0fa); padding: 1.5rem; } .ds-card { display: grid; grid-template-columns: 1fr 1fr; background: #ffffff; border-radius: 0.75rem; color: var(--color-ink, #10122b); font-family: Inter, sans-serif; } .ds-card > div { padding: 1.75rem; } .ds-card > div + div { border-left: 2px solid var(--color-ground, #eef0fa); } .ds-card h3 { margin: 0; font-family: Poppins, sans-serif; font-weight: 600; font-size: 1.37rem; line-height: 1.15; letter-spacing: -0.01em; color: var(--color-brand, #04056f); } .ds-card p { margin: 0.25rem 0 0; color: #434c60; }"
+    },
+    {
+      "name": "Enamel Plates",
+      "kind": "card",
+      "refersTo": "plate-indigo",
+      "description": "Section signs in royal-blue or marigold enamel; marigold lettering on blue, ink on marigold.",
+      "html": "<div class=\"ds-plates\"><a class=\"ds-plate-yellow\" href=\"#\"><strong>Plan a trip in one sentence</strong><span>Tell it where and when.</span></a><a class=\"ds-plate-indigo\" href=\"#\"><strong>Where can I go?</strong><span>Every place one direct train reaches.</span></a></div>",
+      "css": ".ds-plates { display: grid; grid-template-columns: 1.25fr 1fr; gap: 1.5rem; } .ds-plate-yellow, .ds-plate-indigo { display: flex; flex-direction: column; gap: 0.5rem; padding: 1.75rem; border-radius: 0.75rem; text-decoration: none; font-family: Inter, sans-serif; font-size: 1.05rem; transition: background-color 150ms; } .ds-plate-yellow strong, .ds-plate-indigo strong { font-family: Poppins, sans-serif; font-weight: 600; font-size: 1.87rem; line-height: 1.15; letter-spacing: -0.01em; } .ds-plate-yellow { background: #fcb831; color: #10122b; } .ds-plate-yellow:hover { background: #f2a713; } .ds-plate-indigo { background: #04056f; color: rgba(255,255,255,0.9); } .ds-plate-indigo strong { color: #fcb831; } .ds-plate-indigo:hover { background: #020240; } .ds-plate-yellow:focus-visible { outline: 3px solid #04056f; outline-offset: 2px; } .ds-plate-indigo:focus-visible { outline: 3px solid #fcb831; outline-offset: 2px; }"
+    },
+    {
+      "name": "Coach Destination Board",
+      "kind": "custom",
+      "refersTo": "coach-board",
+      "description": "The signature: a marigold band with train number, name and FROM to TO in ink Poppins, heading every train, ticket, plan leg and payment.",
+      "html": "<article class=\"ds-train\"><div class=\"ds-board\"><h3><span class=\"ds-num\">12951</span><span class=\"ds-name\">Mumbai Rajdhani</span><span class=\"ds-route\">New Delhi <span aria-hidden=\"true\">&rarr;</span> Mumbai Central</span></h3><span class=\"ds-type\">Rajdhani</span></div><div class=\"ds-times\"><b>16:55</b><span class=\"ds-track\" aria-hidden=\"true\"></span><b>08:35</b></div></article>",
+      "css": ".ds-train { background: #ffffff; border-radius: 0.75rem; overflow: hidden; } .ds-board { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.25rem; background: #fcb831; color: #10122b; } .ds-board h3 { flex: 1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.125rem 1rem; margin: 0; font-family: Poppins, sans-serif; line-height: 1.15; } .ds-num { font-size: 1.55rem; font-weight: 700; letter-spacing: 0.02em; } .ds-name { font-size: 1.2rem; font-weight: 600; } .ds-route { font-size: 1.05rem; font-weight: 500; color: rgba(16,18,43,0.75); white-space: nowrap; } .ds-type { background: #04056f; color: #fcb831; font-family: Poppins, sans-serif; font-weight: 600; font-size: 0.95rem; padding: 0.25rem 0.5rem 0.125rem; border-radius: 0.25rem; } .ds-times { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1.5rem; padding: 1rem 1.25rem; font-family: Poppins, sans-serif; font-size: 2.16rem; color: #10122b; } .ds-track { position: relative; height: 5px; border-radius: 9999px; background: #04056f; } .ds-track::before, .ds-track::after { content: ''; position: absolute; top: -5px; width: 15px; height: 15px; border-radius: 9999px; box-sizing: border-box; } .ds-track::before { left: -4px; border: 3px solid #04056f; background: #ffffff; } .ds-track::after { right: -4px; background: #04056f; }"
+    },
+    {
+      "name": "Painted Checkbox",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Native controls painted in the world: royal-blue edge, filled royal blue with a drawn marigold tick when checked.",
+      "html": "<label class=\"ds-check\"><input type=\"checkbox\" checked> Lower berth preferred</label>",
+      "css": ".ds-check { display: inline-flex; align-items: center; gap: 0.5rem; font-family: Inter, sans-serif; color: #10122b; } .ds-check input { appearance: none; width: 1.25rem; height: 1.25rem; margin: 0; border: 2px solid #04056f; border-radius: 3px; background: #ffffff center / 80% no-repeat; cursor: pointer; } .ds-check input:checked { background-color: #04056f; background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3.2 3.2L13 4.8' fill='none' stroke='%23fcb831' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\"); } .ds-check input:focus-visible { outline: 3px solid #04056f; outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Enamel Station Sign",
+    "overview": "Safarnama is lettered the way Indian Railways letters its platforms: royal-blue and marigold enamel plates, white task plates hung on a pale indigo ground, bilingual names set side by side. Every surface is a sign. The coach destination board, the marigold plate every coach carries beside its door, heads each train, ticket, plan and payment, and it is the one component that makes a screen recognisably this product.\n\nThe interface is built for a 1920-wide board screen read from across a room. The root size is 120% (one rem is 19.2px) and everything is sized in rem, so the accessibility text setting scales the whole site. Colour does the separating: there are no shadows, no gradients on content, no ornament. Plates are flat, sit apart from the ground by tone alone, and settle into place once with a short drop when they appear.\n\nThe world refuses the generic blue-header travel-app grid, truck-art ornament, and anything that reads as a government website.",
+    "keyCharacteristics": [
+      "Royal blue and marigold at full strength; white plates on an indigo-mist ground.",
+      "Poppins for every heading, number, board and label; Inter for reading text; Hind for Devanagari in both.",
+      "Flat enamel: depth comes from colour, never from shadow.",
+      "The coach destination board as the recurring signature.",
+      "Painted native controls: indigo checkboxes with marigold ticks, drawn chevrons, a drawn calendar mark.",
+      "Large, legible type sized for a classroom board screen."
+    ],
+    "rules": [
+      { "name": "The Marigold-On-Blue Rule", "body": "Marigold is a fill, or lettering on royal or night blue. It is never text on white or on the ground.", "section": "colors" },
+      { "name": "The Blue Money Rule", "body": "Money and the wallet sit on royal blue with marigold or white figures. Green never fills behind money; green is status text only.", "section": "colors" },
+      { "name": "The Vermilion Means Attention Rule", "body": "Vermilion appears only for waitlists, cancellations and errors, never as decoration or emphasis.", "section": "colors" },
+      { "name": "The Sign-Painter Rule", "body": "Anything that is a name, a number or a heading is set in Poppins; anything you read as a sentence is Inter. Fares, times, PNRs, train numbers and class codes are always Poppins.", "section": "typography" },
+      { "name": "The Equal Scripts Rule", "body": "Every face in use carries Devanagari (Poppins and Hind directly; Inter falls through to Hind), so Hindi is never a system fallback.", "section": "typography" },
+      { "name": "The Flat Enamel Rule", "body": "A plate stands out by its colour, never by a shadow. If a surface needs separation, change its enamel or cut it with a 2px ground-colour divider.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do letter every name, number and heading in Poppins and every sentence in Inter.",
+      "Do separate surfaces by enamel colour: white plates (0.75rem corners) on the indigo-mist ground, royal-blue and marigold plates for section signs.",
+      "Do head every train, ticket, plan leg and payment with a coach destination board.",
+      "Do put money on royal blue, with marigold or white figures.",
+      "Do spell availability out in words with a drawn mark beside it; colour only helps.",
+      "Do size in rem so the 120% root and the text-size setting scale everything together.",
+      "Do keep keyboard focus as a 3px royal-blue outline, marigold on blue."
+    ],
+    "donts": [
+      "Don't add shadows to plates, cards, buttons or dialogs.",
+      "Don't set marigold text on white or on the ground.",
+      "Don't fill green behind money or the wallet; green is status text only.",
+      "Don't use vermilion for anything but waitlists, cancellations and errors.",
+      "Don't fall back to operating-system checkboxes, chevrons or calendar icons; paint them in the brand blue.",
+      "Don't let the interface drift toward a government website or a generic blue-header travel-app grid."
+    ]
+  }
+}

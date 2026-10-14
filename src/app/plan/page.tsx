@@ -11,8 +11,8 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
   const t = await getT();
   const q = typeof sp.q === "string" ? sp.q.slice(0, 500) : "";
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
-      <h1 className="text-2xl font-bold">{t("plan.title")}</h1>
+    <div className="mx-auto max-w-7xl px-4 py-6">
+      <h1 className="font-sign text-[2.16rem] leading-tight text-brand">{t("plan.title")}</h1>
       <p className="mb-4 text-slate-600">{t("plan.body")}</p>
       <PlanView key={q} initial={q} autoRun={sp.go === "1"} />
     </div>

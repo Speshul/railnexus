@@ -12,6 +12,7 @@ import { RouteMapLazy } from "@/components/RouteMapLazy";
 import { ScheduleTable } from "@/components/ScheduleTable";
 import { TrainJourneyPicker } from "@/components/TrainJourneyPicker";
 import { SunSide } from "@/components/SunSide";
+import { CoachBoard } from "@/components/CoachBoard";
 import { sunForJourney } from "@/lib/sunpath";
 import { getT } from "@/i18n/server";
 import type { MessageKey } from "@/i18n/core";
@@ -45,13 +46,16 @@ export default async function TrainPage({ params, searchParams }: PageProps<"/tr
   const sun = sunFrom && sunTo ? sunForJourney(train.number, sunFrom.code, sunTo.code, addDays(date, -(sunFrom.day - 1))) : null;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
-      <div className="card mb-4 p-5">
+    <div className="mx-auto max-w-7xl px-6 py-6">
+      <div className="mb-1 overflow-hidden rounded-t-xl">
+        <CoachBoard as="h1" size="lg" number={train.number} name={train.name}>
+          <span className="rounded bg-brand px-2.5 pb-0.5 pt-1 font-sign text-[0.95rem] leading-tight text-accent">{t("train.zone", { type: t(`ttype.${train.type}` as MessageKey), zone: train.zone ?? "IR" })}</span>
+        </CoachBoard>
+      </div>
+      <div className="mb-6 rounded-b-xl bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-sm text-slate-500">{t("train.zone", { type: t(`ttype.${train.type}` as MessageKey), zone: train.zone ?? "IR" })}</p>
-            <h1 className="text-2xl font-bold"><span className="font-mono">{train.number}</span> {train.name}</h1>
-            <p className="mt-1 text-slate-700">
+            <p className="text-[1.1rem] text-slate-700">
               <Link href={`/station/${train.from_code}`} className="hover:underline">{train.from_name}</Link> ({train.departure})
               {" → "}
               <Link href={`/station/${train.to_code}`} className="hover:underline">{train.to_name}</Link> ({train.arrival})
@@ -64,7 +68,7 @@ export default async function TrainPage({ params, searchParams }: PageProps<"/tr
           )}
         </div>
         <dl className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-5">
-          <div><dt className="label">{t("train.runsOn")}</dt><dd><RunDays mask={train.run_days} /> <span className="text-xs text-slate-500">{runDaysLabel(train.run_days, t)}</span></dd></div>
+          <div><dt className="label">{t("train.runsOn")}</dt><dd><RunDays mask={train.run_days} /> <span className="text-sm text-slate-500">{runDaysLabel(train.run_days, t)}</span></dd></div>
           <div><dt className="label">{t("train.distance")}</dt><dd className="font-semibold">{t("unit.km", { n: train.distance })}</dd></div>
           <div><dt className="label">{t("train.time")}</dt><dd className="font-semibold">{formatDuration(train.duration_min, L)}</dd></div>
           <div><dt className="label">{t("train.halts")}</dt><dd className="font-semibold">{train.halt_count} <span className="font-normal text-slate-500">{t("train.haltsOf", { n: train.stop_count })}</span></dd></div>
@@ -93,7 +97,7 @@ export default async function TrainPage({ params, searchParams }: PageProps<"/tr
         <aside className="space-y-4">
           {train.reservable ? (
             <div className="card p-4">
-              <h2 className="mb-3 font-semibold">{t("train.bookThis")}</h2>
+              <h2 className="mb-3 font-sign text-[1.15rem] leading-tight text-brand">{t("train.bookThis")}</h2>
               <TrainJourneyPicker
                 key={`${train.number}-${from?.code ?? ""}-${to?.code ?? ""}`}
                 train={train.number}
@@ -112,16 +116,16 @@ export default async function TrainPage({ params, searchParams }: PageProps<"/tr
           )}
           {train.reservable && (
             <div className="card p-4">
-              <h2 className="font-semibold">{t("train.fares")}</h2>
-              <p className="mb-2 text-xs text-slate-500">
+              <h2 className="font-sign text-[1.15rem] leading-tight text-brand">{t("train.fares")}</h2>
+              <p className="mb-2 text-sm text-slate-500">
                 {segment ? `${from!.name} → ${to!.name}` : t("train.fullRoute")}, {t("unit.km", { n: km })}
               </p>
               <table className="w-full text-sm">
-                <thead><tr className="text-left text-xs text-slate-500"><th className="py-1">{t("train.fareClass")}</th><th className="text-right">{t("train.fareGeneral")}</th><th className="text-right">{t("train.fareTatkal")}</th></tr></thead>
+                <thead><tr className="text-left text-sm text-slate-500"><th className="py-1">{t("train.fareClass")}</th><th className="text-right">{t("train.fareGeneral")}</th><th className="text-right">{t("train.fareTatkal")}</th></tr></thead>
                 <tbody>
                   {CLASS_ORDER.filter((c) => train.classes.includes(c) && c !== "UR").map((c) => (
                     <tr key={c} className="border-t border-slate-100">
-                      <td className="py-1.5"><b>{c}</b> <span className="text-xs text-slate-500">{t(`class.${c}` as MessageKey)}</span></td>
+                      <td className="py-1.5"><b>{c}</b> <span className="text-sm text-slate-500">{t(`class.${c}` as MessageKey)}</span></td>
                       <td className="text-right">{inr(adultFare({ cls: c, km, trainType: train.type, quota: "GN" }).total)}</td>
                       <td className="text-right">{c === "1A" || c === "EC" ? "—" : inr(adultFare({ cls: c, km, trainType: train.type, quota: "TQ" }).total)}</td>
                     </tr>
@@ -132,11 +136,11 @@ export default async function TrainPage({ params, searchParams }: PageProps<"/tr
           )}
           {sun && (
             <div className="card p-4">
-              <h2 className="mb-1 flex items-center gap-2 font-semibold">
+              <h2 className="mb-1 flex items-center gap-2 font-sign text-[1.15rem] leading-tight text-brand">
                 <Sun className="size-4 text-amber-600" aria-hidden /> {t("sun.title")}
               </h2>
               <SunSide report={sun} t={t} compact />
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-sm text-slate-500">
                 {sunFrom.name} → {sunTo.name}. {t("sun.forDate", { date: formatDate(date, undefined, L) })} {t("sun.note")}
               </p>
             </div>

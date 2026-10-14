@@ -56,7 +56,7 @@ function SlotPicker({ value, set }: { value: Set<string>; set: (s: Set<string>) 
     <div className="grid grid-cols-2 gap-1">
       {SLOTS.map((s) => (
         <button key={s.key} onClick={() => set(toggle(value, s.key))}
-          className={`rounded-md border px-2 py-1 text-xs ${value.has(s.key) ? "border-brand bg-brand-light font-semibold text-brand" : "border-slate-200 bg-white"}`}>
+          className={`rounded-md border px-2 py-1 text-sm ${value.has(s.key) ? "border-brand bg-brand-light font-semibold text-brand" : "border-slate-200 bg-white"}`}>
           {s.label}
         </button>
       ))}
@@ -138,11 +138,11 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[15rem_1fr]">
-      <aside className={`${showFilters ? "block" : "hidden"} card h-fit space-y-4 p-4 lg:sticky lg:top-4 lg:block`}>
+    <div className="grid grid-cols-[17rem_1fr] gap-1">
+      <aside className={`${showFilters ? "block" : "hidden"} h-fit space-y-5 rounded-l-xl bg-white p-5 lg:sticky lg:top-4 lg:block`}>
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold">{t("res.filters")}</h2>
-          {activeFilters > 0 && <button onClick={reset} className="text-xs text-brand hover:underline">{t("res.reset")}</button>}
+          <h2 className="font-sign text-[1.15rem] leading-tight text-brand">{t("res.filters")}</h2>
+          {activeFilters > 0 && <button onClick={reset} className="text-sm text-brand hover:underline">{t("res.reset")}</button>}
         </div>
         <div>
           <h3 className="label">{t("res.availability")}</h3>
@@ -179,7 +179,7 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
           <div>
             <h3 className="label">{t("res.boarding")}</h3>
             {fromStations.map(([c, n]) => (
-              <Check key={c} checked={fromStn.has(c)} onChange={() => setFromStn(toggle(fromStn, c))}>{n} <span className="font-mono text-xs text-slate-500">{c}</span></Check>
+              <Check key={c} checked={fromStn.has(c)} onChange={() => setFromStn(toggle(fromStn, c))}>{n} <span className="font-sign text-[0.95rem] text-slate-500">{c}</span></Check>
             ))}
           </div>
         )}
@@ -187,7 +187,7 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
           <div>
             <h3 className="label">{t("res.destination")}</h3>
             {toStations.map(([c, n]) => (
-              <Check key={c} checked={toStn.has(c)} onChange={() => setToStn(toggle(toStn, c))}>{n} <span className="font-mono text-xs text-slate-500">{c}</span></Check>
+              <Check key={c} checked={toStn.has(c)} onChange={() => setToStn(toggle(toStn, c))}>{n} <span className="font-sign text-[0.95rem] text-slate-500">{c}</span></Check>
             ))}
           </div>
         )}
@@ -195,11 +195,11 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
 
       <section>
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm">
-            <button onClick={() => setTab("direct")} className={`rounded-md px-3 py-1.5 ${tab === "direct" ? "bg-brand text-white" : ""}`}>
+          <div className="flex rounded-md bg-white p-1 font-sign text-[0.95rem]">
+            <button onClick={() => setTab("direct")} aria-pressed={tab === "direct"} className={`rounded px-4 pb-1 pt-1.5 leading-none ${tab === "direct" ? "bg-brand text-accent" : "text-brand hover:bg-brand-light"}`}>
               {t("res.tabDirect", { n: results.length })}
             </button>
-            <button onClick={() => setTab("connect")} className={`rounded-md px-3 py-1.5 ${tab === "connect" ? "bg-brand text-white" : ""}`}>
+            <button onClick={() => setTab("connect")} aria-pressed={tab === "connect"} className={`rounded px-4 pb-1 pt-1.5 leading-none ${tab === "connect" ? "bg-brand text-accent" : "text-brand hover:bg-brand-light"}`}>
               {t("res.tabConnect")}
             </button>
           </div>
@@ -231,7 +231,7 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
                 <p className="text-sm text-slate-500" role="status" aria-live="polite">{t("res.showing", { n: filtered.length, total: results.length })}</p>
                 <details className="text-sm">
                   <summary className="cursor-pointer text-brand hover:underline">{t("res.terms")}</summary>
-                  <dl className="card mt-2 max-w-md space-y-1.5 p-3 text-xs text-slate-600">
+                  <dl className="card mt-2 max-w-md space-y-1.5 p-3 text-sm text-slate-600">
                     <div><dt className="inline font-semibold text-ok">{t("res.terms.avl")}</dt><dd className="inline">{t("res.terms.avlDef")}</dd></div>
                     <div><dt className="inline font-semibold text-warn">RAC</dt><dd className="inline">{t("res.terms.racDef")}</dd></div>
                     <div><dt className="inline font-semibold text-bad">{t("res.terms.wl")}</dt><dd className="inline">{t("res.terms.wlDef")}</dd></div>
@@ -239,9 +239,12 @@ export function ResultsView({ data, alternatives = [], nearbyHref }: { data: Sea
                   </dl>
                 </details>
               </div>
-              {filtered.map((j) => (
-                <TrainCard key={j.number} j={j} quota={params.quota} initialClass={classes.size === 1 ? [...classes][0] : null} />
-              ))}
+              {/* One continuous stack of boards: trains meet edge to edge, separated only by a strip of ground. */}
+              <div className="flex flex-col gap-1 overflow-hidden rounded-r-xl">
+                {filtered.map((j) => (
+                  <TrainCard key={j.number} j={j} quota={params.quota} initialClass={classes.size === 1 ? [...classes][0] : null} />
+                ))}
+              </div>
               {alternatives.length > 0 && <NearbyAlternatives data={data} alternatives={alternatives} nearbyHref={nearbyHref} />}
             </div>
           ) : (
@@ -323,7 +326,7 @@ function Connections({ data, alternatives, nearbyHref }: { data: SearchResponse;
   return (
     <div className="space-y-3">
       <div className="card p-4">
-        <h2 className="font-semibold">
+        <h2 className="font-sign text-[1.15rem] leading-tight text-brand">
           {noDirect ? t("conn.stillTravel", { from: fromStation?.name ?? "", to: toStation?.name ?? "" }) : t("conn.moreWays", { n: loaded.list!.length })}
         </h2>
         <p className="text-sm text-slate-600">
@@ -359,7 +362,7 @@ function BookBoth({ c, quota }: { c: ConnectionResult; quota: Quota }) {
       <p className="mb-2 text-sm font-semibold">{t("both.title")}</p>
       <div className="flex flex-wrap items-end gap-3">
         {c.legs.map((l, i) => (
-          <label key={l.number} className="text-xs">
+          <label key={l.number} className="text-sm">
             <span className="label">{t("both.train", { i: i + 1, number: l.number })}</span>
             <select className="input w-auto py-1.5" value={cls[i]} onChange={(e) => setCls((v) => v.map((x, k) => (k === i ? (e.target.value as ClassCode) : x)))}>
               {bookable(l).map((x) => (
@@ -402,22 +405,22 @@ function ConnectionOption({ id, c, quota, open, onToggle }: { id: string; c: Con
           <div className="mt-1 text-sm text-slate-700">
             {t("opt.change", { station: "" })}<b>{c.via.name}</b> <span className="text-warn">{t("opt.wait", { dur: formatDuration(c.layover, L) })}</span>
           </div>
-          <div className="truncate text-xs text-slate-500">{l1.number} {l1.name} + {l2.number} {l2.name}</div>
+          <div className="truncate text-sm text-slate-500">{l1.number} {l1.name} + {l2.number} {l2.name}</div>
         </div>
         <div className="flex items-center gap-4 sm:flex-col sm:items-end sm:gap-1">
           {f1 !== null && f2 !== null && <div className="text-sm">{t("opt.from")} <b className="text-base">{inr(f1 + f2)}</b></div>}
-          <div className={`text-xs font-medium ${seatsBoth ? "text-ok" : "text-warn"}`}>{seatsBoth ? t("opt.seatsBoth") : t("opt.wlOne")}</div>
-          <span className={open ? "btn-secondary py-1.5 text-xs" : "btn-primary py-1.5 text-xs"}>{open ? t("opt.hide") : t("opt.select")}</span>
+          <div className={`text-sm font-medium ${seatsBoth ? "text-ok" : "text-warn"}`}>{seatsBoth ? t("opt.seatsBoth") : t("opt.wlOne")}</div>
+          <span className={open ? "btn-secondary py-1.5 text-sm" : "btn-primary py-1.5 text-sm"}>{open ? t("opt.hide") : t("opt.select")}</span>
         </div>
       </button>
       {open && (
         <div className="space-y-2 border-t border-slate-100 bg-slate-50 p-3">
           <BookBoth c={c} quota={quota} />
-          <p className="px-1 pt-1 text-xs text-slate-500">{t("opt.separately")}</p>
-          <p className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{t("opt.train", { i: 1, from: l1.from.name, to: l1.to.name })}</p>
+          <p className="px-1 pt-1 text-sm text-slate-500">{t("opt.separately")}</p>
+          <p className="px-1 text-sm font-semibold uppercase tracking-wide text-slate-500">{t("opt.train", { i: 1, from: l1.from.name, to: l1.to.name })}</p>
           <TrainCard j={l1} quota={quota} anchor={false} />
           <p className="flex items-center gap-1.5 px-1 text-sm text-warn"><Clock className="size-4" aria-hidden /> {t("opt.changeAt", { station: c.via.name, dur: formatDuration(c.layover, L) })}</p>
-          <p className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{t("opt.train", { i: 2, from: l2.from.name, to: l2.to.name })}</p>
+          <p className="px-1 text-sm font-semibold uppercase tracking-wide text-slate-500">{t("opt.train", { i: 2, from: l2.from.name, to: l2.to.name })}</p>
           <TrainCard j={l2} quota={quota} anchor={false} />
         </div>
       )}
@@ -459,7 +462,7 @@ function NearbyAlternatives({ data, alternatives, nearbyHref }: { data: SearchRe
         </span>
       </summary>
       <div className="bg-white">
-      <p className="border-t border-slate-100 px-4 pt-2 text-xs text-slate-500">
+      <p className="border-t border-slate-100 px-4 pt-2 text-sm text-slate-500">
         {t("near.within", { from: fromStation?.name ?? "", to: toStation?.name ?? "" })}
       </p>
       <ul className="divide-y divide-slate-100">
@@ -475,7 +478,7 @@ function NearbyAlternatives({ data, alternatives, nearbyHref }: { data: SearchRe
                     <ArrowRight className="mx-1 inline size-3.5 text-slate-400" />
                     <span className={changedTo ? "text-brand" : ""}>{a.to.name} ({a.to.code})</span>
                   </div>
-                  <div className="flex flex-wrap gap-x-3 text-xs text-slate-500">
+                  <div className="flex flex-wrap gap-x-3 text-sm text-slate-500">
                     {changedFrom && (
                       <span><Footprints className="mr-0.5 inline size-3" aria-hidden />{t("near.board", { dist: kmLabel(a.from.km, t), station: fromStation?.name ?? "" })}</span>
                     )}
@@ -485,9 +488,9 @@ function NearbyAlternatives({ data, alternatives, nearbyHref }: { data: SearchRe
                 </div>
                 <div className="text-right text-sm">
                   <div className="font-semibold text-ok">{t.n("near.count", a.count)}</div>
-                  <div className="text-xs text-slate-500">{t("near.fastest", { dur: formatDuration(a.fastest, t.locale), time: a.earliest })}</div>
+                  <div className="text-sm text-slate-500">{t("near.fastest", { dur: formatDuration(a.fastest, t.locale), time: a.earliest })}</div>
                 </div>
-                <span className="btn-brand py-1.5 text-xs">{t("near.view")}</span>
+                <span className="btn-brand py-1.5 text-sm">{t("near.view")}</span>
               </Link>
             </li>
           );

@@ -8,7 +8,7 @@ export function NavLinks({ loggedIn }: { loggedIn: boolean }) {
   const path = usePathname();
   const t = useT();
   const links = [
-    { href: "/", label: t("nav.book"), match: (p: string) => p === "/" || p.startsWith("/search") || p.startsWith("/book") },
+    { href: "/", label: t("nav.book"), match: (p: string) => p === "/" || p.startsWith("/search") || p === "/book" },
     { href: "/explore", label: t("nav.explore"), match: (p: string) => p.startsWith("/explore") },
     { href: "/plan", label: t("nav.plan"), match: (p: string) => p.startsWith("/plan") },
     { href: "/trains", label: t("nav.trains"), match: (p: string) => p.startsWith("/train") },
@@ -18,12 +18,13 @@ export function NavLinks({ loggedIn }: { loggedIn: boolean }) {
     ...(loggedIn ? [{ href: "/account", label: t("nav.bookings"), match: (p: string) => p.startsWith("/account") || p.startsWith("/booking") || p.startsWith("/ticket") }] : []),
   ];
   return (
-    <nav aria-label={t("nav.label")} className="flex flex-wrap gap-4 text-sm text-white/85">
+    <nav aria-label={t("nav.label")} className="flex min-w-0 items-center gap-x-[clamp(0.6rem,1.2vw,1.25rem)] font-sign text-[clamp(0.72rem,0.95vw,0.92rem)] font-medium text-white/80">
       {links.map((l) => {
         const current = l.match(path);
+        // The current section is lettered in yellow with a painted bar beneath, like a platform marking.
         return (
           <Link key={l.href} href={l.href} aria-current={current ? "page" : undefined}
-            className={`hover:text-white ${current ? "font-semibold text-white underline decoration-accent decoration-2 underline-offset-4" : ""}`}>
+            className={`relative whitespace-nowrap pb-1 pt-1.5 hover:text-white ${current ? "text-accent after:absolute after:inset-x-1 after:-bottom-1 after:h-[3px] after:rounded-full after:bg-accent" : ""}`}>
             {l.label}
           </Link>
         );

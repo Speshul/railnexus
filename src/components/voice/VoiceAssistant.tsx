@@ -426,33 +426,33 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
   return (
     <>
       {open && (
-        <div role="dialog" aria-label={tr("voice.title")} className="print:hidden fixed bottom-24 right-4 z-50 w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white shadow-2xl">
-          <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
-            <span className="font-semibold">{tr("voice.title")}</span>
+        <div role="dialog" aria-label={tr("voice.title")} className="print:hidden fixed bottom-28 right-8 z-50 w-[min(27rem,calc(100vw-2rem))] overflow-hidden rounded-2xl bg-white ring-4 ring-brand">
+          <div className="flex items-center gap-2 bg-brand px-4 py-2.5 text-white">
+            <span className="font-sign text-[1.04rem] text-accent">{tr("voice.title")}</span>
             <div className="ml-auto flex items-center gap-1">
-              <div className="flex rounded-md border border-slate-200 p-0.5 text-xs" role="group" aria-label={tr("voice.speakLang")}>
+              <div className="flex rounded-md p-0.5 text-sm ring-1 ring-inset ring-white/40" role="group" aria-label={tr("voice.speakLang")}>
                 {(["en-IN", "hi-IN"] as Lang[]).map((l) => (
                   <button key={l} onClick={() => { setLang(l); savePref("voice-lang", l); }} aria-pressed={lang === l}
-                    className={`rounded px-2 py-0.5 ${lang === l ? "bg-brand text-white" : "text-slate-600"}`}>
+                    className={`rounded px-2 py-0.5 ${lang === l ? "bg-accent font-semibold text-ink" : "text-white/85"}`}>
                     {l === "en-IN" ? "English" : "हिंदी"}
                   </button>
                 ))}
               </div>
               <button onClick={() => { setMuted(!muted); savePref("voice-muted", muted ? "0" : "1"); if (!muted) window.speechSynthesis?.cancel(); }}
-                aria-label={muted ? tr("voice.unmute") : tr("voice.mute")} className="rounded p-1.5 text-slate-500 hover:bg-slate-100">
+                aria-label={muted ? tr("voice.unmute") : tr("voice.mute")} className="rounded p-1.5 text-white/85 hover:bg-white/10">
                 {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
               </button>
               <button onClick={() => { stopListening(); window.speechSynthesis?.cancel(); setOpen(false); setPhase("idle"); }}
-                aria-label={tr("voice.close")} className="rounded p-1.5 text-slate-500 hover:bg-slate-100">
+                aria-label={tr("voice.close")} className="rounded p-1.5 text-white/85 hover:bg-white/10">
                 <X className="size-4" />
               </button>
             </div>
           </div>
 
           {hindiVoices.length > 1 && (
-            <label className="flex items-center gap-2 border-b border-slate-100 px-4 py-1.5 text-xs text-slate-600">
+            <label className="flex items-center gap-2 border-b border-slate-100 px-4 py-1.5 text-sm text-slate-600">
               {tr("voice.hindiVoice")}
-              <select className="input w-auto flex-1 py-0.5 text-xs" value={pickVoice(voices, "hi", hindiVoiceName)?.name ?? ""}
+              <select className="input w-auto flex-1 py-0.5 text-sm" value={pickVoice(voices, "hi", hindiVoiceName)?.name ?? ""}
                 onChange={(e) => {
                   setHindiVoiceName(e.target.value);
                   savePref("voice-hindi", e.target.value);
@@ -470,7 +470,7 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
             </label>
           )}
           {enhancedOk && hasBrowserRec && (
-            <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-1.5 text-xs text-slate-600">
+            <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-1.5 text-sm text-slate-600">
               {tr("voice.recognition")}
               <div className="flex rounded-md border border-slate-200 p-0.5" role="group" aria-label={tr("voice.recMode")}>
                 {(["enhanced", "standard"] as Mode[]).map((m) => (
@@ -500,7 +500,7 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
             {heard && phase !== "listening" && (
               <div className="flex items-start gap-2 rounded-lg bg-slate-100 px-3 py-2 text-slate-800">
                 <span className="flex-1">“{heard}”</span>
-                <button onClick={editHeard} className="flex shrink-0 items-center gap-1 text-xs font-medium text-brand hover:underline" aria-label={tr("voice.editLabel")}>
+                <button onClick={editHeard} className="flex shrink-0 items-center gap-1 text-sm font-medium text-brand hover:underline" aria-label={tr("voice.editLabel")}>
                   <Pencil className="size-3" aria-hidden /> {tr("voice.edit")}
                 </button>
               </div>
@@ -513,12 +513,12 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
                 <p className="mb-1.5 text-slate-600">{tr("voice.tryIt")}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {EXAMPLES.map((e) => (
-                    <button key={e} onClick={() => send(e)} className="rounded-full border border-slate-200 px-2.5 py-1 text-xs hover:border-brand">{e}</button>
+                    <button key={e} onClick={() => send(e)} className="rounded-full border border-slate-200 px-2.5 py-1 text-sm hover:border-brand">{e}</button>
                   ))}
                 </div>
               </div>
             )}
-            <p className="text-xs text-slate-500">{tr("voice.scope")}</p>
+            <p className="text-sm text-slate-500">{tr("voice.scope")}</p>
           </div>
 
           <form className="flex gap-2 border-t border-slate-100 p-2" onSubmit={(e) => { e.preventDefault(); send(typed); setTyped(""); }}>
@@ -533,8 +533,8 @@ export function VoiceAssistant({ loggedIn }: { loggedIn: boolean }) {
         onClick={onMic}
         aria-expanded={open}
         aria-label={phase === "listening" ? tr("voice.stop") : tr("voice.speak")}
-        className={`print:hidden fixed bottom-6 right-4 z-50 flex size-14 items-center justify-center rounded-full text-white shadow-lg transition ${
-          phase === "listening" ? "bg-bad ring-4 ring-red-200" : "bg-accent hover:bg-accent-dark"
+        className={`print:hidden fixed bottom-8 right-8 z-50 flex size-16 items-center justify-center rounded-full transition ${
+          phase === "listening" ? "bg-bad text-white ring-4 ring-red-200" : "bg-brand text-accent ring-4 ring-accent hover:bg-brand-dark"
         }`}
       >
         {phase === "listening" && <span className="absolute inset-0 animate-ping rounded-full bg-bad/40" />}

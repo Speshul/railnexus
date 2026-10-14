@@ -11,7 +11,7 @@ function Field({ name, label, type = "text", error, hint, ...rest }: { name: str
       <label htmlFor={name} className="label">{label}</label>
       <input id={name} name={name} type={type} className={`input peer ${error ? "border-bad" : ""}`} aria-invalid={!!error}
         aria-describedby={`${name}-help`} {...rest} />
-      <p id={`${name}-help`} className={`mt-1 text-xs ${error ? "text-bad" : "text-slate-500"}`}>{error ?? hint}</p>
+      <p id={`${name}-help`} className={`mt-1 text-sm ${error ? "text-bad" : "text-slate-500"}`}>{error ?? hint}</p>
     </div>
   );
 }

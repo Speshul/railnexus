@@ -24,40 +24,41 @@ export default async function WalletPage({ searchParams }: PageProps<"/wallet">)
   const when = (ms: number) => new Date(ms).toLocaleString(t.locale === "hi" ? "hi-IN" : "en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6">
-      <h1 className="mb-4 text-2xl font-bold">{t("wallet.title")}</h1>
-      <div className="grid gap-4 md:grid-cols-2">
-        <section className="card bg-brand p-5 text-white">
-          <p className="flex items-center gap-2 text-sm text-white/85"><Wallet className="size-4" aria-hidden /> {t("wallet.balance")}</p>
-          <p className="mt-1 text-4xl font-bold">{inr(balance / 100, true)}</p>
-          <p className="mt-3 text-sm text-white/85">{t("wallet.why")}</p>
+    <div className="mx-auto max-w-5xl px-6 py-8">
+      <h1 className="mb-4 font-sign text-[2.16rem] leading-tight text-brand">{t("wallet.title")}</h1>
+      <div className="grid grid-cols-[1fr_1.1fr] gap-6">
+        {/* The wallet balance: a royal-blue plate with the amount lettered in marigold. */}
+        <section className="flex flex-col justify-between rounded-2xl bg-brand p-8 text-white">
+          <p className="flex items-center gap-2 font-sign text-[1.08rem] text-accent"><Wallet className="size-5" aria-hidden /> {t("wallet.balance")}</p>
+          <p className="mt-2 font-sign text-[3.6rem] font-bold leading-tight text-accent">{inr(balance / 100, true)}</p>
+          <p className="mt-4 max-w-[40ch] text-white/90">{t("wallet.why")}</p>
         </section>
-        <section className="card p-5">
-          <h2 className="mb-3 font-semibold">{t("wallet.addMoney")}</h2>
+        <section className="card p-7">
+          <h2 className="mb-3 font-sign text-[1.15rem] leading-tight text-brand">{t("wallet.addMoney")}</h2>
           <WalletTopUp initial={sp.add ? add : 0} min={TOPUP_MIN} max={TOPUP_MAX} returnTo={returnTo} />
-          {returnTo && <p className="mt-2 text-xs text-slate-600">{t("wallet.returnNote")} <Link href={returnTo} className="text-brand underline">{t("wallet.backToBooking")}</Link></p>}
+          {returnTo && <p className="mt-3 text-[0.9rem] text-slate-600">{t("wallet.returnNote")} <Link href={returnTo} className="text-brand underline">{t("wallet.backToBooking")}</Link></p>}
         </section>
       </div>
 
-      <section className="card mt-4 overflow-hidden">
-        <h2 className="border-b border-slate-100 p-4 font-semibold">{t("wallet.history")}</h2>
+      <section className="card mt-6 overflow-hidden">
+        <h2 className="border-b-2 border-ground px-7 py-4 font-sign text-[1.15rem] leading-tight text-brand">{t("wallet.history")}</h2>
         {history.length === 0 ? (
-          <p className="p-4 text-sm text-slate-600">{t("wallet.empty")}</p>
+          <p className="px-7 py-5 text-slate-600">{t("wallet.empty")}</p>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y-2 divide-ground">
             {history.map((x) => (
-              <li key={x.id} className="flex items-center gap-3 px-4 py-3 text-sm">
+              <li key={x.id} className="flex items-center gap-4 px-7 py-3.5">
                 {x.amount_paise > 0
-                  ? <ArrowDownLeft className="size-5 shrink-0 rounded-full bg-green-50 p-0.5 text-ok" aria-hidden />
+                  ? <ArrowDownLeft className="size-7 shrink-0 rounded-full bg-brand-light p-1 text-brand" aria-hidden />
                   : <ArrowUpRight className="size-5 shrink-0 rounded-full bg-slate-100 p-0.5 text-slate-600" aria-hidden />}
                 <span className="flex-1">
                   <span className="font-medium">{t(`wallet.kind.${x.kind}` as MessageKey)}</span>
-                  {x.ref && x.kind !== "topup" && <span className="ml-1 font-mono text-xs text-slate-500">{x.ref}</span>}
-                  <span className="block text-xs text-slate-500">{when(x.created_at)}</span>
+                  {x.ref && x.kind !== "topup" && <span className="ml-1 font-sign text-[0.95rem] text-slate-500">{x.ref}</span>}
+                  <span className="block text-sm text-slate-500">{when(x.created_at)}</span>
                 </span>
                 <span className="text-right">
                   <span className={`block font-semibold ${x.amount_paise > 0 ? "text-ok" : ""}`}>{x.amount_paise > 0 ? "+" : "−"}{inr(Math.abs(x.amount_paise) / 100, true)}</span>
-                  <span className="block text-xs text-slate-500">{t("wallet.after", { amount: inr(x.balance_after / 100, true) })}</span>
+                  <span className="block text-sm text-slate-500">{t("wallet.after", { amount: inr(x.balance_after / 100, true) })}</span>
                 </span>
               </li>
             ))}

@@ -69,7 +69,7 @@ export function TrainJourneyPicker({
           {Object.keys(QUOTAS).map((k) => <option key={k} value={k}>{t(`quota.${k}` as MessageKey)}</option>)}
         </select>
       </div>
-      {!runs && <p className="text-xs text-bad">{t("jp.noRun", { code: from })}</p>}
+      {!runs && <p className="text-sm text-bad">{t("jp.noRun", { code: from })}</p>}
       <button className="btn-primary w-full" disabled={!runs}>{t("jp.book")}</button>
       <button
         type="button"

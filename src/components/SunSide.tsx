@@ -28,7 +28,7 @@ export function SunSide({ report, t, compact = false }: { report: SunReport; t: 
   return (
     <section className={compact ? "" : "card p-4"} aria-label={t("sun.title")}>
       {!compact && (
-        <h2 className="mb-1 flex items-center gap-2 font-semibold">
+        <h2 className="mb-1 flex items-center gap-2 font-sign text-[1.15rem] leading-tight text-brand">
           <Sun className="size-4 text-amber-500" aria-hidden /> {t("sun.title")}
         </h2>
       )}
@@ -53,7 +53,7 @@ export function SunSide({ report, t, compact = false }: { report: SunReport; t: 
       <div className="mt-3" aria-hidden>
         {(["left", "right"] as const).map((row) => (
           <div key={row} className="mb-1 flex items-center gap-2">
-            <span className="w-8 shrink-0 text-xs text-slate-600">{t(row === "left" ? "sun.rowLeft" : "sun.rowRight")}</span>
+            <span className="w-8 shrink-0 text-sm text-slate-600">{t(row === "left" ? "sun.rowLeft" : "sun.rowRight")}</span>
             <div className="relative h-3 flex-1 overflow-hidden rounded-full bg-slate-100">
               {report.bands.map((b) => (
                 <div key={b.from} className={`absolute inset-y-0 ${ROW[row][b.state]}`}
@@ -62,18 +62,18 @@ export function SunSide({ report, t, compact = false }: { report: SunReport; t: 
             </div>
           </div>
         ))}
-        <div className="ml-10 flex justify-between text-xs text-slate-500">
+        <div className="ml-10 flex justify-between text-sm text-slate-500">
           <span>{clockIST(report.start, L)}</span>
           <span>{clockIST(report.end, L)}</span>
         </div>
-        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600">
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-600">
           <span className="flex items-center gap-1"><i className="size-2.5 rounded-sm bg-amber-400" /> {t("sun.legendSun")}</span>
           <span className="flex items-center gap-1"><i className="size-2.5 rounded-sm bg-amber-100" /> {t("sun.legendAhead")}</span>
           <span className="flex items-center gap-1"><i className="size-2.5 rounded-sm bg-sky-100" /> {t("sun.legendShade")}</span>
           <span className="flex items-center gap-1"><Moon className="size-3 text-slate-700" /> {t("sun.legendNight")}</span>
         </div>
       </div>
-      {!compact && <p className="mt-2 text-xs text-slate-500">{t("sun.note")}</p>}
+      {!compact && <p className="mt-2 text-sm text-slate-500">{t("sun.note")}</p>}
     </section>
   );
 }

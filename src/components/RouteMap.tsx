@@ -44,8 +44,8 @@ export default function RouteMap({ stops, height = 420, showPassing = false }: {
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <FitBounds bounds={bounds} />
-        <Polyline positions={pts.map(ll)} pathOptions={{ color: hasSegment ? "#94a3b8" : "#0b3a75", weight: 3, opacity: 0.8 }} />
-        {hasSegment && <Polyline positions={seg.map(ll)} pathOptions={{ color: "#0b3a75", weight: 5 }} />}
+        <Polyline positions={pts.map(ll)} pathOptions={{ color: hasSegment ? "#94a3b8" : "#04056f", weight: 3, opacity: 0.8 }} />
+        {hasSegment && <Polyline positions={seg.map(ll)} pathOptions={{ color: "#04056f", weight: 5 }} />}
         {pts.map((s, i) =>
           s.halt || showPassing ? (
             <CircleMarker
@@ -53,8 +53,8 @@ export default function RouteMap({ stops, height = 420, showPassing = false }: {
               center={ll(s)}
               radius={s.emphasis ? 8 : s.halt ? 5 : 2.5}
               pathOptions={{
-                color: s.emphasis ? "#f26b1d" : s.halt ? "#0b3a75" : "#64748b",
-                fillColor: s.emphasis ? "#f26b1d" : "#ffffff",
+                color: s.emphasis ? "#fcb831" : s.halt ? "#04056f" : "#64748b",
+                fillColor: s.emphasis ? "#fcb831" : "#ffffff",
                 fillOpacity: 1,
                 weight: s.halt ? 2 : 1,
               }}

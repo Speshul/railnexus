@@ -12,12 +12,12 @@ export default async function AccessibilityPage() {
   const t = await getT();
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="mb-2 text-2xl font-bold">{t("a11yp.title")}</h1>
+      <h1 className="mb-2 font-sign text-[2.16rem] leading-tight text-brand">{t("a11yp.title")}</h1>
       <p className="mb-6 text-slate-600">{t("a11yp.intro", { app: APP_NAME })}</p>
       <div className="space-y-3">
         {FEATURES.map((f) => (
           <section key={f} className="card p-4">
-            <h2 className="mb-1 font-semibold">{t(`a11yp.${f}.t`)}</h2>
+            <h2 className="mb-1 font-sign text-[1.15rem] leading-tight text-brand">{t(`a11yp.${f}.t`)}</h2>
             <p className="text-sm text-slate-700">{t(`a11yp.${f}.b`)}</p>
           </section>
         ))}

@@ -156,20 +156,20 @@ export function BookingForm({ journeys, quota, user, saved }: {
   };
 
   return (
-    <form ref={formRef} action={submit} className="grid gap-4 lg:grid-cols-[1fr_20rem]">
+    <form ref={formRef} action={submit} className="grid grid-cols-[1fr_24rem] gap-6">
       <div className="space-y-4">
         <section className="card p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-semibold">{t("bf.passengers")}</h2>
-            <span className="text-xs text-slate-500">{t("bf.max", { max, quota: t(`quota.${journey.quota}` as MessageKey) })}</span>
+            <h2 className="font-sign text-[1.15rem] leading-tight text-brand">{t("bf.passengers")}</h2>
+            <span className="text-sm text-slate-500">{t("bf.max", { max, quota: t(`quota.${journey.quota}` as MessageKey) })}</span>
           </div>
 
           {saved.length > 0 && (
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold uppercase text-slate-500">{t("bf.saved")}</span>
+              <span className="text-sm font-semibold uppercase text-slate-500">{t("bf.saved")}</span>
               {saved.map((s) => (
                 <button key={s.id} type="button" disabled={usedNames.has(s.name.toLowerCase())} onClick={() => addSaved(s)}
-                  className="inline-flex items-center gap-1 rounded-full border border-slate-300 px-2.5 py-1 text-xs hover:border-brand disabled:opacity-40">
+                  className="inline-flex items-center gap-1 rounded-full border border-slate-300 px-2.5 py-1 text-sm hover:border-brand disabled:opacity-40">
                   <UserPlus className="size-3" aria-hidden /> {s.name} ({s.age}{s.gender})
                 </button>
               ))}
@@ -183,7 +183,7 @@ export function BookingForm({ journeys, quota, user, saved }: {
               const kind = age === null ? null : passengerKind(age, p.noBerth);
               return (
                 <fieldset key={p.key} className="rounded-lg border border-slate-200 p-3">
-                  <legend className="px-1 text-xs font-semibold text-slate-500">
+                  <legend className="px-1 text-sm font-semibold text-slate-500">
                     {t("bf.passenger", { i: i + 1 })}
                     {kind === "infant" && t("bf.infant")}
                     {kind === "child_no_berth" && t("bf.childNoBerth")}
@@ -192,12 +192,12 @@ export function BookingForm({ journeys, quota, user, saved }: {
                     <div>
                       <input aria-label={t("bf.name")} className={`input ${err("name") ? "border-bad" : ""}`} placeholder={t("bf.namePh")} value={p.name} maxLength={30}
                         onChange={(e) => update(p.key, { name: e.target.value })} required />
-                      {err("name") && <p className="mt-0.5 text-xs text-bad">{err("name")}</p>}
+                      {err("name") && <p className="mt-0.5 text-sm text-bad">{err("name")}</p>}
                     </div>
                     <div>
                       <input aria-label={t("bf.age")} className={`input ${err("age") ? "border-bad" : ""}`} placeholder={t("bf.age")} inputMode="numeric" value={p.age} maxLength={3}
                         onChange={(e) => update(p.key, { age: e.target.value.replace(/\D/g, ""), noBerth: false })} required />
-                      {err("age") && <p className="mt-0.5 text-xs text-bad">{err("age")}</p>}
+                      {err("age") && <p className="mt-0.5 text-sm text-bad">{err("age")}</p>}
                     </div>
                     <div>
                       <select aria-label={t("bf.gender")} className={`input ${err("gender") ? "border-bad" : ""}`} value={p.gender} onChange={(e) => update(p.key, { gender: e.target.value })} required>
@@ -206,7 +206,7 @@ export function BookingForm({ journeys, quota, user, saved }: {
                         <option value="F">{t("gender.F")}</option>
                         <option value="T">{t("gender.T")}</option>
                       </select>
-                      {err("gender") && <p className="mt-0.5 text-xs text-bad">{err("gender")}</p>}
+                      {err("gender") && <p className="mt-0.5 text-sm text-bad">{err("gender")}</p>}
                     </div>
                     <select aria-label={t("bf.berthPref")} className="input" value={p.berth} disabled={kind === "infant" || p.noBerth}
                       onChange={(e) => update(p.key, { berth: e.target.value })}>
@@ -225,12 +225,12 @@ export function BookingForm({ journeys, quota, user, saved }: {
                     </button>
                   </div>
                   {age !== null && age >= 5 && age <= 11 && journey.quota !== "TQ" && (
-                    <label className="mt-2 flex items-center gap-2 text-xs text-slate-600">
+                    <label className="mt-2 flex items-center gap-2 text-sm text-slate-600">
                       <input type="checkbox" className="accent-brand" checked={p.noBerth} onChange={(e) => update(p.key, { noBerth: e.target.checked })} />
                       {t("bf.childOpt")}
                     </label>
                   )}
-                  {err("noBerth") && <p className="mt-0.5 text-xs text-bad">{err("noBerth")}</p>}
+                  {err("noBerth") && <p className="mt-0.5 text-sm text-bad">{err("noBerth")}</p>}
                 </fieldset>
               );
             })}
@@ -242,22 +242,22 @@ export function BookingForm({ journeys, quota, user, saved }: {
         </section>
 
         <section className="card grid gap-3 p-4 sm:grid-cols-2">
-          <h2 className="font-semibold sm:col-span-2">{t("bf.contact")}</h2>
+          <h2 className="sm:col-span-2 font-sign text-[1.15rem] leading-tight text-brand">{t("bf.contact")}</h2>
           <div>
             <label className="label" htmlFor="email">{t("bf.email")}</label>
             <input id="email" type="email" className={`input ${fe.email ? "border-bad" : ""}`} value={email} onChange={(e) => setEmail(e.target.value)} required />
-            {fe.email && <p className="mt-0.5 text-xs text-bad">{fe.email}</p>}
+            {fe.email && <p className="mt-0.5 text-sm text-bad">{fe.email}</p>}
           </div>
           <div>
             <label className="label" htmlFor="phone">{t("bf.mobile")}</label>
             <input id="phone" inputMode="numeric" maxLength={10} className={`input ${fe.phone ? "border-bad" : ""}`} value={phone}
               onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))} required />
-            {fe.phone && <p className="mt-0.5 text-xs text-bad">{fe.phone}</p>}
+            {fe.phone && <p className="mt-0.5 text-sm text-bad">{fe.phone}</p>}
           </div>
         </section>
 
         <section className="card space-y-3 p-4 text-sm">
-          <h2 className="font-semibold">{t("bf.options")}</h2>
+          <h2 className="font-sign text-[1.15rem] leading-tight text-brand">{t("bf.options")}</h2>
           <fieldset>
             <legend className="mb-1 font-medium">{t("bf.insurance")}</legend>
             <label className="mr-4 inline-flex items-center gap-2"><input type="radio" name="ins" className="accent-brand" checked={insurance === true} onChange={() => setInsurance(true)} /> {t("bf.insYes")}</label>
@@ -279,7 +279,7 @@ export function BookingForm({ journeys, quota, user, saved }: {
       </div>
 
       <aside className="card h-fit space-y-3 p-4 lg:sticky lg:top-4">
-        <h2 className="font-semibold">{t("bf.fareSummary")}</h2>
+        <h2 className="font-sign text-[1.15rem] leading-tight text-brand">{t("bf.fareSummary")}</h2>
         <dl className="space-y-1.5 text-sm">
           {fare.perPassenger.map((p, i) => (
             <div key={i} className="flex justify-between">
@@ -290,12 +290,12 @@ export function BookingForm({ journeys, quota, user, saved }: {
             </div>
           ))}
           {fare.legs.length > 1 && fare.legs.map((l, i) => (
-            <div key={i} className="flex justify-between text-xs text-slate-500">
+            <div key={i} className="flex justify-between text-sm text-slate-500">
               <dt>{t("bf.trainLine", { i: i + 1, train: journeys[i].train, cls: journeys[i].cls })}</dt><dd>{inr(l.ticketFare)}</dd>
             </div>
           ))}
           {fare.legs.length === 1 && fare.perPassenger[0]?.fare && (
-            <div className="rounded-md bg-slate-50 p-2 text-xs text-slate-500">
+            <div className="rounded-md bg-slate-50 p-2 text-sm text-slate-500">
               {t("bf.perAdult", { base: inr(fare.perPassenger.find((x) => x.kind === "adult")?.fare?.base ?? 0) })}
               {(() => {
                 const f = fare.perPassenger.find((x) => x.kind === "adult")?.fare;
@@ -321,7 +321,7 @@ export function BookingForm({ journeys, quota, user, saved }: {
         <button className="btn-primary w-full py-3" disabled={pending}>
           {pending && <Loader2 className="size-4 animate-spin" aria-hidden />} {t("bf.continue")}
         </button>
-        <p className="text-center text-xs text-slate-500">{t("bf.holdNote")}</p>
+        <p className="text-center text-sm text-slate-500">{t("bf.holdNote")}</p>
       </aside>
     </form>
   );

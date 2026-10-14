@@ -55,8 +55,9 @@ export function AccessibilityMenu() {
         className="flex items-center gap-1.5 rounded-md border border-white/30 px-2.5 py-1 hover:bg-white/10"
       >
         <Accessibility className="size-4" aria-hidden />
-        <span className="hidden sm:inline">{t("a11y.button")}</span>
-        <span className="sr-only sm:hidden">{t("a11y.buttonSr")}</span>
+        {/* On narrower windows the button shrinks to its icon; screen readers always get the full label. */}
+        <span className="max-[1440px]:hidden">{t("a11y.button")}</span>
+        <span className="sr-only min-[1441px]:hidden">{t("a11y.buttonSr")}</span>
       </button>
       {open && (
         <div
@@ -67,7 +68,7 @@ export function AccessibilityMenu() {
           className="absolute right-0 z-50 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-slate-200 bg-white p-4 text-slate-900 shadow-xl"
         >
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-semibold">{t("a11y.title")}</h2>
+            <h2 className="font-sign text-[1.15rem] leading-tight text-brand">{t("a11y.title")}</h2>
             <button onClick={() => { setOpen(false); buttonRef.current?.focus(); }} aria-label={t("a11y.close")} className="rounded p-1 hover:bg-slate-100">
               <X className="size-4" aria-hidden />
             </button>

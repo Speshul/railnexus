@@ -6,7 +6,7 @@ const TIMEOUT_MS = 9000;
 
 function systemPrompt(today: string) {
   const days = Array.from({ length: 8 }, (_, i) => `${addDays(today, i)} ${formatDate(addDays(today, i), { weekday: "long" })}`).join(", ");
-  return `You are the voice assistant of RailNexus, an Indian train ticket booking website.
+  return `You are the voice assistant of Safarnama, an Indian train ticket booking website.
 Users speak English, Hindi or Hinglish (Hindi may arrive in Devanagari or Roman script). Convert ONE utterance into a JSON intent.
 The text comes from speech recognition and may contain mistakes: misheard words, merged/split words, or names spelled by sound
 (the speaker may have an accent or a nasal voice). When several possible hearings are given, use the one that makes sense for

@@ -27,8 +27,8 @@ export default async function ExplorePage({ searchParams }: PageProps<"/explore"
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
-      <h1 className="text-2xl font-bold">{t("explore.title")}</h1>
+    <div className="mx-auto max-w-7xl px-4 py-6">
+      <h1 className="font-sign text-[2.16rem] leading-tight text-brand">{t("explore.title")}</h1>
       <p className="mb-4 text-slate-600">{t("explore.body")}</p>
       {from && !data && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-bad">{t("explore.unknown")}</p>}
       <ExploreView key={`${data?.origin.code}-${data?.date}`} data={data} initial={initial} defaultDate={addDays(todayIST(), 1)} today={todayIST()} />

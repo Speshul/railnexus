@@ -106,9 +106,9 @@ export function StationInput({
             >
               <span>
                 <span className="font-medium">{s.name}</span>
-                {s.state && <span className="ml-1 text-xs text-slate-500">{s.state}</span>}
+                {s.state && <span className="ml-1 text-sm text-slate-500">{s.state}</span>}
               </span>
-              <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs font-semibold text-slate-700">{s.code}</span>
+              <span className="rounded bg-slate-100 px-1.5 py-0.5 font-sign text-[0.95rem] font-semibold text-slate-700">{s.code}</span>
             </li>
           ))}
         </ul>
